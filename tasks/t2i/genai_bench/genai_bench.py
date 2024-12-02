@@ -14,6 +14,7 @@ dataset = dict(
 vqascore_evaluator = dict(
     type="VqascoreEvaluator",
     model="clip-flant5-xxl",
+    start_method="spawn",
 )
 
 one_align_evaluator = dict(
@@ -24,5 +25,6 @@ one_align_evaluator = dict(
 
 evaluator = dict(
     type="AggregationEvaluator",
-    evaluators=[vqascore_evaluator, one_align_evaluator],
+    evaluators=[one_align_evaluator, vqascore_evaluator],
+    start_method="spawn",
 )

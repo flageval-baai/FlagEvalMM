@@ -91,17 +91,25 @@ class BaseEvaluator:
         if eval_func is None:
             return self.cal_accuracy
         if isinstance(eval_func, str):
-            if not osp.isabs(eval_func):
-                eval_func = osp.join(self.base_dir, eval_func)
-            spec = importlib.util.spec_from_file_location("evaluate", eval_func)
-            if spec is None:
-                raise ImportError(f"Could not load module from {eval_func}")
-            module = importlib.util.module_from_spec(spec)
-            if spec.loader is None:
-                raise ImportError(f"Module {eval_func} has no loader")
-            spec.loader.exec_module(module)
-            return getattr(module, "get_result")
+            # Store the path for later loading
+            self.eval_func_path = (
+                eval_func
+                if osp.isabs(eval_func)
+                else osp.join(self.base_dir, eval_func)
+            )
+            return self._load_and_call_eval_func
         return eval_func
+
+    def _load_and_call_eval_func(self, *args, **kwargs):
+        # Load the module and call the function dynamically when needed
+        spec = importlib.util.spec_from_file_location("evaluate", self.eval_func_path)
+        if spec is None:
+            raise ImportError(f"Could not load module from {self.eval_func_path}")
+        module = importlib.util.module_from_spec(spec)
+        if spec.loader is None:
+            raise ImportError(f"Module {self.eval_func_path} has no loader")
+        spec.loader.exec_module(module)
+        return getattr(module, "get_result")(*args, **kwargs)
 
     def evaluate_multiple_choice(self, gt: Dict, pred: Dict) -> bool:
         pred["raw_answer"] = pred["answer"]

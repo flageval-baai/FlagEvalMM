@@ -9,7 +9,7 @@ import logging
 import multiprocessing
 import time
 
-multiprocessing.set_start_method("spawn", force=True)
+# multiprocessing.set_start_method("spawn", force=True)
 
 logger = get_logger(__name__)
 
@@ -75,6 +75,7 @@ class EvaluationServer:
         process_id = f"{task_name}_{model_name}_{int(time.time() * 1000)}"
 
         evaluator = EVALUATORS.build(self.config_dict[task_name].evaluator)
+        start_method = self.config_dict[task_name].evaluator.get("start_method", "fork")
         if task_name not in self.active_task:
             self.load_dataset(task_name)
         dataset = self.active_task[task_name]
@@ -83,8 +84,11 @@ class EvaluationServer:
             new_output_dir if new_output_dir else osp.join(self.output_dir, task_name)
         )
 
-        # Create and start the process
-        process = multiprocessing.Process(
+        # Get the specific context for this process
+        ctx = multiprocessing.get_context(start_method)
+
+        # Create and start the process using the context
+        process = ctx.Process(
             target=evaluator.process,
             args=(dataset,),
             kwargs={"output_dir": output_dir, "model_name": model_name},
