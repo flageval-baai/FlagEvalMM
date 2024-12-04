@@ -186,7 +186,8 @@ class MmmuEvaluator(BaseEvaluator):
                 is_correct = eval_open(gt["answer"], pred)
             right += is_correct
             subject_score[gt["subject"]].append(is_correct)
-            difficulty_score[gt["topic_difficulty"]].append(is_correct)
+            if "topic_difficulty" in gt:
+                difficulty_score[gt["topic_difficulty"]].append(is_correct)
             answer["correct"] = is_correct
             answer["label"] = gt["answer"]
             answer["question_type"] = gt["question_type"]
@@ -194,7 +195,8 @@ class MmmuEvaluator(BaseEvaluator):
         result["subject_score"] = {
             k: round(sum(v) / len(v) * 100, 2) for k, v in subject_score.items()
         }
-        result["difficulty_score"] = {
-            k: round(sum(v) / len(v) * 100, 2) for k, v in difficulty_score.items()
-        }
+        if len(difficulty_score) > 0:
+            result["difficulty_score"] = {
+                k: round(sum(v) / len(v) * 100, 2) for k, v in difficulty_score.items()
+            }
         return result
