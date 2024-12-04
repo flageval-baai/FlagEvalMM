@@ -3,6 +3,7 @@ import re
 import difflib
 import pprint
 import importlib.util
+from collections import defaultdict
 from typing import Optional, Dict, List, Tuple, Callable, Union, Any
 from torch.utils.data import Dataset
 import os.path as osp
@@ -72,6 +73,7 @@ class BaseEvaluator:
         use_llm_evaluator: bool = False,
         eval_func: Optional[Union[Callable, str]] = None,
         base_dir: str = "",
+        detailed_keys: Optional[List[str]] = None,
         **kwargs,
     ) -> None:
         self.is_clean = is_clean
@@ -86,6 +88,7 @@ class BaseEvaluator:
                 json_mode=True,
                 **kwargs,
             )
+        self.detailed_keys = detailed_keys
 
     def get_eval_func(self, eval_func: Optional[Union[Callable, str]]):
         if eval_func is None:
@@ -182,6 +185,7 @@ class BaseEvaluator:
         self, annotations: Dict, predictions: List[Dict], *args, **kwargs
     ) -> Dict:
         right = 0
+        detailed_results = defaultdict(list)
         for pred in predictions:
             question_id = str(pred["question_id"])
             gt = annotations[question_id]
@@ -199,7 +203,16 @@ class BaseEvaluator:
             pred["correct"] = is_correct
             pred["label"] = gt["answer"]
             right += is_correct
-        return {"accuracy": round(right / len(predictions) * 100, 2)}
+            if self.detailed_keys:
+                for key in self.detailed_keys:
+                    detailed_results[gt[key]].append(is_correct)
+        results = {
+            "accuracy": round(right / len(predictions) * 100, 2),
+        }
+        if self.detailed_keys:
+            for key, values in detailed_results.items():
+                results[key] = round(sum(values) / len(values) * 100, 2)
+        return results
 
     def maybe_clean_answer(self, answer: str) -> str:
         if not self.is_clean:
