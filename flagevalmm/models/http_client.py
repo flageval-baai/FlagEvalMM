@@ -22,7 +22,8 @@ class HttpClient(BaseApiModel):
         temperature: float = 0.0,
         stream: bool = False,
         max_image_size: int = 4 * 1024 * 1024,
-        min_image_hw: int | None = None,
+        min_short_side: int | None = None,
+        max_long_side: int | None = None,
         use_cache=False,
     ) -> None:
         super().__init__(
@@ -32,7 +33,8 @@ class HttpClient(BaseApiModel):
             temperature=temperature,
             stream=stream,
             max_image_size=max_image_size,
-            min_image_hw=min_image_hw,
+            min_short_side=min_short_side,
+            max_long_side=max_long_side,
             use_cache=use_cache,
         )
         self.chat_args: Dict[str, Any] = {
@@ -101,7 +103,10 @@ class HttpClient(BaseApiModel):
         )
         for img_path in image_paths:
             base64_image = encode_image(
-                img_path, max_size=self.max_image_size, min_short_side=self.min_image_hw
+                img_path,
+                max_size=self.max_image_size,
+                min_short_side=self.min_short_side,
+                max_long_side=self.max_long_side,
             )
             messages[-1]["content"].append(
                 {
@@ -112,3 +117,19 @@ class HttpClient(BaseApiModel):
                 },
             )
         return messages
+
+
+if __name__ == "__main__":
+    client = HttpClient(
+        model_name="/share/projset/models/vlm/Qwen2-VL-7B-Instruct",
+        url="http://localhost:8001/v1/chat/completions",
+        max_long_side=1500,
+    )
+    image_path = [
+        "/root/.cache/flagevalmm/datasets/BLINK/val/image/val_Art_Style_1_1.jpg",
+        "/root/.cache/flagevalmm/datasets/BLINK/val/image/val_Art_Style_1_2.jpg",
+        "/root/.cache/flagevalmm/datasets/BLINK/val/image/val_Art_Style_1_3.jpg",
+    ]
+    question = "<image 1> <image 2> <image 3> Some most common art painting styles include Realism, Impressionism, Expressionism, Pop Art, and Cubism.\nGiven the following images of art paintings, use the first image as the reference image, and determine which one of the second or the third image shares the same style as the reference image?\nSelect from the following choices.\n(A) the second image\n(B) the third image"
+    messages = client.build_message(query=question, image_paths=image_path)
+    client.infer(messages)

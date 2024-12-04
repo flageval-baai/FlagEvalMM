@@ -16,7 +16,7 @@ class ModelAdapter(BaseModelAdapter):
             api_key=task_info.get("api_key", None),
             use_cache=task_info.get("use_cache", False),
             max_image_size=task_info.get("max_image_size", 4 * 1024 * 1024),
-            min_image_hw=task_info.get("min_image_hw", None),
+            min_short_side=task_info.get("min_short_side", None),
         )
 
     def process_single_item(self, i):

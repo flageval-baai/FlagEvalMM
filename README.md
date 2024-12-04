@@ -107,7 +107,7 @@ Create a config file named `qwen2_vl_72b_instruct.json`:
     "model_name": "Qwen/Qwen2-VL-72B-Instruct",
     "api_key": "EMPTY",
     "output_dir": "./results/Qwen2-VL-72B-Instruct",
-    "min_image_hw": 28,
+    "min_short_side": 28,
     "num_workers": 8,
     "backend": "vllm",
     "extra_args": "--limit-mm-per-prompt image=18 --tensor-parallel-size 4 --max-model-len 32768 --trust-remote-code --mm-processor-kwargs '{\"max_dynamic_patch\":4}'"

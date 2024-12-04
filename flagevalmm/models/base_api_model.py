@@ -22,7 +22,8 @@ class BaseApiModel:
         temperature: float = 0.0,
         stream: bool = False,
         max_image_size: int = 4 * 1024 * 1024,
-        min_image_hw: int = 28,
+        min_short_side: int = 28,
+        max_long_side: int = 1500,
         use_cache=False,
     ) -> None:
         self.model_name = model_name
@@ -33,7 +34,8 @@ class BaseApiModel:
         self.temperature = temperature
         self.stream = stream
         self.max_image_size = max_image_size
-        self.min_image_hw = min_image_hw
+        self.min_short_side = min_short_side
+        self.max_long_side = max_long_side
         self.cache = ModelCache(self.chat_name) if use_cache else None
 
     def add_to_cache(self, chat_messages, response) -> None:

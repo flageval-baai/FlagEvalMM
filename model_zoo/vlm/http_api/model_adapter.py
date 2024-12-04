@@ -57,7 +57,8 @@ class ModelAdapter(BaseModelAdapter):
             url=task_info.get("url", None),
             use_cache=task_info.get("use_cache", False),
             max_image_size=task_info.get("max_image_size", 4 * 1024 * 1024),
-            min_image_hw=task_info.get("min_image_hw", None),
+            min_short_side=task_info.get("min_short_side", None),
+            max_long_side=task_info.get("max_long_side", None),
         )
 
     def launch_model(self, task_info: Dict):
