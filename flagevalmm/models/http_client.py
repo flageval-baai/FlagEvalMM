@@ -47,7 +47,7 @@ class HttpClient(BaseApiModel):
         self.headers = {
             "Content-Type": "application/json",
         }
-        if "azure.com" in self.url.lower():
+        if self.url and "azure.com" in self.url.lower():
             self.headers["api-key"] = api_key
         else:
             self.headers["Authorization"] = f"Bearer {api_key}"
@@ -117,19 +117,3 @@ class HttpClient(BaseApiModel):
                 },
             )
         return messages
-
-
-if __name__ == "__main__":
-    client = HttpClient(
-        model_name="/share/projset/models/vlm/Qwen2-VL-7B-Instruct",
-        url="http://localhost:8001/v1/chat/completions",
-        max_long_side=1500,
-    )
-    image_path = [
-        "/root/.cache/flagevalmm/datasets/BLINK/val/image/val_Art_Style_1_1.jpg",
-        "/root/.cache/flagevalmm/datasets/BLINK/val/image/val_Art_Style_1_2.jpg",
-        "/root/.cache/flagevalmm/datasets/BLINK/val/image/val_Art_Style_1_3.jpg",
-    ]
-    question = "<image 1> <image 2> <image 3> Some most common art painting styles include Realism, Impressionism, Expressionism, Pop Art, and Cubism.\nGiven the following images of art paintings, use the first image as the reference image, and determine which one of the second or the third image shares the same style as the reference image?\nSelect from the following choices.\n(A) the second image\n(B) the third image"
-    messages = client.build_message(query=question, image_paths=image_path)
-    client.infer(messages)

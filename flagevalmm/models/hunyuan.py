@@ -1,7 +1,7 @@
 import os
 import json
 import types
-
+import httpx
 from typing import Optional, List, Any
 from flagevalmm.common.logger import get_logger
 from flagevalmm.models.base_api_model import BaseApiModel
@@ -21,11 +21,13 @@ class Hunyuan(BaseApiModel):
     def __init__(
         self,
         model_name: str,
+        url: str | httpx.URL | None = None,
         chat_name: Optional[str] = None,
         max_tokens: Optional[int] = None,
         temperature: float = 0.0,
         stream: bool = False,
         use_cache=False,
+        **kwargs,
     ) -> None:
         super().__init__(
             model_name=model_name,
@@ -36,10 +38,10 @@ class Hunyuan(BaseApiModel):
             use_cache=use_cache,
         )
         self.model_type = "hunyuan"
-
         cred = credential.Credential(os.getenv("HUNYUAN_AK"), os.getenv("HUNYUAN_SK"))
         httpProfile = HttpProfile()
-        httpProfile.endpoint = "hunyuan.tencentcloudapi.com"
+        httpProfile.endpoint = url
+        httpProfile.reqTimeout = 300
 
         clientProfile = ClientProfile()
         clientProfile.httpProfile = httpProfile
@@ -47,7 +49,8 @@ class Hunyuan(BaseApiModel):
 
     def _chat(self, chat_messages: Any, **kwargs):
         req = models.ChatCompletionsRequest()
-        params = {"Model": "hunyuan-vision", "Messages": chat_messages}
+        params = {"Model": self.model_name, "Messages": chat_messages}
+
         req.from_json_string(json.dumps(params))
         try:
             resp = self.client.ChatCompletions(req)
@@ -68,7 +71,6 @@ class Hunyuan(BaseApiModel):
     ) -> List:
         messages = past_messages if past_messages else []
         messages.append({"Role": "user", "Contents": [{"Type": "text", "Text": query}]})
-
         for img_path in image_paths:
             base64_image = encode_image(img_path, max_size=self.max_image_size)
             messages[-1]["Contents"].append(

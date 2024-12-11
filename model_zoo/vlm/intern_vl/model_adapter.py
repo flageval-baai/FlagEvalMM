@@ -96,5 +96,6 @@ if __name__ == "__main__":
         server_ip=args.server_ip,
         server_port=args.server_port,
         timeout=args.timeout,
+        extra_cfg=args.cfg,
     )
     model_adapter.run()

@@ -9,7 +9,12 @@ from flagevalmm.server.utils import parse_args, default_collate_fn
 class ModelAdapter(BaseModelAdapter):
     def model_init(self, task_info: Dict):
         model_name = task_info["model_name"]
-        self.model = Hunyuan(model_name=model_name, max_tokens=2048, use_cache=True)
+        self.model = Hunyuan(
+            model_name=model_name,
+            max_tokens=1024,
+            url=task_info.get("url", None),
+            use_cache=task_info.get("use_cache", False),
+        )
 
     def run_one_task(self, task_name: str, meta_info: Dict[str, Any]):
         dataloader = self.create_data_loader(
