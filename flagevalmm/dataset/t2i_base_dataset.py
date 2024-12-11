@@ -50,6 +50,6 @@ class Text2ImageBaseDataset(Dataset):
         num = self.text_number()
         anno_dict = {}
         for i in range(num):
-            data = self.get_data(i)
-            anno_dict[data["id"]] = data
+            cur_data = self.data[i]
+            anno_dict[cur_data["id"]] = cur_data
         return anno_dict
