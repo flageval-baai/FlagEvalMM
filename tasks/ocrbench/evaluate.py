@@ -1,5 +1,6 @@
 from typing import Dict, List
 import unicodedata
+from collections import defaultdict
 
 
 def get_score(gt, pred):
@@ -26,18 +27,7 @@ def get_score(gt, pred):
 
 def get_result(annotations: Dict, predictions: List[Dict]) -> Dict:
     results = {}
-    ocrbench_score = {
-        "Regular Text Recognition": [0, 0],
-        "Irregular Text Recognition": [0, 0],
-        "Artistic Text Recognition": [0, 0],
-        "Handwriting Recognition": [0, 0],
-        "Digit String Recognition": [0, 0],
-        "Non-Semantic Text Recognition": [0, 0],
-        "Scene Text-centric VQA": [0, 0],
-        "Doc-oriented VQA": [0, 0],
-        "Key Information Extraction": [0, 0],
-        "Handwritten Mathematical Expression Recognition": [0, 0],
-    }
+    ocrbench_score = defaultdict(lambda: [0, 0])
     for pred in predictions:
         question_id = str(pred["question_id"])
         gt = annotations[question_id]

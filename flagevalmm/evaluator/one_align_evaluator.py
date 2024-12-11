@@ -27,7 +27,7 @@ class OneAlignEvaluator:
             attn_implementation="eager",
             torch_dtype=torch.float16,
             device_map="auto",
-        ).cuda()
+        )
         self.metrics = metrics
 
     def get_metric_results(
