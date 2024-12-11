@@ -199,7 +199,7 @@ class ServerWrapper:
         for _ in range(10):
             if self.is_server_running():
                 break
-            time.sleep(1)
+            time.sleep(10)
         else:
             raise RuntimeError("Server failed to start")
 
