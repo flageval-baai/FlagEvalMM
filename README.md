@@ -162,7 +162,7 @@ python flagevalmm/server/run_server.py --tasks tasks/charxiv/charxiv_val.py --ou
 
 This will start a server on port 11823, and the data server will be running until you stop it.
 ```bash
-python flagevalmm/eval.py --output-dir ./results/qwenvl2-7b --tasks tasks/charxiv/charxiv_val.py --model your_model_path/Qwen2-VL-7B-Instruct/--exec model_zoo/vlm/qwen_vl/model_adapter.py
+python flagevalmm/eval.py --output-dir ./results/qwenvl2-7b --tasks tasks/charxiv/charxiv_val.py --model your_model_path/Qwen2-VL-7B-Instruct/ --exec model_zoo/vlm/qwen_vl/model_adapter.py --server-port 11823
 ```
 
 This will evaluate the model on the data server.
