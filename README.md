@@ -70,7 +70,7 @@ An example of llava with vllm as backend:
 
 ```bash
 flagevalmm --tasks tasks/mmmu/mmmu_val.py \
-        --exec model_zoo/vlm/http_api/model_adapter.py \
+        --exec model_zoo/vlm/api_model/model_adapter.py \
         --model llava-hf/llava-onevision-qwen2-7b-ov-chat-hf \
         --num-workers 8 \
         --output-dir ./results/llava-onevision-qwen2-7b-ov-chat-hf \
@@ -90,7 +90,7 @@ For large models like Qwen2-VL-72B that use vllm, you can enable multi-GPU infer
 
 ```bash
 flagevalmm --tasks tasks/mmmu_pro/mmmu_pro_standard_test.py tasks/ocrbench/ocrbench_test.py \
-        --exec model_zoo/vlm/http_api/model_adapter.py \
+        --exec model_zoo/vlm/api_model/model_adapter.py \
         --model Qwen/Qwen2-VL-72B-Instruct \
         --num-workers 8 \
         --output-dir ./results/Qwen2-VL-72B-Instruct \
@@ -118,7 +118,7 @@ This simplifies your evaluation command to:
 
 ```bash
 flagevalmm --tasks tasks/mmmu_pro/mmmu_pro_standard_test.py tasks/ocrbench/ocrbench_test.py \
-        --exec model_zoo/vlm/http_api/model_adapter.py \
+        --exec model_zoo/vlm/api_model/model_adapter.py \
         --cfg qwen2_vl_72b_instruct.json
 ```
 
@@ -137,7 +137,7 @@ Example of evaluating gpt-style models:
 
 ```bash
 flagevalmm --tasks tasks/mmmu/mmmu_val.py \
-        --exec model_zoo/vlm/http_api/model_adapter.py \
+        --exec model_zoo/vlm/api_model/model_adapter.py \
         --model gpt-4o-mini \
         --num-workers 4 \
         --url https://api.openai.com/v1/chat/completions \
@@ -150,7 +150,6 @@ flagevalmm --tasks tasks/mmmu/mmmu_val.py \
 
 ## Start data server and evaluate seperately
 
-
 Above is one-key evaluation, you can also start data server seperately and evaluate seperately.Example of evaluating qwen-vl-2 model:
 
 ```bash
@@ -161,6 +160,7 @@ python flagevalmm/server/run_server.py --tasks tasks/charxiv/charxiv_val.py --ou
 ### Evaluate seperately
 
 This will start a server on port 11823, and the data server will be running until you stop it.
+
 ```bash
 python flagevalmm/eval.py --output-dir ./results/qwenvl2-7b --tasks tasks/charxiv/charxiv_val.py --model your_model_path/Qwen2-VL-7B-Instruct/ --exec model_zoo/vlm/qwen_vl/model_adapter.py --server-port 11823
 ```

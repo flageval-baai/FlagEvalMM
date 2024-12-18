@@ -1,45 +1,60 @@
-import anthropic
 from typing import Optional, List, Any
 from flagevalmm.common.logger import get_logger
 from flagevalmm.models.base_api_model import BaseApiModel
 from flagevalmm.prompt.prompt_tools import encode_image
-from anthropic.resources.messages import NOT_GIVEN
 
 logger = get_logger(__name__)
+
+# Lazy loading of Anthropic packages
+anthropic: Any = None
+
+
+def _load_anthropic_packages():
+    global anthropic
+    try:
+        import anthropic
+    except Exception:
+        logger.error(
+            "Anthropic SDK for Python is not installed, run `pip install anthropic`"
+        )
+        raise
 
 
 class Claude(BaseApiModel):
     def __init__(
         self,
         model_name: str,
-        chat_name: str | None = None,
-        max_tokens: int = 1024,
-        api_key: str | None = None,
+        chat_name: Optional[str] = None,
+        max_tokens: Optional[int] = None,
         temperature: float = 0.0,
+        max_image_size: int = 5 * 1024 * 1024,
+        min_short_side: Optional[int] = None,
+        max_long_side: Optional[int] = None,
+        use_cache: bool = False,
+        api_key: Optional[str] = None,
         stream: bool = False,
-        use_cache=False,
-        max_image_size: int = 4 * 1024 * 1024,
         **kwargs,
     ) -> None:
+        _load_anthropic_packages()
         super().__init__(
             model_name=model_name,
             chat_name=chat_name,
             max_tokens=max_tokens,
             temperature=temperature,
-            stream=stream,
-            use_cache=use_cache,
             max_image_size=max_image_size,
+            min_short_side=min_short_side,
+            max_long_side=max_long_side,
+            use_cache=use_cache,
         )
         self.model_type = "claude"
-        self.chat_args = {"temperature": self.temperature, "max_tokens": max_tokens}
-
+        self.stream = stream
         self.client = anthropic.Anthropic(api_key=api_key)
 
     def _chat(self, chat_messages: Any, **kwargs):
         system_prompt = (
             chat_messages.pop(0)["content"]
             if chat_messages[0]["role"] == "system"
-            else NOT_GIVEN
+            else anthropic._types.NOT_GIVEN
         )
         chat_args = self.chat_args.copy()
         chat_args.update(kwargs)

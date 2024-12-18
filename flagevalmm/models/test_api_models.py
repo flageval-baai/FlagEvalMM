@@ -1,7 +1,6 @@
 import unittest
 import os
 from flagevalmm.models.gpt import GPT
-from flagevalmm.models.qwen import Qwen
 from flagevalmm.models.hunyuan import Hunyuan
 from flagevalmm.models.http_client import HttpClient
 from flagevalmm.models.claude import Claude
@@ -9,11 +8,11 @@ from flagevalmm.models.gemini import Gemini
 
 
 class BaseTestModel:
-    system_prompt = "Your task is to generate a joke that is very funny."
 
     def test_generate_joke(self):
-        query = "tell me a joke about mars, it should be very funny"
-        messages = self.model.build_message(query, system_prompt=self.system_prompt)
+        system_prompt = "Answer all questions in Chinese"
+        query = "Tell me a joke about Mars and Pokemon, it should be very funny"
+        messages = self.model.build_message(query, system_prompt=system_prompt)
         answer = self.model.infer(messages)
 
         # Add assertions to verify the result
@@ -23,9 +22,7 @@ class BaseTestModel:
 
     def test_generate_joke_with_image(self):
         query = "Look at this image and create a funny joke based on what you see"
-        messages = self.model.build_message(
-            query, system_prompt=self.system_prompt, image_paths=["assets/test_1.jpg"]
-        )
+        messages = self.model.build_message(query, image_paths=["assets/test_1.jpg"])
         answer = self.model.infer(messages)
 
         # Add assertions to verify the result
@@ -43,8 +40,10 @@ class TestGPTModel(BaseTestModel, unittest.TestCase):
 
 class TestQwenModel(BaseTestModel, unittest.TestCase):
     def setUp(self):
-        self.model = Qwen(
-            model_name="qwen-vl-max", temperature=0.5, use_cache=False, stream=False
+        self.model = GPT(
+            model_name="qwen-vl-plus",
+            api_key=os.environ.get("QWEN_API_KEY"),
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
         )
 
 
@@ -66,7 +65,7 @@ class TestYiChat(BaseTestModel, unittest.TestCase):
         )
 
 
-class HunyuanModel(BaseTestModel, unittest.TestCase):
+class TestHunyuanModel(BaseTestModel, unittest.TestCase):
     def setUp(self):
         self.model = Hunyuan(model_name="hunyuan-vision", use_cache=False)
 
@@ -78,7 +77,7 @@ class TestClaudeModel(BaseTestModel, unittest.TestCase):
         )
 
 
-class HttpClientModel(BaseTestModel, unittest.TestCase):
+class TestHttpClientModel(BaseTestModel, unittest.TestCase):
     def setUp(self):
         self.model = HttpClient(
             model_name="gpt-4o-mini",

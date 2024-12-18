@@ -21,10 +21,21 @@ def parse_args():
     parser.add_argument("--tasks", nargs="+", required=True, help="tasks to run")
     parser.add_argument("--exec", type=str, help="model path in examples")
     parser.add_argument("--debug", action="store_true", help="debug mode")
-    parser.add_argument("--try-run", action="store_true", help="try run mode")
+    parser.add_argument(
+        "--try-run",
+        action="store_true",
+        help="try run mode, only run the first 32 samples",
+    )
     parser.add_argument("--output-dir", type=str, help="output dir")
     parser.add_argument("--data-root", type=str, help="data root")
     parser.add_argument("--model", type=str, help="model name or path")
+    parser.add_argument(
+        "--model-type",
+        type=str,
+        default=None,
+        choices=["http", "claude", "gemini", "gpt", "hunyuan"],
+        help="type of the model",
+    )
     parser.add_argument("--cfg", type=str, help="config file")
     parser.add_argument("--num-workers", "--num-workers", type=int)
     parser.add_argument("--backend", type=str)
@@ -62,7 +73,8 @@ def update_cfg_from_args(args):
     if args.model:
         cfg["model_path"] = args.model
         cfg["model_name"] = args.model
-
+    if args.model_type:
+        cfg["model_type"] = args.model_type
     if args.output_dir:
         cfg["output_dir"] = args.output_dir
     else:
@@ -94,6 +106,7 @@ class ServerWrapper:
 
     def __init__(self, args):
         self.args = args
+        self.exec = args.exec
         self.cfg = update_cfg_from_args(args)
         self.port = None
         self.evaluation_server_ip = args.server_ip
@@ -106,7 +119,11 @@ class ServerWrapper:
     def start(self):
         """Main method to start the server and run the model"""
         # Validate inputs
-        assert self.args.exec is not None, "exec is required"
+        if self.exec is None:
+            logger.warning(
+                "`--exec` is not provided, using default value: model_zoo/vlm/api_model/model_adapter.py"
+            )
+            self.exec = "model_zoo/vlm/api_model/model_adapter.py"
 
         # Handle finished tasks
         if self.args.skip:
@@ -143,23 +160,21 @@ class ServerWrapper:
     def _build_command(self):
         """Private method to build the command for model execution"""
         command = []
-        if self.args.exec.endswith("py"):
-            assert osp.exists(self.args.exec), f"model path {self.args.exec} not found"
+        if self.exec.endswith("py"):
+            assert osp.exists(self.exec), f"model path {self.exec} not found"
             command += [
                 "python",
-                self.args.exec,
+                self.exec,
                 "--server_ip",
                 self.evaluation_server_ip,
                 "--server_port",
                 str(self.port),
             ]
         else:
-            assert osp.exists(
-                f"{self.args.exec}/run.sh"
-            ), f"run.sh not found in {self.args.exec}"
+            assert osp.exists(f"{self.exec}/run.sh"), f"run.sh not found in {self.exec}"
             command += [
                 "bash",
-                f"{self.args.exec}/run.sh",
+                f"{self.exec}/run.sh",
                 self.evaluation_server_ip,
                 str(self.port),
             ]
@@ -232,8 +247,8 @@ class ServerWrapper:
                     else:
                         self.infer_process.kill()
                     self.infer_process.wait()
-            except Exception as e:
-                logger.info(f"The process {self.infer_process.pid} is killed: {e}")
+            except Exception:
+                logger.info(f"The process {self.infer_process.pid} is killed")
             finally:
                 self.infer_process = None
 

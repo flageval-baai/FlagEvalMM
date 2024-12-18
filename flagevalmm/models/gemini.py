@@ -5,40 +5,54 @@ from flagevalmm.common.logger import get_logger
 from flagevalmm.models.base_api_model import BaseApiModel
 
 logger = get_logger(__name__)
-try:
-    import google.generativeai as genai
-    from google.ai import generativelanguage as glm
-    from google.generativeai.types import HarmBlockThreshold, HarmCategory
-except ImportError:
-    logger.warning(
-        "google-generativeai is not installed, please install it by `pip install google-generativeai`"
-    )
+
+# Lazy loading of Google packages
+genai: Any = None
+glm: Any = None
+HarmBlockThreshold: Any = None
+HarmCategory: Any = None
+
+
+def _load_google_packages():
+    global genai, glm, HarmBlockThreshold, HarmCategory
+    try:
+        import google.generativeai as genai
+        from google.ai import generativelanguage as glm
+        from google.generativeai.types import HarmBlockThreshold, HarmCategory
+    except Exception:
+        logger.error(
+            "google-generativeai is not installed, please install it by `pip install google-generativeai`"
+        )
+        raise
 
 
 class Gemini(BaseApiModel):
     def __init__(
         self,
         model_name: str,
-        chat_name: str | None = None,
-        max_tokens: int = 1024,
-        api_key: str | None = None,
+        chat_name: Optional[str] = None,
+        max_tokens: Optional[int] = None,
         temperature: float = 0.0,
+        max_image_size: Optional[int] = None,
+        min_short_side: Optional[int] = None,
+        max_long_side: Optional[int] = None,
+        use_cache: bool = False,
+        api_key: Optional[str] = None,
         stream: bool = False,
-        use_cache=False,
-        max_image_size: int = 4 * 1024 * 1024,
         **kwargs,
     ) -> None:
+        _load_google_packages()
         super().__init__(
             model_name=model_name,
             chat_name=chat_name,
             max_tokens=max_tokens,
             temperature=temperature,
-            stream=stream,
-            use_cache=use_cache,
             max_image_size=max_image_size,
+            min_short_side=min_short_side,
+            max_long_side=max_long_side,
+            use_cache=use_cache,
         )
         self.model_type = "gemini"
-        self.chat_args = {"temperature": self.temperature, "max_tokens": max_tokens}
         api_key = api_key if api_key else os.environ.get("GOOGLE_API_KEY")
         genai.configure(api_key=api_key)
         self.client = genai.GenerativeModel(self.model_name)

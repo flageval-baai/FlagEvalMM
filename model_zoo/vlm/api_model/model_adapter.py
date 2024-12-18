@@ -1,14 +1,14 @@
 import argparse
 import re
 import os
-from typing import Dict, Any
+from typing import Dict, Any, Optional, Union
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import atexit
 import signal
 
 from flagevalmm.server import ServerDataset
 from flagevalmm.models.base_model_adapter import BaseModelAdapter
-from flagevalmm.models.http_client import HttpClient
+from flagevalmm.models import HttpClient, Claude, Gemini, GPT, Hunyuan
 from flagevalmm.server.model_server import ModelServer
 from flagevalmm.server.utils import get_random_port
 from flagevalmm.common.logger import get_logger
@@ -25,18 +25,39 @@ def parse_args():
     parser.add_argument("--timeout", type=int, default=1000)
     parser.add_argument("--cfg", "-c", type=str, default=None)
     parser.add_argument("--num-workers", "--num-workers", type=int)
-    parser.add_argument("--backend", type=str)
+    parser.add_argument(
+        "--model-type",
+        type=str,
+        default=None,
+        choices=["http", "claude", "gemini", "gpt", "hunyuan"],
+        help="type of the model",
+    )
+    parser.add_argument(
+        "--backend",
+        type=str,
+        default=None,
+        help="backend of the http model, like vllm or sglang",
+    )
     return parser.parse_args()
 
 
 class ModelAdapter(BaseModelAdapter):
-    def __init__(self, server_ip, server_port, timeout, extra_cfg=None):
+    def __init__(
+        self,
+        server_ip: str,
+        server_port: int,
+        timeout: int,
+        model_type: Optional[str] = None,
+        extra_cfg: Optional[Union[str, Dict]] = None,
+    ):
+        self.model_type = model_type
         super().__init__(
             server_ip=server_ip,
             server_port=server_port,
             timeout=timeout,
             extra_cfg=extra_cfg,
         )
+
         atexit.register(self.cleanup)
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -47,19 +68,34 @@ class ModelAdapter(BaseModelAdapter):
         os._exit(0)
 
     def model_init(self, task_info: Dict):
-        model_name = task_info["model_name"]
         if task_info.get("backend", None):
             self.model_server = self.launch_model(task_info)
-        self.model = HttpClient(
-            model_name=model_name,
-            max_tokens=1024,
-            api_key=task_info.get("api_key", None),
-            url=task_info.get("url", None),
-            use_cache=task_info.get("use_cache", False),
-            max_image_size=task_info.get("max_image_size", 4 * 1024 * 1024),
-            min_short_side=task_info.get("min_short_side", None),
-            max_long_side=task_info.get("max_long_side", None),
-        )
+
+        model_config_keys = [
+            "model_name",
+            "url",
+            "base_url",
+            "api_key",
+            "use_cache",
+            "max_image_size",
+            "min_short_side",
+            "max_long_side",
+            "max_tokens",
+            "temperature",
+            "chat_name",
+            "stream",
+        ]
+        model_config = {k: task_info.get(k) for k in model_config_keys}
+
+        model_type_map = {
+            "http": HttpClient,
+            "claude": Claude,
+            "gemini": Gemini,
+            "gpt": GPT,
+            "hunyuan": Hunyuan,
+        }
+        model_type = self.model_type or task_info.get("model_type", "http")
+        self.model = model_type_map[model_type](**model_config)
 
     def launch_model(self, task_info: Dict):
         port = get_random_port()
@@ -82,7 +118,7 @@ class ModelAdapter(BaseModelAdapter):
         logger.info(qs)
         messages = self.model.build_message(qs, image_paths=img_path)
         try:
-            result = self.model.infer(messages, max_tokens=1024, temperature=0.0)
+            result = self.model.infer(messages)
         except Exception as e:
             result = "Error code " + str(e)
         return {"question_id": question_id, "question": qs, "answer": result}
@@ -118,6 +154,7 @@ if __name__ == "__main__":
         server_ip=args.server_ip,
         server_port=args.server_port,
         timeout=args.timeout,
+        model_type=args.model_type,
         extra_cfg=args.cfg,
     )
     model_adapter.run()

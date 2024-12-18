@@ -3,7 +3,7 @@ import json
 import requests
 import httpx
 
-from typing import Optional, List, Any, Dict
+from typing import Optional, List, Any, Union
 from flagevalmm.common.logger import get_logger
 from flagevalmm.models.base_api_model import BaseApiModel
 from flagevalmm.prompt.prompt_tools import encode_image
@@ -15,45 +15,38 @@ class HttpClient(BaseApiModel):
     def __init__(
         self,
         model_name: str,
-        chat_name: str | None = None,
-        max_tokens: int | None = None,
-        api_key: str | None = None,
-        url: str | httpx.URL | None = None,
+        chat_name: Optional[str] = None,
+        max_tokens: int = 1024,
         temperature: float = 0.0,
-        stream: bool = False,
-        max_image_size: int = 4 * 1024 * 1024,
-        min_short_side: int | None = None,
-        max_long_side: int | None = None,
-        use_cache=False,
+        max_image_size: Optional[int] = None,
+        min_short_side: Optional[int] = None,
+        max_long_side: Optional[int] = None,
+        use_cache: bool = False,
+        api_key: Optional[str] = None,
+        url: Optional[Union[str, httpx.URL]] = None,
+        **kwargs,
     ) -> None:
         super().__init__(
             model_name=model_name,
             chat_name=chat_name,
             max_tokens=max_tokens,
             temperature=temperature,
-            stream=stream,
             max_image_size=max_image_size,
             min_short_side=min_short_side,
             max_long_side=max_long_side,
             use_cache=use_cache,
         )
-        self.chat_args: Dict[str, Any] = {
-            "temperature": self.temperature,
-            "stream": self.stream,
-        }
-        if max_tokens is not None:
-            self.chat_args["max_tokens"] = max_tokens
         self.url = url
-        self.headers = {
-            "Content-Type": "application/json",
-        }
+        self.headers = {"Content-Type": "application/json"}
         if self.url and "azure.com" in self.url.lower():
             self.headers["api-key"] = api_key
         else:
             self.headers["Authorization"] = f"Bearer {api_key}"
 
     def _chat(self, chat_messages: Any, **kwargs):
-        data = {"model": f"{self.model_name}", "messages": chat_messages, **kwargs}
+        chat_args = self.chat_args.copy()
+        chat_args.update(kwargs)
+        data = {"model": f"{self.model_name}", "messages": chat_messages, **chat_args}
         response = requests.post(
             self.url, headers=self.headers, data=json.dumps(data), timeout=120
         )
