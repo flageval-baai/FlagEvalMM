@@ -89,7 +89,12 @@ class Hunyuan(BaseApiModel):
         messages = past_messages if past_messages else []
         messages.append({"Role": "user", "Contents": [{"Type": "text", "Text": query}]})
         for img_path in image_paths:
-            base64_image = encode_image(img_path, max_size=self.max_image_size)
+            base64_image = encode_image(
+                img_path,
+                max_size=self.max_image_size,
+                min_short_side=self.min_short_side,
+                max_long_side=self.max_long_side,
+            )
             messages[-1]["Contents"].append(
                 {
                     "Type": "image_url",

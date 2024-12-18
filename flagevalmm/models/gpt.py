@@ -104,7 +104,12 @@ class GPT(BaseApiModel):
             },
         )
         for img_path in image_paths:
-            base64_image = encode_image(img_path, max_size=self.max_image_size)
+            base64_image = encode_image(
+                img_path,
+                max_size=self.max_image_size,
+                min_short_side=self.min_short_side,
+                max_long_side=self.max_long_side,
+            )
             messages[-1]["content"].append(
                 {
                     "type": "image_url",

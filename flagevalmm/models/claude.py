@@ -29,7 +29,7 @@ class Claude(BaseApiModel):
         temperature: float = 0.0,
         max_image_size: int = 5 * 1024 * 1024,
         min_short_side: Optional[int] = None,
-        max_long_side: Optional[int] = None,
+        max_long_side: int = 8000,
         use_cache: bool = False,
         api_key: Optional[str] = None,
         stream: bool = False,
@@ -99,7 +99,10 @@ class Claude(BaseApiModel):
         )
         for img_path in image_paths:
             base64_image = encode_image(
-                img_path, max_size=self.max_image_size, max_long_side=8000
+                img_path,
+                max_size=self.max_image_size,
+                min_short_side=self.min_short_side,
+                max_long_side=self.max_long_side,
             )
 
             media_type = "image/jpeg"
