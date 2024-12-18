@@ -148,6 +148,30 @@ flagevalmm --tasks tasks/mmmu/mmmu_val.py \
 
 `--use-cache` is optional, it will cache the model outputs, the same question with the same model setting will get results from cache.
 
+## Start data server and evaluate seperately
+
+
+Above is one-key evaluation, you can also start data server seperately and evaluate seperately.Example of evaluating qwen-vl-2 model:
+
+```bash
+# Start data server
+python flagevalmm/server/run_server.py --tasks tasks/charxiv/charxiv_val.py --output-dir ./results/qwenvl2-7b --port 11823 
+```
+
+### Evaluate seperately
+
+This will start a server on port 11823, and the data server will be running until you stop it.
+```bash
+python flagevalmm/eval.py --output-dir ./results/qwenvl2-7b --tasks tasks/charxiv/charxiv_val.py --model your_model_path/Qwen2-VL-7B-Instruct/ --exec model_zoo/vlm/qwen_vl/model_adapter.py --server-port 11823
+```
+
+This will evaluate the model on the data server.
+If you have generated results from the data server, you can directly evaluate the results by:
+
+```bash
+python flagevalmm/eval.py --output-dir ./results/qwenvl2-7b --exec model_zoo/vlm/qwen_vl/model_adapter.py --tasks tasks/charxiv/charxiv_val.py --without-infer
+```
+
 ## About Data
 
 In the task configuration file, we download datasets from HuggingFace by default. If you need to use your own dataset, please set the `dataset_path` to your dataset path in the configuration file.
