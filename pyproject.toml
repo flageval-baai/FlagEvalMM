@@ -28,7 +28,6 @@ dependencies = [
     "tenacity",
     "decord",
     "openai",
-    "anthropic",
     "av",
     "accelerate"]  
 requires-python = ">=3.10"

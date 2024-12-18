@@ -4,7 +4,7 @@ import openai
 import httpx
 from openai import AzureOpenAI, OpenAI
 
-from typing import Optional, List, Any, Dict
+from typing import Optional, List, Any, Union
 from flagevalmm.common.logger import get_logger
 from flagevalmm.models.base_api_model import BaseApiModel
 from flagevalmm.prompt.prompt_tools import encode_image
@@ -16,13 +16,16 @@ class GPT(BaseApiModel):
     def __init__(
         self,
         model_name: str,
-        chat_name: str | None = None,
-        max_tokens: int | None = None,
-        api_key: str | None = None,
-        base_url: str | httpx.URL | None = None,
+        chat_name: Optional[str] = None,
+        max_tokens: Optional[int] = None,
         temperature: float = 0.0,
-        stream: bool = False,
+        max_image_size: Optional[int] = None,
+        min_short_side: Optional[int] = None,
+        max_long_side: Optional[int] = None,
         use_cache: bool = False,
+        api_key: Optional[str] = None,
+        base_url: Optional[Union[str, httpx.URL]] = None,
+        stream: bool = False,
         use_azure_api: bool = False,
         json_mode: bool = False,
         **kwargs,
@@ -32,18 +35,15 @@ class GPT(BaseApiModel):
             chat_name=chat_name,
             max_tokens=max_tokens,
             temperature=temperature,
-            stream=stream,
+            max_image_size=max_image_size,
+            min_short_side=min_short_side,
+            max_long_side=max_long_side,
             use_cache=use_cache,
         )
         self.model_type = "gpt"
-        self.chat_args: Dict[str, Any] = {
-            "temperature": self.temperature,
-            "stream": self.stream,
-        }
-        if max_tokens is not None:
-            self.chat_args["max_tokens"] = max_tokens
         if json_mode:
             self.chat_args["response_format"] = {"type": "json_object"}
+
         if use_azure_api:
             if api_key is None:
                 api_key = os.getenv("AZURE_OPENAI_API_KEY")
@@ -104,7 +104,12 @@ class GPT(BaseApiModel):
             },
         )
         for img_path in image_paths:
-            base64_image = encode_image(img_path, max_size=self.max_image_size)
+            base64_image = encode_image(
+                img_path,
+                max_size=self.max_image_size,
+                min_short_side=self.min_short_side,
+                max_long_side=self.max_long_side,
+            )
             messages[-1]["content"].append(
                 {
                     "type": "image_url",

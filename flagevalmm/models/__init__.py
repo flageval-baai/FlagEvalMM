@@ -9,6 +9,8 @@ from flagevalmm.models.http_image_client import HttpImageClient
 from flagevalmm.models.flux import Flux
 from flagevalmm.models.claude import Claude
 from flagevalmm.models.gemini import Gemini
+from flagevalmm.models.http_client import HttpClient
+from flagevalmm.models.hunyuan import Hunyuan
 
 __all__ = [
     "GPT",
@@ -22,4 +24,6 @@ __all__ = [
     "Flux",
     "Claude",
     "Gemini",
+    "Hunyuan",
+    "HttpClient",
 ]

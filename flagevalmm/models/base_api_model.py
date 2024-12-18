@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from tenacity import (
     retry,
@@ -20,22 +20,27 @@ class BaseApiModel:
         chat_name: Optional[str] = None,
         max_tokens: Optional[int] = None,
         temperature: float = 0.0,
+        max_image_size: Optional[int] = None,
+        min_short_side: Optional[int] = None,
+        max_long_side: Optional[int] = None,
+        use_cache: bool = False,
         stream: bool = False,
-        max_image_size: int = 4 * 1024 * 1024,
-        min_short_side: int = 28,
-        max_long_side: int = 1500,
-        use_cache=False,
     ) -> None:
         self.model_name = model_name
         self.chat_name = chat_name if chat_name else model_name
-        self.use_cache = use_cache
-        self.model_type = "base"
         self.max_tokens = max_tokens
         self.temperature = temperature
-        self.stream = stream
         self.max_image_size = max_image_size
         self.min_short_side = min_short_side
         self.max_long_side = max_long_side
+        self.use_cache = use_cache
+        self.model_type = "base"
+        self.stream = stream
+        self.chat_args: Dict[str, Any] = {
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+        }
+
         self.cache = ModelCache(self.chat_name) if use_cache else None
 
     def add_to_cache(self, chat_messages, response) -> None:
