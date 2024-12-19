@@ -15,6 +15,7 @@ from flagevalmm.models.base_model_adapter import BaseModelAdapter
 from flagevalmm.server.utils import parse_args
 
 
+# modified from https://huggingface.co/OpenGVLab/InternVL2_5-78B
 def split_model(model_name):
     device_map = {}
     world_size = torch.cuda.device_count()
@@ -44,6 +45,7 @@ def split_model(model_name):
     device_map["language_model.model.norm"] = 0
     device_map["language_model.lm_head"] = 0
     device_map[f"language_model.model.layers.{num_layers - 1}"] = 0
+    device_map["language_model.model.rotary_emb"] = 0
 
     return device_map
 
@@ -158,8 +160,6 @@ class CustomDataset(ServerDataset):
         pixel_values = []
         num_patches_list = []
         for img_path in img_paths:
-            if "dummy" in img_path:
-                continue
             pixel_values.append(load_image(img_path, max_num=12).to(torch.bfloat16))
             num_patches_list.append(pixel_values[-1].size(0))
 
@@ -216,6 +216,7 @@ class ModelAdapter(BaseModelAdapter):
                 use_flash_attn=True,
                 trust_remote_code=True,
                 device_map=device_map,
+                attn_implementation="flash_attention_2",
             ).eval()
 
         model = self.accelerator.prepare_model(model, evaluation_mode=True)
@@ -278,6 +279,5 @@ if __name__ == "__main__":
         server_port=args.server_port,
         timeout=args.timeout,
         extra_cfg=args.cfg,
-        # extra_cfg={"model_path": "/share/projset/models/vlm/InternVL2-Llama3-76B"}
     )
     model_adapter.run()
