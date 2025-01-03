@@ -20,6 +20,7 @@ class CmmuDataset(VqaBaseDataset):
         with_label=False,
         shift_check=True,
         filter_types=None,
+        **kwargs,
     ):
         if data_root is not None:
             self.data_root = data_root
