@@ -127,3 +127,8 @@ ChangeLog
 
 # Internal
 internal
+
+# results
+results/
+
+.json
