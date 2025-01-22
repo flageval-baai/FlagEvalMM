@@ -80,9 +80,9 @@ flagevalmm --tasks tasks/mmmu/mmmu_val.py \
 
 `--tasks` 是要评测的任务路径，支持多个任务。
 
-`--exec` 是适配模型的脚本。
+`--exec` 是执行模型推理的代码。
 
-`--model` 可以是 huggingface 上的模型名称或你自己的模型路径。建议提前从 huggingface 下载模型。
+`--model` 模型路径，可以是 huggingface 上的模型名称或你自己的模型路径。建议提前从 huggingface 下载模型。
 
 `--extra-args` 是 vllm 服务器的参数。
 
@@ -95,7 +95,8 @@ flagevalmm --tasks tasks/mmmu_pro/mmmu_pro_standard_test.py tasks/ocrbench/ocrbe
         --num-workers 8 \
         --output-dir ./results/Qwen2-VL-72B-Instruct \
         --backend vllm \
-        --extra-args "--limit-mm-per-prompt image=18 --tensor-parallel-size 4 --max-model-len 32768 --trust-remote-code --mm-processor-kwargs '{\"max_dynamic_patch\":4}'"
+        --extra-args "--limit-mm-per-prompt image=18 --tensor-parallel-size 4 --max-model-len 32768 --trust-remote-code \
+        --mm-processor-kwargs '{\"max_dynamic_patch\":4}'"
 ```
 
 由于参数可能相当复杂，建议使用 JSON 配置文件。示例如下：
@@ -171,6 +172,10 @@ python flagevalmm/eval.py --output-dir ./results/qwenvl2-7b --tasks tasks/charxi
 ```bash
 python flagevalmm/eval.py --output-dir ./results/qwenvl2-7b --exec model_zoo/vlm/qwen_vl/model_adapter.py --tasks tasks/charxiv/charxiv_val.py --without-infer
 ```
+
+## 添加你自己的任务
+
+如果你想添加自己的数据集，请参照该文档：[添加你自己的任务](.tasks/README.md)
 
 ## 关于数据
 
