@@ -6,6 +6,8 @@
 
 FlagEvalMM is an open-source evaluation framework designed to comprehensively assess multimodal models. It provides a standardized way to evaluate models that work with multiple modalities (text, images, video) across various tasks and metrics.
 
+For Chinese documentation, please refer to [README_ZH.md](README_ZH.md).
+
 ## Key Features
 
 - **Flexible Architecture**: Support for multiple multimodal models and evaluation tasks, including: VQA, image retrieval, text-to-image, etc.
