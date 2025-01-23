@@ -53,25 +53,6 @@ def load_image_or_video(
         sampled_frame_indices[-1] = total_frame_num - 1
         frames = video_reader.get_batch(sampled_frame_indices)
         frames = frames.asnumpy().astype(np.uint8)
-        for i, frame in enumerate(frames):
-            import os
-            import os.path as osp
-
-            os.makedirs(
-                osp.join(
-                    "/share/projset/hezheqi/projects/FlagEvalMM/output",
-                    osp.basename(image_or_video_path),
-                ),
-                exist_ok=True,
-            )
-            pil_frame = Image.fromarray(frame)
-            pil_frame.save(
-                osp.join(
-                    "/share/projset/hezheqi/projects/FlagEvalMM/output",
-                    osp.basename(image_or_video_path),
-                    f"{sampled_frame_indices[i]}.png",
-                )
-            )
     else:
         frames = None
 

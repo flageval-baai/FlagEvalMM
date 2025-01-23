@@ -100,7 +100,7 @@ class Claude(BaseApiModel):
             },
         )
 
-        def add_image_to_message(data_path, media_type):
+        def add_image_to_message(data_path):
             base64_image = encode_image(
                 data_path,
                 max_size=self.max_image_size,
@@ -123,13 +123,13 @@ class Claude(BaseApiModel):
         for data_type, data_path in multi_modal_data.items():
             if data_type == "image":
                 for img_path in data_path:
-                    add_image_to_message(img_path, "image/jpeg")
+                    add_image_to_message(img_path)
 
             elif data_type == "video":
                 frames = load_image_or_video(
                     data_path, max_num_frames=self.max_num_frames, return_tensors=False
                 )
                 for frame in frames:
-                    add_image_to_message(Image.fromarray(frame), "image/jpeg")
+                    add_image_to_message(Image.fromarray(frame))
 
         return messages
