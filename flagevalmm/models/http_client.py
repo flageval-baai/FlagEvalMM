@@ -3,10 +3,12 @@ import json
 import requests
 import httpx
 
-from typing import Optional, List, Any, Union
+from typing import Optional, List, Any, Union, Dict
 from flagevalmm.common.logger import get_logger
 from flagevalmm.models.base_api_model import BaseApiModel
 from flagevalmm.prompt.prompt_tools import encode_image
+from flagevalmm.common.video_utils import load_image_or_video
+from PIL import Image
 
 logger = get_logger(__name__)
 
@@ -21,6 +23,7 @@ class HttpClient(BaseApiModel):
         max_image_size: Optional[int] = None,
         min_short_side: Optional[int] = None,
         max_long_side: Optional[int] = None,
+        max_num_frames: Optional[int] = 8,
         use_cache: bool = False,
         api_key: Optional[str] = None,
         url: Optional[Union[str, httpx.URL]] = None,
@@ -34,6 +37,7 @@ class HttpClient(BaseApiModel):
             max_image_size=max_image_size,
             min_short_side=min_short_side,
             max_long_side=max_long_side,
+            max_num_frames=max_num_frames,
             use_cache=use_cache,
         )
         self.url = url
@@ -77,7 +81,7 @@ class HttpClient(BaseApiModel):
         self,
         query: str,
         system_prompt: Optional[str] = None,
-        image_paths: List[str] = [],
+        multi_modal_data: Dict[str, Any] = {},
         past_messages: Optional[List] = None,
     ) -> List:
         messages = past_messages if past_messages else []
@@ -94,9 +98,10 @@ class HttpClient(BaseApiModel):
                 ],
             },
         )
-        for img_path in image_paths:
+
+        def add_image_to_message(image_data):
             base64_image = encode_image(
-                img_path,
+                image_data,
                 max_size=self.max_image_size,
                 min_short_side=self.min_short_side,
                 max_long_side=self.max_long_side,
@@ -104,9 +109,19 @@ class HttpClient(BaseApiModel):
             messages[-1]["content"].append(
                 {
                     "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/jpeg;base64,{base64_image}",
-                    },
-                },
+                    "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                }
             )
+
+        for data_type, data_path in multi_modal_data.items():
+            if data_type == "image":
+                for img_path in data_path:
+                    add_image_to_message(img_path)
+            elif data_type == "video":
+                frames = load_image_or_video(
+                    data_path, max_num_frames=self.max_num_frames, return_tensors=False
+                )
+                for frame in frames:
+                    add_image_to_message(Image.fromarray(frame))
+
         return messages

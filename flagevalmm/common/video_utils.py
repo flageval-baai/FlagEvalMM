@@ -3,6 +3,7 @@ import numpy as np
 import decord
 import av
 import torch
+from typing import Union
 from flagevalmm.common.logger import get_logger
 
 logger = get_logger(__name__)
@@ -33,32 +34,46 @@ def read_video_pyav(video_path: str, max_num_frames: int, return_tensors: bool =
 
 def load_image_or_video(
     image_or_video_path: str, max_num_frames: int, return_tensors: bool
-):
+) -> Union[np.ndarray, torch.Tensor]:
     logger.info(f"Loading image or video from {image_or_video_path}")
     if image_or_video_path.endswith(".png"):
         frame = Image.open(image_or_video_path)
         frame = frame.convert("RGB")
         frame = np.array(frame).astype(np.uint8)
         frame_list = [frame]
-        buffer = np.array(frame_list)
+        frames = np.array(frame_list)
     elif image_or_video_path.endswith(".mp4"):
         decord.bridge.set_bridge("native")
         video_reader = decord.VideoReader(image_or_video_path, num_threads=1)
+        total_frame_num = len(video_reader)
+        sampled_frame_indices = np.linspace(
+            start=0, stop=total_frame_num - 1, num=max_num_frames, dtype=int
+        )
+        # Ensure the last frame is included
+        sampled_frame_indices[-1] = total_frame_num - 1
+        frames = video_reader.get_batch(sampled_frame_indices)
+        frames = frames.asnumpy().astype(np.uint8)
+        for i, frame in enumerate(frames):
+            import os
+            import os.path as osp
 
-        frames = video_reader.get_batch(
-            range(len(video_reader))
-        )  # (T, H, W, C), torch.uint8
-        buffer = frames.asnumpy().astype(np.uint8)
+            os.makedirs(
+                osp.join(
+                    "/share/projset/hezheqi/projects/FlagEvalMM/output",
+                    osp.basename(image_or_video_path),
+                ),
+                exist_ok=True,
+            )
+            pil_frame = Image.fromarray(frame)
+            pil_frame.save(
+                osp.join(
+                    "/share/projset/hezheqi/projects/FlagEvalMM/output",
+                    osp.basename(image_or_video_path),
+                    f"{sampled_frame_indices[i]}.png",
+                )
+            )
     else:
-        buffer = None
-
-    frames = buffer
-    nums_frame = min(len(frames), max_num_frames)
-    if nums_frame:
-        frame_indices = np.linspace(
-            start=0, stop=len(frames) - 1, num=nums_frame
-        ).astype(int)
-        frames = frames[frame_indices]
+        frames = None
 
     if return_tensors:
         frames = torch.from_numpy(frames).float().cuda()

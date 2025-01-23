@@ -3,11 +3,13 @@ import json
 import openai
 import httpx
 from openai import AzureOpenAI, OpenAI
+from PIL import Image
 
-from typing import Optional, List, Any, Union
+from typing import Optional, List, Any, Union, Dict
 from flagevalmm.common.logger import get_logger
 from flagevalmm.models.base_api_model import BaseApiModel
 from flagevalmm.prompt.prompt_tools import encode_image
+from flagevalmm.common.video_utils import load_image_or_video
 
 logger = get_logger(__name__)
 
@@ -22,6 +24,7 @@ class GPT(BaseApiModel):
         max_image_size: Optional[int] = None,
         min_short_side: Optional[int] = None,
         max_long_side: Optional[int] = None,
+        max_num_frames: Optional[int] = None,
         use_cache: bool = False,
         api_key: Optional[str] = None,
         base_url: Optional[Union[str, httpx.URL]] = None,
@@ -38,6 +41,7 @@ class GPT(BaseApiModel):
             max_image_size=max_image_size,
             min_short_side=min_short_side,
             max_long_side=max_long_side,
+            max_num_frames=max_num_frames,
             use_cache=use_cache,
         )
         self.model_type = "gpt"
@@ -86,38 +90,41 @@ class GPT(BaseApiModel):
         self,
         query: str,
         system_prompt: Optional[str] = None,
-        image_paths: List[str] = [],
+        multi_modal_data: Dict[str, Any] = {},
         past_messages: Optional[List] = None,
     ) -> List:
         messages = past_messages if past_messages else []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
-        messages.append(
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": query,
-                    },
-                ],
-            },
-        )
-        for img_path in image_paths:
+
+        content = [{"type": "text", "text": query}]
+
+        def add_image_to_message(data_path):
             base64_image = encode_image(
-                img_path,
+                data_path,
                 max_size=self.max_image_size,
                 min_short_side=self.min_short_side,
                 max_long_side=self.max_long_side,
             )
-            messages[-1]["content"].append(
+            content.append(
                 {
                     "type": "image_url",
-                    "image_url": {
-                        "url": f"data:image/jpeg;base64,{base64_image}",
-                    },
-                },
+                    "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                }
             )
+
+        for data_type, data_path in multi_modal_data.items():
+            if data_type == "image":
+                for img_path in data_path:
+                    add_image_to_message(img_path)
+            elif data_type == "video":
+                frames = load_image_or_video(
+                    data_path, max_num_frames=self.max_num_frames, return_tensors=False
+                )
+                for frame in frames:
+                    add_image_to_message(Image.fromarray(frame))
+
+        messages.append({"role": "user", "content": content})
         return messages
 
     def get_embedding(self, text: str):
@@ -147,6 +154,8 @@ if __name__ == "__main__":
 
     query = "根据这张图片的内容，写一个笑话"
     messages = model.build_message(
-        query, system_prompt=system_prompt, image_paths=["assets/test_1.jpg"]
+        query,
+        system_prompt=system_prompt,
+        multi_modal_data={"image": ["assets/test_1.jpg"]},
     )
     answer = model.infer(messages)
