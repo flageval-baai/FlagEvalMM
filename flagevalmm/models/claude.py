@@ -1,7 +1,9 @@
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 from flagevalmm.common.logger import get_logger
 from flagevalmm.models.base_api_model import BaseApiModel
 from flagevalmm.prompt.prompt_tools import encode_image
+from flagevalmm.common.video_utils import load_image_or_video
+from PIL import Image
 
 logger = get_logger(__name__)
 
@@ -80,7 +82,7 @@ class Claude(BaseApiModel):
         self,
         query: str,
         system_prompt: Optional[str] = None,
-        image_paths: List[str] = [],
+        multi_modal_data: Dict[str, Any] = {},
         past_messages: Optional[List] = None,
     ) -> List:
         messages = past_messages if past_messages else []
@@ -97,9 +99,10 @@ class Claude(BaseApiModel):
                 ],
             },
         )
-        for img_path in image_paths:
+
+        def add_image_to_message(data_path):
             base64_image = encode_image(
-                img_path,
+                data_path,
                 max_size=self.max_image_size,
                 min_short_side=self.min_short_side,
                 max_long_side=self.max_long_side,
@@ -116,4 +119,17 @@ class Claude(BaseApiModel):
                     },
                 },
             )
+
+        for data_type, data_path in multi_modal_data.items():
+            if data_type == "image":
+                for img_path in data_path:
+                    add_image_to_message(img_path)
+
+            elif data_type == "video":
+                frames = load_image_or_video(
+                    data_path, max_num_frames=self.max_num_frames, return_tensors=False
+                )
+                for frame in frames:
+                    add_image_to_message(Image.fromarray(frame))
+
         return messages

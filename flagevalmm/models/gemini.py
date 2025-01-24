@@ -1,8 +1,9 @@
 import os
 from PIL import Image
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 from flagevalmm.common.logger import get_logger
 from flagevalmm.models.base_api_model import BaseApiModel
+from flagevalmm.common.video_utils import load_image_or_video
 
 logger = get_logger(__name__)
 
@@ -36,6 +37,7 @@ class Gemini(BaseApiModel):
         max_image_size: Optional[int] = None,
         min_short_side: Optional[int] = None,
         max_long_side: Optional[int] = None,
+        max_num_frames: Optional[int] = None,
         use_cache: bool = False,
         api_key: Optional[str] = None,
         stream: bool = False,
@@ -50,6 +52,7 @@ class Gemini(BaseApiModel):
             max_image_size=max_image_size,
             min_short_side=min_short_side,
             max_long_side=max_long_side,
+            max_num_frames=max_num_frames,
             use_cache=use_cache,
         )
         self.model_type = "gemini"
@@ -91,14 +94,24 @@ class Gemini(BaseApiModel):
         self,
         query: str,
         system_prompt: Optional[str] = None,
-        image_paths: List[str] = [],
+        multi_modal_data: Dict[str, Any] = {},
         past_messages: Optional[List] = None,
     ) -> List:
         messages = past_messages if past_messages else []
         if system_prompt:
             messages.append(system_prompt)
         messages.append(query)
-        for img_path in image_paths:
-            im = Image.open(img_path).convert("RGB")
-            messages.append(im)
+
+        for data_type, data_path in multi_modal_data.items():
+            if data_type == "image":
+                for img_path in data_path:
+                    im = Image.open(img_path).convert("RGB")
+                    messages.append(im)
+            elif data_type == "video":
+                frames = load_image_or_video(
+                    data_path, max_num_frames=self.max_num_frames, return_tensors=False
+                )
+                for frame in frames:
+                    messages.append(Image.fromarray(frame))
+
         return messages

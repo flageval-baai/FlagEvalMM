@@ -23,6 +23,7 @@ class BaseApiModel:
         max_image_size: Optional[int] = None,
         min_short_side: Optional[int] = None,
         max_long_side: Optional[int] = None,
+        max_num_frames: Optional[int] = 8,
         use_cache: bool = False,
         stream: bool = False,
     ) -> None:
@@ -33,6 +34,7 @@ class BaseApiModel:
         self.max_image_size = max_image_size
         self.min_short_side = min_short_side
         self.max_long_side = max_long_side
+        self.max_num_frames = max_num_frames
         self.use_cache = use_cache
         self.model_type = "base"
         self.stream = stream

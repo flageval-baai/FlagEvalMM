@@ -114,9 +114,9 @@ class ModelAdapter(BaseModelAdapter):
         return model_server
 
     def process_single_item(self, i):
-        question_id, img_path, qs = self.dataset[i]
+        question_id, multi_modal_data, qs = self.dataset[i]
         logger.info(qs)
-        messages = self.model.build_message(qs, image_paths=img_path)
+        messages = self.model.build_message(qs, multi_modal_data=multi_modal_data)
         try:
             result = self.model.infer(messages)
         except Exception as e:
@@ -132,7 +132,12 @@ class ModelAdapter(BaseModelAdapter):
                 logger.error(f"Error shutting down model server: {e}")
 
     def run_one_task(self, task_name: str, meta_info: Dict[str, Any]):
-        self.dataset = ServerDataset(task_name, self.server_ip, self.server_port)
+        self.dataset = ServerDataset(
+            task_name,
+            task_type=meta_info["type"],
+            server_ip=self.server_ip,
+            server_port=self.server_port,
+        )
         results = []
         num_workers = self.task_info.get("num_workers", 1)
         with ThreadPoolExecutor(max_workers=num_workers) as executor:
