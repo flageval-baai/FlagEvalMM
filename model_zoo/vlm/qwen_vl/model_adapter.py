@@ -15,6 +15,7 @@ class CustomDataset(ServerDataset):
         img_path = data["img_path"]
         qs = data["question"]
         qs, idx = process_images_symbol(qs)
+        qs = qs.strip()
         idx = set(idx)
         img_path_idx = []
         for i in idx:
@@ -43,7 +44,11 @@ class ModelAdapter(BaseModelAdapter):
         if hasattr(model, "module"):
             model = model.module
         self.model = model
-        self.processor = AutoProcessor.from_pretrained(ckpt_path)
+        min_pixels = 256 * 28 * 28
+        max_pixels = 1280 * 28 * 28
+        self.processor = AutoProcessor.from_pretrained(
+            ckpt_path, min_pixels=min_pixels, max_pixels=max_pixels
+        )
 
     def build_message(
         self,
@@ -86,7 +91,6 @@ class ModelAdapter(BaseModelAdapter):
             img_path_flaten = [p[0] for p in img_path]
             qs = qs[0]
             messages = self.build_message(qs, image_paths=img_path_flaten)
-
             text = self.processor.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True
             )
@@ -101,7 +105,7 @@ class ModelAdapter(BaseModelAdapter):
             inputs = inputs.to("cuda")
 
             # Inference
-            generated_ids = self.model.generate(**inputs, max_new_tokens=1024)
+            generated_ids = self.model.generate(**inputs, max_new_tokens=4096)
             generated_ids_trimmed = [
                 out_ids[len(in_ids) :]
                 for in_ids, out_ids in zip(inputs.input_ids, generated_ids)

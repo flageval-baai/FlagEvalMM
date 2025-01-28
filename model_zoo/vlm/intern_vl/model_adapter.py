@@ -67,6 +67,7 @@ class ModelAdapterVllm(BaseModelAdapter):
         data_loader = self.create_data_loader(
             CustomDataset,
             task_name,
+            task_type=meta_info["type"],
             collate_fn=default_collate_fn,
             batch_size=1,
             num_workers=2,
