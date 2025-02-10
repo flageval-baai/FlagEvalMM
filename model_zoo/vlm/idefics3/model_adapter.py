@@ -94,7 +94,7 @@ class ModelAdapter(BaseModelAdapter):
         cnt = 0
 
         data_loader = self.create_data_loader(
-            CustomDataset, task_name, collate_fn, batch_size=1, num_workers=2
+            CustomDataset, task_name, collate_fn=collate_fn, batch_size=1, num_workers=2
         )
         for question_id, question, images in data_loader:
             if cnt == 1:

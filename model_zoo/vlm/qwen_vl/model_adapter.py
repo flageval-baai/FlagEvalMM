@@ -1,7 +1,12 @@
 import torch
 from typing import Dict, Any
 import time
-from transformers import Qwen2VLForConditionalGeneration, AutoTokenizer, AutoProcessor
+from transformers import (
+    Qwen2VLForConditionalGeneration,
+    Qwen2_5_VLForConditionalGeneration,
+    AutoTokenizer,
+    AutoProcessor,
+)
 from flagevalmm.server import ServerDataset
 from flagevalmm.models.base_model_adapter import BaseModelAdapter
 from flagevalmm.server.utils import parse_args, process_images_symbol
@@ -32,12 +37,20 @@ class ModelAdapter(BaseModelAdapter):
         torch.set_grad_enabled(False)
         with self.accelerator.main_process_first():
             tokenizer = AutoTokenizer.from_pretrained(ckpt_path, trust_remote_code=True)
-            model = Qwen2VLForConditionalGeneration.from_pretrained(
-                ckpt_path,
-                device_map="auto",
-                torch_dtype=torch.bfloat16,
-                attn_implementation="flash_attention_2",
-            )
+            if "Qwen2.5" in ckpt_path:
+                model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+                    ckpt_path,
+                    device_map="auto",
+                    torch_dtype=torch.bfloat16,
+                    attn_implementation="flash_attention_2",
+                )
+            else:
+                model = Qwen2VLForConditionalGeneration.from_pretrained(
+                    ckpt_path,
+                    device_map="auto",
+                    torch_dtype=torch.bfloat16,
+                    attn_implementation="flash_attention_2",
+                )
 
         model = self.accelerator.prepare_model(model, evaluation_mode=True)
         self.tokenizer = tokenizer

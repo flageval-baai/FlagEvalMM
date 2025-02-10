@@ -70,7 +70,7 @@ class ModelAdapter(BaseModelAdapter):
         results = []
         cnt = 0
         data_loader = self.create_data_loader(
-            CustomDataset, task_name, collate_fn, batch_size=1
+            CustomDataset, task_name, collate_fn=collate_fn, batch_size=1
         )
 
         for question_id, question, images in data_loader:
