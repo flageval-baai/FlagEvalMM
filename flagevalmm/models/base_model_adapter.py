@@ -126,6 +126,7 @@ class BaseModelAdapter:
         self,
         dataset_cls: type[ServerDataset],
         task_name: str,
+        task_type: str = "vqa",
         collate_fn: Optional[Callable] = None,
         batch_size: int = 1,
         num_workers: int = 2,
@@ -133,7 +134,11 @@ class BaseModelAdapter:
         if self.accelerator is not None:
             with self.accelerator.main_process_first():
                 dataset = dataset_cls(
-                    task_name, self.server_ip, self.server_port, self.timeout
+                    task_name,
+                    self.server_ip,
+                    self.server_port,
+                    self.timeout,
+                    task_type=task_type,
                 )
                 data_loader = DataLoader(
                     dataset,

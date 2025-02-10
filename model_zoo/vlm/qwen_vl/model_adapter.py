@@ -1,7 +1,12 @@
 import torch
 from typing import Dict, Any
 import time
-from transformers import Qwen2VLForConditionalGeneration, AutoTokenizer, AutoProcessor
+from transformers import (
+    Qwen2VLForConditionalGeneration,
+    Qwen2_5_VLForConditionalGeneration,
+    AutoTokenizer,
+    AutoProcessor,
+)
 from flagevalmm.server import ServerDataset
 from flagevalmm.models.base_model_adapter import BaseModelAdapter
 from flagevalmm.server.utils import parse_args, process_images_symbol
@@ -15,6 +20,7 @@ class CustomDataset(ServerDataset):
         img_path = data["img_path"]
         qs = data["question"]
         qs, idx = process_images_symbol(qs)
+        qs = qs.strip()
         idx = set(idx)
         img_path_idx = []
         for i in idx:
@@ -31,19 +37,31 @@ class ModelAdapter(BaseModelAdapter):
         torch.set_grad_enabled(False)
         with self.accelerator.main_process_first():
             tokenizer = AutoTokenizer.from_pretrained(ckpt_path, trust_remote_code=True)
-            model = Qwen2VLForConditionalGeneration.from_pretrained(
-                ckpt_path,
-                device_map="auto",
-                torch_dtype=torch.bfloat16,
-                attn_implementation="flash_attention_2",
-            )
+            if "Qwen2.5" in ckpt_path:
+                model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+                    ckpt_path,
+                    device_map="auto",
+                    torch_dtype=torch.bfloat16,
+                    attn_implementation="flash_attention_2",
+                )
+            else:
+                model = Qwen2VLForConditionalGeneration.from_pretrained(
+                    ckpt_path,
+                    device_map="auto",
+                    torch_dtype=torch.bfloat16,
+                    attn_implementation="flash_attention_2",
+                )
 
         model = self.accelerator.prepare_model(model, evaluation_mode=True)
         self.tokenizer = tokenizer
         if hasattr(model, "module"):
             model = model.module
         self.model = model
-        self.processor = AutoProcessor.from_pretrained(ckpt_path)
+        min_pixels = 256 * 28 * 28
+        max_pixels = 1280 * 28 * 28
+        self.processor = AutoProcessor.from_pretrained(
+            ckpt_path, min_pixels=min_pixels, max_pixels=max_pixels
+        )
 
     def build_message(
         self,
@@ -86,7 +104,6 @@ class ModelAdapter(BaseModelAdapter):
             img_path_flaten = [p[0] for p in img_path]
             qs = qs[0]
             messages = self.build_message(qs, image_paths=img_path_flaten)
-
             text = self.processor.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True
             )
@@ -101,7 +118,7 @@ class ModelAdapter(BaseModelAdapter):
             inputs = inputs.to("cuda")
 
             # Inference
-            generated_ids = self.model.generate(**inputs, max_new_tokens=1024)
+            generated_ids = self.model.generate(**inputs, max_new_tokens=4096)
             generated_ids_trimmed = [
                 out_ids[len(in_ids) :]
                 for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
