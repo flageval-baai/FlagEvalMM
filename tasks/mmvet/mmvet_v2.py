@@ -1,7 +1,7 @@
 import os
 
 config = dict(
-    dataset_path="/share/projset/mmdataset/mm-vet-v2",
+    dataset_path="whyu/mm-vet-v2",
     processed_dataset_path="mm-vet-v2",
     processor="process.py",
 )

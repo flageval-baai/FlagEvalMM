@@ -13,12 +13,12 @@ model = dict(
 )
 vae = dict(
     type="VideoAutoencoderKL",
-    from_pretrained="/share/projset/models/t2i/sd-vae-ft-ema",
+    from_pretrained="stabilityai/sd-vae-ft-ema",
     micro_batch_size=1,
 )
 text_encoder = dict(
     type="t5",
-    from_pretrained="/share/projset/models/t2v/t5-v1_1-xxl",
+    from_pretrained="stabilityai/sd-vae-ft-ema",
     model_max_length=120,
 )
 scheduler = dict(

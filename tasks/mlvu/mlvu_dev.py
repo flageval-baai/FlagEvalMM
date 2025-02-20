@@ -3,7 +3,7 @@ register_evaluator = {"mlvu_dataset_evaluator.py": "MLUVDatasetEvaluator"}
 
 dataset = dict(
     type="MLVUDataset",
-    data_root="/share/projset/mmdataset/MLVU/MLVU",
+    data_root="MLVU/MVLU",
     split="dev",
     name="mlvu_dev",
 )

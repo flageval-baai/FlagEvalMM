@@ -136,6 +136,6 @@ if __name__ == "__main__":
         server_ip=args.server_ip,
         server_port=args.server_port,
         timeout=args.timeout,
-        extra_cfg={"model_path": "/share/projset/models/vlm/Pixtral-12B-2409"},
+        extra_cfg={"model_path": "mistralai/Pixtral-12B-2409"},
     )
     model_adapter.run()

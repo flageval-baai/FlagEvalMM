@@ -13,8 +13,7 @@ dataset = dict(
 
 clip_evaluator = dict(
     type="CLIPScoreEvaluator",
-    # model_name_or_path="openai/clip-vit-base-patch16",
-    model_name_or_path="/share/projset/models/t2i/clip-vit-base-patch16",
+    model_name_or_path="openai/clip-vit-base-patch16",
 )
 
 inception_metric_evaluator = dict(
