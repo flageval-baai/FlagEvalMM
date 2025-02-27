@@ -4,6 +4,7 @@ from flagevalmm.evaluator.pre_process import normalize_string
 from word2number import w2n
 from collections import defaultdict
 import numpy as np
+import re
 
 MCA_QUESTION_TYPES = set(
     [
@@ -26,7 +27,12 @@ NA_QUESTION_TYPES = set(
 
 
 def fuzzy_matching(pred):
-    return pred.split(" ")[0].rstrip(".").strip()
+    # extract the first number or digits
+    res = re.search(r"\d+\.\d+|\d+", pred)
+    if res:
+        return res.group()
+    else:
+        return pred.split(" ")[0].rstrip(".").strip()
 
 
 def abs_dist_norm(pred, target):

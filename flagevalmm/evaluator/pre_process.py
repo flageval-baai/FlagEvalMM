@@ -108,7 +108,7 @@ def convert_circled_numbers(text):
 
 def normalize_string(raw_answer):
     if "$" not in raw_answer:
-        wrong_answer_words = ["\\times", "不对", "不正确", "×", "x", "X"]
+        wrong_answer_words = ["\\times", "不对", "不正确", "×"]
         for word in wrong_answer_words:
             raw_answer = raw_answer.replace(word, "错误")
     raw_answer = re.sub(r"\\text\s*\{(.*?)\}", r"\1", raw_answer)
