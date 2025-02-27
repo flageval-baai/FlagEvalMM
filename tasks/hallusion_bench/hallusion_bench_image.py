@@ -1,5 +1,5 @@
 config = dict(
-    dataset_path="/share/projset/mmdataset/huggingface_format/HallusionBench",
+    dataset_path="rayguan/HallusionBench",
     split="image",
     processed_dataset_path="HallusionBench",
     processor="process.py",

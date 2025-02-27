@@ -1,4 +1,4 @@
-from typing import Optional, Any, Dict, List
+from typing import Optional, Any, Dict, List, Union
 import os.path as osp
 import json
 from torch.utils.data import Dataset
@@ -17,7 +17,7 @@ class VqaBaseDataset(Dataset):
         *,
         name: str,
         data_root: Optional[str] = None,
-        anno_file: Optional[str] = None,
+        anno_file: Optional[Union[str, List[str]]] = None,
         cache_dir: str = FLAGEVALMM_DATASETS_CACHE_DIR,
         config: Optional[dict] = None,
         prompt_template: Optional[str] = None,
@@ -30,7 +30,7 @@ class VqaBaseDataset(Dataset):
         )
 
         anno_file = "data.json" if anno_file is None else anno_file
-        self.annotations = json.load(open(osp.join(self.data_root, anno_file)))
+        self.annotations = self.load_annotations(anno_file)
         self.name = name
         if prompt_template is not None:
             self.prompt_template = PROMPTS.build(prompt_template)
@@ -39,6 +39,15 @@ class VqaBaseDataset(Dataset):
         self.with_label = with_label or debug
         if debug:
             self.annotations = self.annotations[:32]
+
+    def load_annotations(self, anno_file: Union[str, List[str]]):
+        if isinstance(anno_file, str):
+            annotations = json.load(open(osp.join(self.data_root, anno_file)))
+        else:
+            annotations = []
+            for file in anno_file:
+                annotations.extend(json.load(open(osp.join(self.data_root, file))))
+        return annotations
 
     def __len__(self) -> int:
         return len(self.annotations)
