@@ -52,7 +52,7 @@ def get_result(sim_matrix) -> Dict[str, Any]:
     return result
 
 @EVALUATORS.register_module()
-class VideoRetrievalEvaluator:
+class RetrievalEvaluator:
     def __init__(self, **kwargs):
         pass
 
@@ -63,10 +63,12 @@ class VideoRetrievalEvaluator:
         sim_matrix = np.load(os.path.join(output_dir, f"{dataset_name}.npy"))
 
         # Calculate retrieval metrics
-        result = get_result(sim_matrix, dataset)
+        result = get_result(sim_matrix)
 
         # Save result
         json_save(result, os.path.join(output_dir, f"{dataset_name}_result.json"))
         print(f"{result}")
+
+        return result
 
 
