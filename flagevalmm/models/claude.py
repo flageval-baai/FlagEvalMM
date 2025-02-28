@@ -1,3 +1,4 @@
+import os
 from typing import Optional, List, Any, Dict
 from flagevalmm.common.logger import get_logger
 from flagevalmm.models.base_api_model import BaseApiModel
@@ -27,7 +28,7 @@ class Claude(BaseApiModel):
         self,
         model_name: str,
         chat_name: Optional[str] = None,
-        max_tokens: Optional[int] = None,
+        max_tokens: int = 1024,
         temperature: float = 0.0,
         max_image_size: int = 5 * 1024 * 1024,
         min_short_side: Optional[int] = None,
@@ -50,6 +51,8 @@ class Claude(BaseApiModel):
         )
         self.model_type = "claude"
         self.stream = stream
+        if api_key is None:
+            api_key = os.getenv("ANTHROPIC_API_KEY")
         self.client = anthropic.Anthropic(api_key=api_key)
 
     def _chat(self, chat_messages: Any, **kwargs):
