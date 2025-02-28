@@ -15,7 +15,7 @@ class VideoDataset(VqaBaseDataset):
             "question_id": str(annotation["question_id"]),
             "type": annotation["question_type"],
         }
-        if self.with_label:
+        if self.with_label and "answer" in annotation:
             ret["label"] = annotation["answer"]
         return ret
 

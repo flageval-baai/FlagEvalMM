@@ -73,7 +73,12 @@ class EvaluationServer:
     ) -> None:
         # Create a unique process ID using timestamp
         process_id = f"{task_name}_{model_name}_{int(time.time() * 1000)}"
-
+        # If evaluator is not specified, skip evaluation
+        if not self.config_dict[task_name].get("evaluator", None):
+            logger.warning(
+                f"No evaluator specified for task {task_name}, skipping evaluation"
+            )
+            return
         evaluator = EVALUATORS.build(self.config_dict[task_name].evaluator)
         start_method = self.config_dict[task_name].evaluator.get("start_method", "fork")
         if task_name not in self.active_task:
