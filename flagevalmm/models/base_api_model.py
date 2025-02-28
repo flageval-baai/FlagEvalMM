@@ -40,8 +40,9 @@ class BaseApiModel:
         self.stream = stream
         self.chat_args: Dict[str, Any] = {
             "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
         }
+        if max_tokens is not None:
+            self.chat_args["max_tokens"] = max_tokens
 
         self.cache = ModelCache(self.chat_name) if use_cache else None
 
