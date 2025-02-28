@@ -7,7 +7,7 @@ from PIL import Image
 import numpy as np
 from mmengine.config import Config
 from typing import Any, List, Optional, Tuple
-import importlib
+import importlib.util
 from flagevalmm.registry import DATASETS, EVALUATORS
 import os.path as osp
 
@@ -155,8 +155,10 @@ def merge_args(cfg: Config, task_config_file: str, args: argparse.Namespace) -> 
     if args.try_run:
         cfg.dataset.debug = True
     base_dir = osp.abspath(osp.dirname(task_config_file))
-    cfg.evaluator.base_dir = base_dir
     cfg.dataset.base_dir = base_dir
+    if cfg.get("evaluator", None):
+        cfg.evaluator.base_dir = base_dir
+
     return cfg
 
 

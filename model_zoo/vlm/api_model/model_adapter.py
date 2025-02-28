@@ -83,6 +83,7 @@ class ModelAdapter(BaseModelAdapter):
             "max_tokens",
             "temperature",
             "chat_name",
+            "max_num_frames",
             "stream",
         ]
         model_config = {k: task_info[k] for k in model_config_keys if k in task_info}
