@@ -47,6 +47,13 @@ class VqaBaseDataset(Dataset):
             annotations = []
             for file in anno_file:
                 annotations.extend(json.load(open(osp.join(self.data_root, file))))
+        # find duplicate question_id
+        question_id_set = set()
+        for anno in annotations:
+            assert (
+                anno["question_id"] not in question_id_set
+            ), f"Duplicate question_id: {anno['question_id']}"
+            question_id_set.add(anno["question_id"])
         return annotations
 
     def __len__(self) -> int:
