@@ -171,7 +171,7 @@ This will evaluate the model on the data server.
 If you have generated results from the data server, you can directly evaluate the results by:
 
 ```bash
-python flagevalmm/eval.py --output-dir ./results/qwenvl2-7b --exec model_zoo/vlm/qwen_vl/model_adapter.py --tasks tasks/charxiv/charxiv_val.py --without-infer
+python flagevalmm/eval.py --output-dir ./results/qwenvl2-7b --tasks tasks/charxiv/charxiv_val.py --without-infer
 ```
 
 ## About Data

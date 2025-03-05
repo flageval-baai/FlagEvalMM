@@ -1,5 +1,5 @@
 config = dict(
-    dataset_path="/share/projset/mmdataset/huggingface_format/textvqa",
+    dataset_path="facebook/textvqa",
     split="validation",
     processed_dataset_path="textvqa",
     processor="process.py",

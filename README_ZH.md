@@ -175,7 +175,7 @@ python flagevalmm/eval.py --output-dir ./results/qwenvl2-7b --exec model_zoo/vlm
 
 ## 添加你自己的任务
 
-如果你想添加自己的数据集，请参照该文档：[添加你自己的任务](.tasks/README.md)
+如果你想添加自己的数据集，请参照该文档：[添加你自己的任务](./tasks/README.md)
 
 ## 关于数据
 
