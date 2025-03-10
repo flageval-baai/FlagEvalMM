@@ -71,7 +71,7 @@ class RetrievalMSRVTTDataset(Dataset):
         video_mask = np.zeros((1, self.max_frames), dtype=np.long)
         video = np.zeros((1, self.max_frames, 1, 3, self.image_resolution, self.image_resolution), dtype=np.float)
 
-        video_path = os.path.join(self.data_root, "videos", video_id + ".mp4")
+        video_path = os.path.join(self.data_root, "MSRVTT_Videos", video_id + ".mp4")
 
         # 提取视频帧
         raw_video_data = self.frameExtractor.get_video_data(video_path, self.max_frames)
