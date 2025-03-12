@@ -27,13 +27,12 @@ def json_save(content: Dict[str, Any], jf_nm: str) -> None:
     with open(jf_nm, "w") as jf:
         json.dump(content, jf)
 
-
-# 获取评测指标的函数
+# Function to get evaluation metrics
 def get_result(sim_matrix) -> Dict[str, Any]:
     """
-    获取视频检索的评测指标
-    :param similarity_matrix: 相似度矩阵
-    :return: 评测指标字典
+    Get video retrieval evaluation metrics
+    :param similarity_matrix: Similarity matrix
+    :return: Dictionary of evaluation metrics
     """
     # compute text-to-video retrieval
     tv_metrics = compute_metrics(sim_matrix)
@@ -70,5 +69,3 @@ class RetrievalEvaluator:
         print(f"{result}")
 
         return result
-
-

@@ -25,7 +25,7 @@ class RetrievalMSRVTTDataset(Dataset):
         feature_framerate: float = 1.0,
         max_frames: int = 100,
         image_resolution: int = 224,
-        tokenizer=None,  # 添加 tokenizer 参数
+        tokenizer=None,  # Add tokenizer parameter
         **kwargs,
     ) -> None:
         self.data_root = get_data_root(
@@ -33,21 +33,21 @@ class RetrievalMSRVTTDataset(Dataset):
         )
 
         self.name = name
-        # 加载 MSRVTT 数据集的 CSV 文件
+        # Load the MSRVTT dataset CSV file
         self.csv_path = os.path.join(self.data_root, anno_file if anno_file else "MSRVTT_JSFUSION_test.csv")
         self.data = pd.read_csv(self.csv_path)
 
-        # 初始化视频帧提取器
+        # Initialize the video frame extractor
         self.frameExtractor = RawFrameExtractor(framerate=feature_framerate, size=image_resolution)
 
-        # 初始化文本和视频相关参数
+        # Initialize text and video-related parameters
         self.max_words = max_words
         self.max_frames = max_frames
         self.feature_framerate = feature_framerate
         self.image_resolution = image_resolution
-        self.tokenizer = tokenizer  # 设置 tokenizer
+        self.tokenizer = tokenizer  # Set tokenizer
 
-        # 加载视频和文本数据
+        # Load video and caption data
         self.videos = self.data['video_id'].values
         self.captions = self.data['sentence'].values
 
@@ -58,22 +58,22 @@ class RetrievalMSRVTTDataset(Dataset):
         video_id = self.videos[index]
         caption = self.captions[index]
 
-        # 获取视频帧
+        # Get video frames
         video_frames, video_mask = self._get_rawvideo(video_id)
 
-        # 获取文本特征
+        # Get text features
         text_features, text_mask = self._get_text(caption)
 
         return video_frames, video_mask, text_features, text_mask
 
     def _get_rawvideo(self, video_id: str) -> Tuple[np.ndarray, np.ndarray]:
-        """获取视频帧数据"""
+        """Get video frame data"""
         video_mask = np.zeros((1, self.max_frames), dtype=np.long)
         video = np.zeros((1, self.max_frames, 1, 3, self.image_resolution, self.image_resolution), dtype=np.float)
 
         video_path = os.path.join(self.data_root, "MSRVTT_Videos", video_id + ".mp4")
 
-        # 提取视频帧
+        # Extract video frames
         raw_video_data = self.frameExtractor.get_video_data(video_path, self.max_frames)
         raw_video_data = raw_video_data['video']
 
@@ -97,24 +97,24 @@ class RetrievalMSRVTTDataset(Dataset):
         return video, video_mask
 
     def _get_text(self, caption: str) -> Tuple[np.ndarray, np.ndarray]:
-        """获取文本特征"""
-        # 使用 tokenizer 对文本进行编码
+        """Get text features"""
+        # Use tokenizer to encode text
         words = self.tokenizer.tokenize(caption)
 
-        # 添加 CLS 和 SEP 标记
+        # Add CLS and SEP tokens
         words = [self.tokenizer.cls_token] + words + [self.tokenizer.sep_token]
 
-        # 截断或填充到最大长度
+        # Truncate or pad to the max length
         if len(words) > self.max_words:
             words = words[:self.max_words]
         else:
             words = words + [self.tokenizer.pad_token] * (self.max_words - len(words))
 
-        # 转换为 ID
+        # Convert to IDs
         input_ids = self.tokenizer.convert_tokens_to_ids(words)
         input_mask = [1] * len(input_ids)
 
-        # 填充到最大长度
+        # Pad to the max length
         while len(input_ids) < self.max_words:
             input_ids.append(0)
             input_mask.append(0)

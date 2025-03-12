@@ -7,7 +7,6 @@
 import torch
 import numpy as np
 from PIL import Image
-# pytorch=1.7.1
 from torchvision.transforms import Compose
 from torchvision.transforms import Resize
 from torchvision.transforms import CenterCrop

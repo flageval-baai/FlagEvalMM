@@ -9,7 +9,7 @@ flagevalmm --tasks tasks/retrieval/msrvtt/msrvtt_test.py \
   --model "your clip2video path" \
   --output-dir ./results/clip2video
 ```
-#  Performance
+#  Performance results for CLIP2Video
 
 | Protocol | R@1 | R@5 | R@10 | Median Rank | Mean Rank |
 |----------|-----|-----|------|-------------|-----------|
