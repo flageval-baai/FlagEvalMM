@@ -4,7 +4,6 @@ import numpy as np
 import os
 from typing import Dict, Any
 from flagevalmm.registry import EVALUATORS
-import torch
 
 def compute_metrics(x):
     sx = np.sort(-x, axis=1)
