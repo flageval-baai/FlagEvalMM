@@ -11,7 +11,7 @@ ANSWER_LETTERS = ["A", "B", "C", "D"]
 
 
 def merge_relation(relation):
-    """将关系映射为更高层的类别"""
+    """Map relationships to higher-level categories"""
     if relation in DIRECTION_SET:
         return "direction"
     elif relation in DISTANCE_SET:
@@ -21,25 +21,25 @@ def merge_relation(relation):
 
 
 def process(cfg):
-    """处理数据集并保存为标准格式"""
+    """Process the dataset and save it in a standard format"""
     data_dir, split = cfg.dataset_path, cfg.split
     name = cfg.get("dataset_name", "")
 
-    # 构建输出路径
+    # build output path
     output_dir = osp.join(cfg.processed_dataset_path, name, split)
     img_dir = osp.join(output_dir, "img")
     os.makedirs(img_dir, exist_ok=True)
 
-    # 加载数据集
+    # load dataset
     data = load_dataset(data_dir, name=name, split=split)
     content = []
 
-    # 处理每一条数据
+    # process each item
     for annotation in data:
         question_id = annotation["question_id"]
         img_name = f"img/{question_id}.png"
 
-        # 构建信息字典
+        # build information dictionary
         info = {
             "question": annotation["question"],
             "answer": ANSWER_LETTERS[annotation["answer"]],
@@ -51,7 +51,7 @@ def process(cfg):
             "question_type": "multiple-choice",
         }
 
-        # 保存图片
+        # save image
         try:
             image_data = base64.b64decode(annotation["image"])
             with open(osp.join(output_dir, img_name), "wb") as image_file:
@@ -59,7 +59,7 @@ def process(cfg):
         except Exception as e:
             print(f"Error saving image {question_id}: {e}")
 
-        # 格式化问题文本
+        # format question
         question = info["question"]
         if "options" in info:
             options_text = "\n".join([f"{opt}" for opt in info["options"]])
@@ -68,7 +68,7 @@ def process(cfg):
         info["formatted_question"] = question
         content.append(info)
 
-    # 保存处理后的数据
+    # save data
     output_file = osp.join(output_dir, "data.json")
     with open(output_file, "w") as f:
         json.dump(content, f, indent=2)
