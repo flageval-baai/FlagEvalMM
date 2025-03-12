@@ -40,7 +40,7 @@ class ModelAdapter(BaseModelAdapter):
             frame_image = Image.fromarray(frame).convert("RGB")
             processed_frame = self.preprocess(images=frame_image, return_tensors="pt")
             video_features.append(processed_frame["pixel_values"].squeeze(0))
-        video_features = torch.stack(video_features).mean(dim=0) #在这个函数里是把视频处理成一帧一帧的就行，还是要把所有帧都堆起来
+        video_features = torch.stack(video_features).mean(dim=0) 
         return video_features.squeeze(0).cuda()
 
     def get_caption(self, caption_id, task_name):
