@@ -8,7 +8,7 @@ from collections import defaultdict
 
 
 @EVALUATORS.register_module()
-class MLUVDatasetEvaluator(BaseEvaluator):
+class MVBenchDatasetEvaluator(BaseEvaluator):
     def __init__(self, metrics: List = ["accuracy"]) -> None:
         self.metrics = metrics
 
