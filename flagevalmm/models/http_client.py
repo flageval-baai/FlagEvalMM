@@ -51,39 +51,31 @@ class HttpClient(BaseApiModel):
         chat_args = self.chat_args.copy()
         chat_args.update(kwargs)
         data = {"model": f"{self.model_name}", "messages": chat_messages, **chat_args}
-        try:
-            response = requests.post(
-                self.url, headers=self.headers, data=json.dumps(data), timeout=300
+        response = requests.post(
+            self.url, headers=self.headers, data=json.dumps(data), timeout=300
+        )
+        response_json = response.json()
+        if response.status_code != 200:
+            if "error" not in response_json:
+                yield f"Error code: {response_json['message']}"
+                return
+            err_msg = response_json["error"]
+            if "code" in err_msg and (
+                err_msg["code"] == "data_inspection_failed" or err_msg["code"] == "1301"
+            ):
+                yield err_msg["message"]
+                return
+            raise Exception(
+                f"Request failed with status code {response.status_code}: {err_msg}"
             )
-            response_json = response.json()
-            if response.status_code != 200:
-                if "error" not in response_json:
-                    yield f"Error code: {response_json['message']}"
-                    return
-                err_msg = response_json["error"]
-                if "code" in err_msg and (
-                    err_msg["code"] == "data_inspection_failed"
-                    or err_msg["code"] == "1301"
-                ):
-                    yield err_msg["message"]
-                    return
-                raise Exception(
-                    f"Request failed with status code {response.status_code}: {err_msg}"
-                )
-            if "choices" in response_json:
-                message = response_json["choices"][0]["message"]
-                if "content" in message:
-                    yield message["content"]
-                else:
-                    yield ""
+        if "choices" in response_json:
+            message = response_json["choices"][0]["message"]
+            if "content" in message:
+                yield message["content"]
             else:
-                yield response_json["completions"][0]["text"]
-        except requests.exceptions.Timeout:
-            yield "Error code: 408, Request timed out. Please check if the server is responding or consider increasing the timeout."
-        except requests.exceptions.ConnectionError:
-            yield "Error code: 503, Connection error. Please check if the server is running at the specified URL."
-        except Exception as e:
-            yield f"Error code: 500, An error occurred: {str(e)}"
+                yield ""
+        else:
+            yield response_json["completions"][0]["text"]
 
     def build_message(
         self,
