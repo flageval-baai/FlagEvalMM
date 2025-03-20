@@ -21,7 +21,7 @@ class ModelAdapter(BaseModelAdapter):
         response = get_retrieval_data(
             index=video_id,
             task_name=task_name,
-            data_type="video",  
+            data_type="video",
             server_ip=self.server_ip,
             server_port=self.server_port,
             timeout=self.timeout,
@@ -30,17 +30,17 @@ class ModelAdapter(BaseModelAdapter):
         cap = cv2.VideoCapture(video_path)
         frames = []
         while True:
-            ret, frame = cap.read()  
+            ret, frame = cap.read()
             if not ret:
-                break  
-            frames.append(frame)  
+                break
+            frames.append(frame)
         cap.release()
         video_features = []
-        for frame in frames:  
+        for frame in frames:
             frame_image = Image.fromarray(frame).convert("RGB")
             processed_frame = self.preprocess(images=frame_image, return_tensors="pt")
             video_features.append(processed_frame["pixel_values"].squeeze(0))
-        video_features = torch.stack(video_features).mean(dim=0) 
+        video_features = torch.stack(video_features).mean(dim=0)
         return video_features.squeeze(0).cuda()
 
     def get_caption(self, caption_id, task_name):
@@ -58,7 +58,7 @@ class ModelAdapter(BaseModelAdapter):
         output_dir = meta_info["output_dir"]
         max_cap_len = 77
         itd = 50
-        N = meta_info["video_number"]  # 假设你有多个视频
+        N = meta_info["video_number"]
 
         acc_video_embeddings = None
         acc_text_embeddings = None
@@ -71,7 +71,9 @@ class ModelAdapter(BaseModelAdapter):
             videos = [self.get_video(video_id, task_name) for video_id in range(_s, _e)]
             videos = torch.stack(videos, 0).squeeze()
 
-            captions = [self.get_caption(caption_id, task_name) for caption_id in range(_s * 5, _e * 5)]
+            captions = [
+                self.get_caption(caption_id, task_name) for caption_id in range(_s, _e)
+            ]
             texts = [
                 self.preprocess(
                     text=cap,
@@ -87,8 +89,12 @@ class ModelAdapter(BaseModelAdapter):
             with torch.no_grad():
                 video_features = self.model.get_image_features(videos)
                 text_features = self.model.get_text_features(texts)
-                video_embeddings = video_features / video_features.norm(dim=-1, keepdim=True)
-                text_embeddings = text_features / text_features.norm(dim=-1, keepdim=True)
+                video_embeddings = video_features / video_features.norm(
+                    dim=-1, keepdim=True
+                )
+                text_embeddings = text_features / text_features.norm(
+                    dim=-1, keepdim=True
+                )
 
             torch.cuda.empty_cache()
 
@@ -117,6 +123,7 @@ class ModelAdapter(BaseModelAdapter):
         np.save(f"{full_save_path}", acc_sim)
 
         return acc_sim
+
 
 if __name__ == "__main__":
     args = parse_args()

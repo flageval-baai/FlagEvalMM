@@ -1,16 +1,15 @@
-from typing import Optional, Any, Dict, List, Tuple
+from typing import Optional, Any, Dict, Tuple
 import os
-import json
 import pandas as pd
-import numpy as np
 from torch.utils.data import Dataset
-from PIL import Image
 from flagevalmm.registry import DATASETS
 from flagevalmm.common.const import FLAGEVALMM_DATASETS_CACHE_DIR
 from flagevalmm.dataset.utils import get_data_root
 import sys
+
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
+
 
 @DATASETS.register_module()
 class RetrievalMSRVTTDataset(Dataset):
@@ -31,12 +30,14 @@ class RetrievalMSRVTTDataset(Dataset):
 
         self.name = name
         # Load the MSRVTT dataset CSV file
-        self.csv_path = os.path.join(self.data_root, anno_file if anno_file else "MSRVTT_JSFUSION_test.csv")
+        self.csv_path = os.path.join(
+            self.data_root, anno_file if anno_file else "MSRVTT_JSFUSION_test.csv"
+        )
         self.data = pd.read_csv(self.csv_path)
 
         # Load video and caption data
-        self.videos = self.data['video_id'].values
-        self.captions = self.data['sentence'].values
+        self.videos = self.data["video_id"].values
+        self.captions = self.data["sentence"].values
 
     def __len__(self):
         return len(self.videos)
@@ -50,7 +51,11 @@ class RetrievalMSRVTTDataset(Dataset):
     def get_video(self, video_index: int) -> Dict[str, str]:
         assert video_index < len(self)
         video_id = self.videos[video_index]
-        return {"video_path": os.path.join(self.data_root, "MSRVTT_Videos", video_id + ".mp4")}
+        return {
+            "video_path": os.path.join(
+                self.data_root, "MSRVTT_Videos", video_id + ".mp4"
+            )
+        }
 
     def get_caption(self, catpion_index: int) -> Dict[str, str]:
         assert catpion_index < len(self)

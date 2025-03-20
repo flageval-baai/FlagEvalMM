@@ -5,6 +5,7 @@ import os
 from typing import Dict, Any
 from flagevalmm.registry import EVALUATORS
 
+
 def compute_metrics(x):
     sx = np.sort(-x, axis=1)
     d = np.diag(-x)
@@ -13,18 +14,20 @@ def compute_metrics(x):
     ind = np.where(ind == 0)
     ind = ind[1]
     metrics = {}
-    metrics['R1'] = float(np.sum(ind == 0)) * 100 / len(ind)
-    metrics['R5'] = float(np.sum(ind < 5)) * 100 / len(ind)
-    metrics['R10'] = float(np.sum(ind < 10)) * 100 / len(ind)
-    metrics['MR'] = np.median(ind) + 1
-    metrics["MedianR"] = metrics['MR']
+    metrics["R1"] = float(np.sum(ind == 0)) * 100 / len(ind)
+    metrics["R5"] = float(np.sum(ind < 5)) * 100 / len(ind)
+    metrics["R10"] = float(np.sum(ind < 10)) * 100 / len(ind)
+    metrics["MR"] = np.median(ind) + 1
+    metrics["MedianR"] = metrics["MR"]
     metrics["MeanR"] = np.mean(ind) + 1
     metrics["cols"] = [int(i) for i in list(ind)]
     return metrics
 
+
 def json_save(content: Dict[str, Any], jf_nm: str) -> None:
     with open(jf_nm, "w") as jf:
         json.dump(content, jf)
+
 
 # Function to get evaluation metrics
 def get_result(sim_matrix) -> Dict[str, Any]:
@@ -39,18 +42,19 @@ def get_result(sim_matrix) -> Dict[str, Any]:
     vt_metrics = compute_metrics(sim_matrix.T)
 
     result = {
-        "v2t_R@1": vt_metrics['R1'],
-        "v2t_R@5": vt_metrics['R5'],
-        "v2t_R@10": vt_metrics['R10'],
-        "t2v_R@1": tv_metrics['R1'],
-        "t2v_R@5": tv_metrics['R5'],
-        "t2v_R@10": tv_metrics['R10'],
+        "v2t_R@1": vt_metrics["R1"],
+        "v2t_R@5": vt_metrics["R5"],
+        "v2t_R@10": vt_metrics["R10"],
+        "t2v_R@1": tv_metrics["R1"],
+        "t2v_R@5": tv_metrics["R5"],
+        "t2v_R@10": tv_metrics["R10"],
     }
 
     return result
 
+
 @EVALUATORS.register_module()
-class RetrievalEvaluator:
+class RetrievalMSRVTTEvaluator:
     def __init__(self, **kwargs):
         pass
 

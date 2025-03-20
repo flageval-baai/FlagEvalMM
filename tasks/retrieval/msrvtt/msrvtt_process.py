@@ -1,15 +1,13 @@
-import json
 import os
-import os.path as osp
-from PIL import Image
 import subprocess
 import zipfile
-import os
+
+
 # from dataloaders.rawframe_util import RawFrameExtractor
 def process(cfg):
-    download_and_extract_dataset(cfg.dataset_path,"./",cfg.extract_dir)
-    
- 
+    download_and_extract_dataset(cfg.dataset_path, "./", cfg.extract_dir)
+
+
 def download_and_extract_dataset(repo_id, cache_dir, extract_dir):
     """
     Download Hugging Face dataset and extract it to the specified path.
@@ -28,7 +26,9 @@ def download_and_extract_dataset(repo_id, cache_dir, extract_dir):
         f"huggingface-cli download {repo_id} --repo-type dataset --local-dir {cache_dir}"
     )
     try:
-        result = subprocess.run(command, shell=True, check=True, text=True, capture_output=True)
+        result = subprocess.run(
+            command, shell=True, check=True, text=True, capture_output=True
+        )
         print("Download successful!")
         print(result.stdout)
     except subprocess.CalledProcessError as e:
@@ -37,7 +37,9 @@ def download_and_extract_dataset(repo_id, cache_dir, extract_dir):
         return  # If download fails, return immediately
 
     # Locate the downloaded ZIP file
-    zip_file_path = os.path.join(cache_dir, "MSRVTT_Videos.zip")  # Assume the ZIP file is named MSRVTT_Videos.zip
+    zip_file_path = os.path.join(
+        cache_dir, "MSRVTT_Videos.zip"
+    )  # Assume the ZIP file is named MSRVTT_Videos.zip
     if not os.path.exists(zip_file_path):
         print(f"Error: ZIP file '{zip_file_path}' not found.")
         return
@@ -47,7 +49,7 @@ def download_and_extract_dataset(repo_id, cache_dir, extract_dir):
 
     # Extract the ZIP file
     try:
-        with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+        with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
             zip_ref.extractall(extract_dir)
         print(f"ZIP file extracted successfully to: {extract_dir}")
     except zipfile.BadZipFile:

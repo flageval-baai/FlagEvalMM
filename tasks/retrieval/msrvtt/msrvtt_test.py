@@ -1,6 +1,5 @@
-
 register_dataset = {"retrieval_msrvtt_dataset.py": "RetrievalMSRVTTDataset"}
-register_evaluator = {"video_retrieval_evaluator.py": "RetrievalEvaluator"}
+register_evaluator = {"video_retrieval_evaluator.py": "RetrievalMSRVTTEvaluator"}
 
 config = dict(
     dataset_path="shiyili1111/MSR-VTT",
@@ -16,5 +15,5 @@ dataset = dict(
 )
 
 evaluator = dict(
-    type="RetrievalEvaluator",
+    type="RetrievalMSRVTTEvaluator",
 )
