@@ -10,7 +10,13 @@ flagevalmm --tasks tasks/retrieval/msrvtt/msrvtt_test.py \
 ```
 #  Performance results for CLIP2Video
 
-| Protocol | R@1 | R@5 | R@10 | Median Rank | Mean Rank |
-|----------|-----|-----|------|-------------|-----------|
-| MSRVTT | 45.6 | 72.6 | 81.7 | 2 | 14.6 |
+| Protocol | R@1  | R@5  | R@10 |
+|----------|------|------|------|
+| v2t      | 10.1 | 20.8 | 27.8 |
+
+
+| Protocol | R@1   | R@5   | R@10  |
+|----------|-------|-------|-------|
+| t2v      | 6.82  | 16.50 | 21.64 |
+
 
