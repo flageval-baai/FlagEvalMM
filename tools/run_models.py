@@ -1,6 +1,6 @@
 import subprocess
 import time
-from typing import List, Dict, Set, Optional, Tuple
+from typing import List, Dict, Set, Optional
 import os
 import argparse
 from mmengine import Config

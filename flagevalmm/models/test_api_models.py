@@ -8,7 +8,6 @@ from flagevalmm.models.gemini import Gemini
 
 
 class BaseTestModel:
-
     def test_generate_joke(self):
         system_prompt = "Answer all questions in Chinese"
         query = "Tell me a joke about Mars and Pokemon, it should be very funny"
