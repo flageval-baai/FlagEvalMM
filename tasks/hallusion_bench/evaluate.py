@@ -62,12 +62,12 @@ def cal_accuracy(annotations, predictions):
         is_correct = gt["answer"] == answer["answer"]
         answer["correct"] = is_correct
         answer["label"] = gt["answer"]
-        answer[
-            "mix_figure_id"
-        ] = f"{gt['subcategory']}_{gt['set_id']}_{gt['figure_id']}"
-        answer[
-            "mix_question_id"
-        ] = f"{gt['subcategory']}_{gt['set_id']}_{gt['question_id_ori']}"
+        answer["mix_figure_id"] = (
+            f"{gt['subcategory']}_{gt['set_id']}_{gt['figure_id']}"
+        )
+        answer["mix_question_id"] = (
+            f"{gt['subcategory']}_{gt['set_id']}_{gt['question_id_ori']}"
+        )
         right += is_correct
     return round(right / len(predictions) * 100, 2)
 
