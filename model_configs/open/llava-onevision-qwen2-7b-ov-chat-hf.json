@@ -1,0 +1,7 @@
+{
+    "model_name": "models/vlm/llava-onevision-qwen2-7b-ov-chat-hf",
+    "api_key": "EMPTY",
+    "url": "http://localhost:8000/v1/chat/completions",
+    "extra_args": "--limit-mm-per-prompt image=2 --max-model-len 32768",
+    "num_workers": 8
+}

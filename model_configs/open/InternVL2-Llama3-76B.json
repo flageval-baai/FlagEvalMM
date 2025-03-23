@@ -1,0 +1,8 @@
+{
+    "model_name": "models/vlm/InternVL2-Llama3-76B",
+    "api_key": "EMPTY",
+    "url": "http://localhost:8001/v1/chat/completions",
+    "num_workers": 8,
+    "max_long_side": 1500,
+    "extra_args": "--limit-mm-per-prompt image=18 --max-model-len 24576  --tensor-parallel-size 4 --trust-remote-code --mm-processor-kwargs '{\"max_dynamic_patch\":4}'"
+}

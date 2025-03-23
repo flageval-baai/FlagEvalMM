@@ -1,0 +1,4 @@
+{
+    "model_name": "models/vlm/Molmo-72B-0924",
+    "tensor_parallel_size": 4
+}

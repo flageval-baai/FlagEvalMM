@@ -1,0 +1,8 @@
+{
+    "model_name": "models/vlm/Qwen2-VL-2B-Instruct",
+    "api_key": "EMPTY",
+    "url": "http://localhost:8000/v1/chat/completions",
+    "min_short_side": 28,
+    "num_workers": 8,
+    "extra_args": "--limit-mm-per-prompt image=2 --max-model-len 32768 --max_num_seqs 5"
+}

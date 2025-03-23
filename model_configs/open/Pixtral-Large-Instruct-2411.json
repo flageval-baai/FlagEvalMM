@@ -1,0 +1,7 @@
+{
+    "model_name": "models/vlm/Pixtral-Large-Instruct-2411",
+    "api_key": "EMPTY",
+    "url": "http://localhost:8000/v1/chat/completions",
+    "num_workers": 8,
+    "extra_args": "--tokenizer-mode mistral --limit-mm-per-prompt image=18 --max-model-len 32768 --tensor-parallel-size 8"
+}
