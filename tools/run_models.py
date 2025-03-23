@@ -9,11 +9,27 @@ import json
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, required=True, help="Config file with model information and tasks")
-    parser.add_argument("--cfg-dir", type=str, default="model_configs/open", help="Directory containing model configs")
-    parser.add_argument("--output-dir", type=str, help="Optional output directory override")
-    parser.add_argument("--models-base-dir", type=str, default="models/vlm", 
-                       help="Base directory for model files")
+    parser.add_argument(
+        "--config",
+        type=str,
+        required=True,
+        help="Config file with model information and tasks",
+    )
+    parser.add_argument(
+        "--cfg-dir",
+        type=str,
+        default="model_configs/open",
+        help="Directory containing model configs",
+    )
+    parser.add_argument(
+        "--output-dir", type=str, help="Optional output directory override"
+    )
+    parser.add_argument(
+        "--models-base-dir",
+        type=str,
+        default="models/vlm",
+        help="Base directory for model files",
+    )
     return parser.parse_args()
 
 
@@ -69,7 +85,7 @@ class GPUManager:
 
         # Create logs directory if it doesn't exist
         os.makedirs("logs", exist_ok=True)
-        
+
         # Create log file name based on model name
         log_file = f"logs/{model_name}.log"
         with open(log_file, "w") as f:
@@ -126,23 +142,25 @@ def run_models(model_info: List, cmds: List[str]):
         raise  # Re-raise the KeyboardInterrupt
 
 
-def update_model_config(model_config_path: str, model_name: str, models_base_dir: str) -> Optional[Dict]:
+def update_model_config(
+    model_config_path: str, model_name: str, models_base_dir: str
+) -> Optional[Dict]:
     """Update model config with standardized paths"""
     if not os.path.exists(model_config_path):
         config_data = {}
     else:
-        with open(model_config_path, 'r') as f:
+        with open(model_config_path, "r") as f:
             config_data = json.load(f)
-    
+
     try:
         # Update model_name path with standardized path
         new_model_path = os.path.join(models_base_dir, model_name)
         config_data["model_name"] = new_model_path
-        
+
         # Write the updated config back to the file
-        with open(model_config_path, 'w') as f:
+        with open(model_config_path, "w") as f:
             json.dump(config_data, f, indent=4)
-        
+
         return config_data
     except Exception as e:
         print(f"Error updating config file {model_config_path}: {e}")
@@ -152,30 +170,30 @@ def update_model_config(model_config_path: str, model_name: str, models_base_dir
 if __name__ == "__main__":
     args = parse_args()
     config = Config.fromfile(args.config)
-    
+
     # Use provided output directory or one from config
     if args.output_dir:
         output_dir = args.output_dir
     else:
         output_dir = config.get("output_dir", None)
-    
+
     # Create models_base_dir if it doesn't exist
     os.makedirs(args.models_base_dir, exist_ok=True)
-    
+
     if args.models_base_dir:
         # Update model configs with specified paths
         for model_info_tuple in config.model_info:
             model_name = model_info_tuple[0]
             model_config_path = f"{args.cfg_dir}/{model_name}.json"
             update_model_config(model_config_path, model_name, args.models_base_dir)
-    
+
     cmds = []
     for model_name, backend in config.model_info:
         cmd = f"flagevalmm --tasks {' '.join(config.tasks)} --cfg {args.cfg_dir}/{model_name}.json --quiet --skip"
-        
+
         if output_dir:
             cmd += f" --output-dir {output_dir}/{model_name}"
-            
+
         # Handle different backend types
         if backend == "api_model":
             cmd += " --exec model_zoo/vlm/api_model/model_adapter.py --backend vllm"
@@ -184,9 +202,9 @@ if __name__ == "__main__":
                 cmd += f" --exec model_zoo/vlm/{backend}"
             else:
                 cmd += f" --exec model_zoo/vlm/{backend}/model_adapter.py"
-                
+
         cmds.append(cmd)
         print(cmd)
-        
+
     # Run the models
-    run_models(config.model_info, cmds) 
+    run_models(config.model_info, cmds)

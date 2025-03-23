@@ -11,12 +11,10 @@ model_info = [
     ["InternVL2-8B", "api_model"],
     ["llava-onevision-qwen2-7b-ov-chat-hf", "api_model"],
     ["Phi-3.5-vision-instruct", "Phi_3.5_v"],
-    
     # Large models (requiring multiple GPUs)
     ["Qwen2-VL-72B-Instruct", "api_model"],
     ["InternVL2-Llama3-76B", "api_model"],
     ["Meta-Llama-3.2-11B-Vision-Instruct", "api_model"],
-    
     # Custom adapter example
     ["InternVL2_5-26B", "intern_vl/model_adapter_v2_5.py"],
 ]
@@ -30,4 +28,4 @@ tasks = [
 ]
 
 # Optional: Default output directory for results
-output_dir = "./results/batch_eval" 
+output_dir = "./results/batch_eval"
