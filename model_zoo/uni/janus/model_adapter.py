@@ -139,7 +139,7 @@ class ModelAdapter(BaseModelAdapter):
 
     def run_one_task(self, task_name: str, meta_info: Dict[str, Any]):
         # Determine task type from task name
-        is_t2i = "t2i" in meta_info['type'].lower()
+        is_t2i = "t2i" in meta_info["type"].lower()
         logger.info(
             f"Running {task_name, meta_info} as {'T2I' if is_t2i else 'VQA'} task"
         )
