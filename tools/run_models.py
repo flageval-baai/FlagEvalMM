@@ -199,7 +199,7 @@ if __name__ == "__main__":
             cmd += " --exec model_zoo/vlm/api_model/model_adapter.py --backend vllm"
         else:
             if backend.endswith(".py"):
-                cmd += f" --exec model_zoo/vlm/{backend}"
+                cmd += f" --exec {backend}"
             else:
                 cmd += f" --exec model_zoo/vlm/{backend}/model_adapter.py"
 
