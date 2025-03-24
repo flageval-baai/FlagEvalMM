@@ -1,5 +1,5 @@
 {
-    "model_name": "models/vlm/Phi-3.5-vision-instruct",
+    "model_name": "Phi-3.5-vision-instruct",
     "api_key": "EMPTY",
     "url": "http://localhost:8000/v1/chat/completions",
     "num_workers": 8,

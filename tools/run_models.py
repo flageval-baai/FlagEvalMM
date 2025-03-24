@@ -27,7 +27,7 @@ def parse_args():
     parser.add_argument(
         "--models-base-dir",
         type=str,
-        default="models/vlm",
+        required=True,
         help="Base directory for model files",
     )
     return parser.parse_args()

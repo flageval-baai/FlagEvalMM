@@ -1,5 +1,5 @@
 {
-    "model_name": "models/vlm/Janus-1.3B",
+    "model_name": "Janus-1.3B",
     "api_key": "EMPTY",
     "url": "http://localhost:8000/v1/chat/completions",
     "extra_args": "--limit-mm-per-prompt image=18 --max-model-len 32768 --trust-remote-code --mm-processor-kwargs {'max_dynamic_patch':4} --max-num-seqs 5"

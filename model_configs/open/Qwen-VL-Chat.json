@@ -1,5 +1,5 @@
 {
-    "model_name": "models/vlm/Qwen-VL-Chat",
+    "model_name": "Qwen-VL-Chat",
     "api_key": "EMPTY",
     "url": "http://localhost:8000/v1/chat/completions",
     "min_short_side": 28,

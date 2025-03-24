@@ -1,5 +1,5 @@
 {
-    "model_name": "models/vlm/Meta-Llama-3.2-11B-Vision-Instruct",
+    "model_name": "Meta-Llama-3.2-11B-Vision-Instruct",
     "api_key": "EMPTY",
     "url": "http://localhost:8003/v1/chat/completions",
     "num_workers": 1,

@@ -1,5 +1,5 @@
 {
-    "model_name": "models/vlm/Pixtral-Large-Instruct-2411",
+    "model_name": "Pixtral-Large-Instruct-2411",
     "api_key": "EMPTY",
     "url": "http://localhost:8000/v1/chat/completions",
     "num_workers": 8,

@@ -1,5 +1,5 @@
 {
-    "model_name": "models/vlm/Pixtral-12B-2409",
+    "model_name": "Pixtral-12B-2409",
     "api_key": "EMPTY",
     "url": "http://localhost:8000/v1/chat/completions",
     "num_workers": 8,

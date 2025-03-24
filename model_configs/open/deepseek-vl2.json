@@ -1,5 +1,5 @@
 {
-    "model_name": "models/vlm/deepseek-vl2",
+    "model_name": "deepseek-vl2",
     "api_key": "EMPTY",
     "url": "http://localhost:8000/v1/chat/completions",
     "min_short_side": 28,

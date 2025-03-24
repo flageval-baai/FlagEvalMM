@@ -19,13 +19,13 @@ The `run_models.py` script allows you to run multiple models in parallel on a mu
 The script requires specifying both a configuration file and the model directory:
 
 ```bash
-python tools/run_models.py --config tools/configs/example_batch.py --models-base-dir models/vlm
+python tools/run_models.py --config tools/configs/example_batch.py --models-base-dir model_path
 ```
 
 You can also specify a custom model configuration directory (defaults to model_configs/open):
 
 ```bash
-python tools/run_models.py --config tools/configs/example_batch.py --models-base-dir models/vlm --cfg-dir model_configs/open
+python tools/run_models.py --config tools/configs/example_batch.py --models-base-dir model_path --cfg-dir model_configs/open
 ```
 
 ### Configuration Format

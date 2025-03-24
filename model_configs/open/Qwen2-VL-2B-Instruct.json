@@ -1,5 +1,5 @@
 {
-    "model_name": "models/vlm/Qwen2-VL-2B-Instruct",
+    "model_name": "Qwen2-VL-2B-Instruct",
     "api_key": "EMPTY",
     "url": "http://localhost:8000/v1/chat/completions",
     "min_short_side": 28,

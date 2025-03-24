@@ -1,5 +1,5 @@
 {
-    "model_name": "models/vlm/InternVL2_5-2B",
+    "model_name": "InternVL2_5-2B",
     "api_key": "EMPTY",
     "url": "http://localhost:8000/v1/chat/completions",
     "num_workers": 1,

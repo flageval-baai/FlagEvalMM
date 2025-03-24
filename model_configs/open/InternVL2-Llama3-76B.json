@@ -1,5 +1,5 @@
 {
-    "model_name": "models/vlm/InternVL2-Llama3-76B",
+    "model_name": "InternVL2-Llama3-76B",
     "api_key": "EMPTY",
     "url": "http://localhost:8001/v1/chat/completions",
     "num_workers": 8,

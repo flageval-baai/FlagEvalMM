@@ -1,5 +1,5 @@
 {
-    "model_name": "models/vlm/Phi-4-multimodal-instruct",
+    "model_name": "Phi-4-multimodal-instruct",
     "api_key": "EMPTY",
     "url": "http://localhost:8000/v1/chat/completions",
     "min_short_side": 28,
