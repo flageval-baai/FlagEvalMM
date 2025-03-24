@@ -1,0 +1,8 @@
+{
+    "model_name": "InternVL2_5-78B",
+    "api_key": "EMPTY",
+    "url": "http://localhost:8000/v1/chat/completions",
+    "num_workers": 8,
+    "max_long_side": 1500,
+    "extra_args": "--limit-mm-per-prompt image=18 --max-model-len 32768 --trust-remote-code --mm-processor-kwargs '{\"max_dynamic_patch\":4}' --tensor-parallel-size 4"
+}

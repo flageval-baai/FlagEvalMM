@@ -1,0 +1,10 @@
+{
+    "model_name": "Phi-4-multimodal-instruct",
+    "api_key": "EMPTY",
+    "url": "http://localhost:8000/v1/chat/completions",
+    "min_short_side": 28,
+    "max_long_side": 1500,
+    "num_workers": 5,
+    "max_num_frames": 8,
+    "extra_args": "--limit-mm-per-prompt image=8 --max-model-len 32768 --max_num_seqs 5"
+}

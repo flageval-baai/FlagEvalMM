@@ -124,6 +124,36 @@ flagevalmm --tasks tasks/mmmu_pro/mmmu_pro_standard_test.py tasks/ocrbench/ocrbe
         --cfg qwen2_vl_72b_instruct.json
 ```
 
+## Multi-task and Multi-model Evaluation
+
+For evaluating multiple models on the same benchmarks, FlagEvalMM provides a batch execution tool with automatic GPU management:
+
+```bash
+python tools/run_models.py --config tools/configs/example_batch.py --models-base-dir /path/to/models
+```
+
+The batch configuration file format:
+
+```python
+# List of models and their backends
+model_info = [
+    ["Qwen2-VL-7B-Instruct", "api_model"],
+    ["InternVL2-8B", "api_model"],
+    ["Phi-3.5-vision-instruct", "Phi_3.5_v"],
+]
+
+# List of tasks to evaluate
+tasks = [
+    "tasks/mmmu/mmmu_val.py",
+    "tasks/mmvet/mmvet_v2.py",
+]
+
+# Optional: Default output directory for results
+output_dir = "./results/batch_eval" 
+```
+
+The tool automatically allocates GPUs based on model requirements, runs models in parallel, and logs outputs to separate files. For more details, see `tools/README.md`.
+
 Example of evaluating models without vllm (using transformers instead):
 
 ```bash
