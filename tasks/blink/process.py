@@ -2,6 +2,7 @@ from datasets import load_dataset
 import os
 import os.path as osp
 import json
+import tqdm
 
 
 def process(cfg):
@@ -27,7 +28,7 @@ def process(cfg):
     output_base_dir = osp.join(cfg.processed_dataset_path, split)
     for dataset_name in dataset_names:
         dataset = load_dataset(data_dir, dataset_name, split=split)
-        for data in dataset:
+        for data in tqdm.tqdm(dataset):
             new_data = {}
             new_data["question_id"] = data["idx"]
             new_data["question"] = data["prompt"]
@@ -42,11 +43,11 @@ def process(cfg):
                 new_data["img_path"].append(image_path)
                 full_image_path = osp.join(output_base_dir, image_path)
                 os.makedirs(osp.dirname(full_image_path), exist_ok=True)
-                # data[f'image_{i + 1}'].save(full_image_path)
+                data[f"image_{i + 1}"].save(full_image_path)
             img_prefix = ""
             for i in range(len(new_data["img_path"])):
                 img_prefix += f"<image {i+1}> "
             new_data["question"] = img_prefix + new_data["question"]
             content.append(new_data)
     with open(osp.join(output_base_dir, "data.json"), "w") as f:
-        json.dump(content, f)
+        json.dump(content, f, indent=2, ensure_ascii=True)
