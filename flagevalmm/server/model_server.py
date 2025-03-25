@@ -22,15 +22,15 @@ class ModelServer:
         self,
         model_name: str,
         port: int = 8000,
-        server_type: str = "vllm",
+        backend: str = "vllm",
         extra_args: Optional[str] = None,
     ):
         self.model_name = model_name
         self.port = port
-        assert server_type in ["vllm", "sglang"], "server_type must be vllm or sglang"
+        assert backend in ["vllm", "sglang"], "backend must be vllm or sglang"
         # extra args is like "--limit-mm-per-prompt image=8 --max-model-len 32768"
         splited_args = shlex.split(extra_args) if extra_args else []
-        if server_type == "vllm":
+        if backend == "vllm":
             self.get_cmd = self.get_vllm_cmd
         else:
             self.get_cmd = self.get_sglang_cmd

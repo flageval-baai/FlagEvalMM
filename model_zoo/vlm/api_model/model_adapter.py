@@ -5,6 +5,7 @@ from typing import Dict, Any, Optional, Union
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import atexit
 import signal
+from importlib.metadata import version, PackageNotFoundError
 
 from flagevalmm.server import ServerDataset
 from flagevalmm.models.base_model_adapter import BaseModelAdapter
@@ -109,10 +110,22 @@ class ModelAdapter(BaseModelAdapter):
         task_info["url"] = url
 
         model_name = task_info["model_name"]
+        backend = task_info.get("backend", "vllm")
         model_server = ModelServer(
-            model_name, port=port, extra_args=task_info.get("extra_args", None)
+            model_name,
+            port=port,
+            backend=backend,
+            extra_args=task_info.get("extra_args", None),
         )
         task_info["execute_cmd"] = model_server.execute_cmd
+        important_packages = [backend, "transformers", "torch"]
+        task_info["important_packages"] = []
+        for package in important_packages:
+            try:
+                version_pkg = version(package)
+                task_info["important_packages"].append(f"{package}=={version_pkg}")
+            except PackageNotFoundError:
+                task_info["important_packages"].append(f"{package} not installed")
         return model_server
 
     def process_single_item(self, i):

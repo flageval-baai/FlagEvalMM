@@ -64,7 +64,7 @@ class HttpClient(BaseApiModel):
                 if (
                     err_msg["code"] == "data_inspection_failed"
                     or err_msg["code"] == "1301"
-                    or err_msg["message"].startswith("No candidates")
+                    or "No candidates" in err_msg["message"]
                 ):
                     yield err_msg["message"]
                     return
