@@ -75,6 +75,15 @@ class EvaluationServer:
     ) -> None:
         # Create a unique process ID using timestamp
         process_id = f"{task_name}_{model_name}_{int(time.time() * 1000)}"
+
+        output_dir = (
+            new_output_dir if new_output_dir else osp.join(self.output_dir, task_name)
+        )
+        # Save config_dict as python file
+        with open(osp.join(output_dir, f"{task_name}_config.json"), "w") as f:
+            json.dump(
+                self.config_dict[task_name].to_dict(), f, indent=2, ensure_ascii=True
+            )
         # If evaluator is not specified, skip evaluation
         if not self.config_dict[task_name].get("evaluator", None):
             logger.warning(
@@ -82,14 +91,7 @@ class EvaluationServer:
             )
             return
         evaluator = EVALUATORS.build(self.config_dict[task_name].evaluator)
-        output_dir = (
-            new_output_dir if new_output_dir else osp.join(self.output_dir, task_name)
-        )
-        # Save config_dict as python file
-        with open(osp.join(output_dir, f"{task_name}.json"), "w") as f:
-            json.dump(
-                self.config_dict[task_name].to_dict(), f, indent=2, ensure_ascii=True
-            )
+
         start_method = self.config_dict[task_name].evaluator.get("start_method", "fork")
         if task_name not in self.active_task:
             self.load_dataset(task_name)
