@@ -112,6 +112,7 @@ class ModelAdapter(BaseModelAdapter):
         model_server = ModelServer(
             model_name, port=port, extra_args=task_info.get("extra_args", None)
         )
+        task_info["execute_cmd"] = model_server.execute_cmd
         return model_server
 
     def process_single_item(self, i):

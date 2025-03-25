@@ -60,11 +60,14 @@ class HttpClient(BaseApiModel):
                 yield f"Error code: {response_json['message']}"
                 return
             err_msg = response_json["error"]
-            if "code" in err_msg and (
-                err_msg["code"] == "data_inspection_failed" or err_msg["code"] == "1301"
-            ):
-                yield err_msg["message"]
-                return
+            if "code" in err_msg and "message" in err_msg:
+                if (
+                    err_msg["code"] == "data_inspection_failed"
+                    or err_msg["code"] == "1301"
+                    or err_msg["message"].startswith("No candidates")
+                ):
+                    yield err_msg["message"]
+                    return
             raise Exception(
                 f"Request failed with status code {response.status_code}: {err_msg}"
             )

@@ -1,4 +1,5 @@
 import json
+import copy
 from typing import List, Dict, Any, Callable, Optional
 import os.path as osp
 from accelerate import Accelerator
@@ -10,6 +11,7 @@ from flagevalmm.server.utils import get_meta, get_task_info, submit
 from flagevalmm.server.server_dataset import ServerDataset
 from flagevalmm.common.logger import get_logger
 
+os.environ["no_proxy"] = "127.0.0.1,localhost"
 logger = get_logger(__name__)
 
 
@@ -69,6 +71,12 @@ class BaseModelAdapter:
                     self.task_info["output_dir"], task_name
                 )
                 os.makedirs(meta_info["output_dir"], exist_ok=True)
+            # Save task_info
+            task_info = copy.deepcopy(self.task_info)
+            task_info.pop("task_names")
+            task_info.update(meta_info)
+            with open(osp.join(meta_info["output_dir"], "task_info.json"), "w") as f:
+                json.dump(task_info, f, indent=2, ensure_ascii=True)
             self.run_one_task(task_name, meta_info)
             submit(
                 task_name,
