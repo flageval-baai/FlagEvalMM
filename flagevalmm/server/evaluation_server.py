@@ -87,7 +87,9 @@ class EvaluationServer:
         )
         # Save config_dict as python file
         with open(osp.join(output_dir, f"{task_name}.json"), "w") as f:
-            json.dump(self.config_dict[task_name], f, indent=2, ensure_ascii=True)
+            json.dump(
+                self.config_dict[task_name].to_dict(), f, indent=2, ensure_ascii=True
+            )
         start_method = self.config_dict[task_name].evaluator.get("start_method", "fork")
         if task_name not in self.active_task:
             self.load_dataset(task_name)
