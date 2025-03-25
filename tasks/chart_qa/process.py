@@ -19,7 +19,7 @@ def process(cfg):
         new_data["ori_type"] = data["type"]
         new_data["question_type"] = "short-answer"
         new_data["img_path"] = osp.join("images", f"{i}.png")
-        # data["image"].save(osp.join(output_dir, new_data['img_path']))
+        data["image"].save(osp.join(output_dir, new_data["img_path"]))
         content.append(new_data)
     json.dump(
         content,
