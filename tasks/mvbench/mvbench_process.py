@@ -3,25 +3,24 @@ import os
 import os.path as osp
 import glob
 import subprocess
-import zipfile
-import os
 from flagevalmm.common.const import FLAGEVALMM_DATASETS_CACHE_DIR
 
 
 def process(cfg):
-    download_and_extract_dataset(cfg.dataset_path, cfg.processed_dataset_path, cfg.split)
+    download_and_extract_dataset(
+        cfg.dataset_path, cfg.processed_dataset_path, cfg.split
+    )
 
 
 def download_and_extract_dataset(repo_id, processed_dataset_path, split):
     cache_dir = osp.join(FLAGEVALMM_DATASETS_CACHE_DIR, processed_dataset_path, split)
     os.makedirs(cache_dir, exist_ok=True)
 
-    command = (
-        f"export HF_ENDPOINT=https://hf-mirror.com && "
-        f"huggingface-cli download {repo_id} --repo-type dataset --revision video --local-dir {cache_dir}"
-    )
+    command = f"huggingface-cli download {repo_id} --repo-type dataset --revision video --local-dir {cache_dir}"
     try:
-        result = subprocess.run(command, shell=True, check=True, text=True, capture_output=True)
+        result = subprocess.run(
+            command, shell=True, check=True, text=True, capture_output=True
+        )
         print("Download successful!")
         print(result.stdout)
     except subprocess.CalledProcessError as e:
@@ -64,13 +63,26 @@ def process_json(input_file, video_prefix):
     question_type = os.path.splitext(os.path.basename(input_file))[0]
 
     processed_data = []
-    for idx, annotation in enumerate(data):
+    for annotation in data:
+        answer = annotation["answer"]
+        options = annotation["candidates"]
+        if answer in options:
+            answer_index = options.index(answer)
+            answer_label = chr(ord("A") + answer_index) + " " + answer
+        base = ord("A")
+        question = annotation["question"]
+        question = (
+            "Carefully watch the video and pay attention to the cause and sequence of events, the detail and movement of objects, and the action and pose of persons. Based on your observations, select the best option that accurately addresses the question.\n"
+            + question
+        )
+        for i, choice in enumerate(options):
+            question += "\n" + "(" + chr(base + i) + ")" + choice
+        question += "\nOnly give the best option. \nBest option:("
         processed_entry = {
-            "question_id": idx,
-            "question": annotation["question"],
-            "answer": annotation["answer"],
+            "question": question,
+            "answer": answer_label,
             "question_type": question_type,
-            "video_path": osp.join(video_prefix, annotation["video"])
+            "video_path": osp.join(video_prefix, annotation["video"]),
         }
         processed_data.append(processed_entry)
 
@@ -79,6 +91,7 @@ def process_json(input_file, video_prefix):
 
 def batch_process_json_files(input_folder, video_prefix_mapping, output_file):
     all_processed_data = []
+    global_question_id = 0
 
     input_files = glob.glob(osp.join(input_folder, "*.json"))
 
@@ -88,6 +101,10 @@ def batch_process_json_files(input_folder, video_prefix_mapping, output_file):
         print(f"Processing {filename} with video prefix: {video_prefix}")
 
         processed_data = process_json(input_file, video_prefix)
+        for entry in processed_data:
+            entry["question_id"] = global_question_id
+            global_question_id += 1
+
         all_processed_data.extend(processed_data)
 
     with open(output_file, "w", encoding="utf-8") as f:

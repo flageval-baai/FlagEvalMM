@@ -9,24 +9,28 @@ from collections import defaultdict
 
 @EVALUATORS.register_module()
 class MVBenchDatasetEvaluator(BaseEvaluator):
-    def __init__(self, metrics: List = ["accuracy"]) -> None:
+    def __init__(self, metrics: List = ["accuracy"], **kwargs) -> None:
         self.metrics = metrics
 
-    def check_ans(pred, gt):
+    def check_ans(self, pred, gt):
         flag = False
-        
-        pred_list = pred.lower().split(' ')
-        pred_option, pred_content = pred_list[0], ' '.join(pred_list[1:])
-        gt_list = gt.lower().split(' ')
-        gt_option, gt_content = gt_list[0], ' '.join(gt_list[1:])
-        if gt_content[-1] == '.':
+
+        pred_list = pred.lower().split(" ")
+        if pred_list[0] == "(":
+            pred_option, _ = pred_list[1], " ".join(pred_list[4:])
+        else:
+            pred_option, _ = pred_list[0], " ".join(pred_list[1:])
+        gt_list = gt.lower().split(" ")
+        gt_option, gt_content = gt_list[0], " ".join(gt_list[1:])
+
+        if gt_content and gt_content[-1] == ".":
             gt_content = gt_content[:-1]
-        
-        if pred_option.replace('.', '') in gt_option:
+
+        if pred_option.replace(".", "") in gt_option:
             flag = True
         elif gt_option in pred_option:
             flag = True
-            
+
         return flag
 
     def process(self, dataset, output_dir, **kwargs):
@@ -43,7 +47,7 @@ class MVBenchDatasetEvaluator(BaseEvaluator):
             question_id = pred["question_id"]
             pred = pred["answer"]
             gt = annotation[question_id]["answer"]
-            task_type = annotation[question_id]["data"]["task_type"]
+            task_type = annotation[question_id]["question_type"]
             acc_dict[task_type][1] += 1
             if self.check_ans(pred, gt):
                 acc_dict[task_type][0] += 1
