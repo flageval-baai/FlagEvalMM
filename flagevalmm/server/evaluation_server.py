@@ -18,7 +18,9 @@ logger = get_logger(__name__)
 
 class FuncEncoder(json.JSONEncoder):
     def default(self, obj):
-        if callable(obj):
+        if isinstance(obj, set):
+            return list(obj)
+        elif callable(obj):
             # Convert function objects to their string representation
             return f"<function {obj.__name__}>"
         return json.JSONEncoder.default(self, obj)
@@ -88,13 +90,18 @@ class EvaluationServer:
             new_output_dir if new_output_dir else osp.join(self.output_dir, task_name)
         )
         # Save config_dict as python file
-        with open(osp.join(output_dir, f"{task_name}_config.json"), "w") as f:
-            json.dump(
-                self.config_dict[task_name].to_dict(),
-                f,
-                indent=2,
-                ensure_ascii=True,
-                cls=FuncEncoder,
+        try:
+            with open(osp.join(output_dir, f"{task_name}_config.json"), "w") as f:
+                json.dump(
+                    self.config_dict[task_name].to_dict(),
+                    f,
+                    indent=2,
+                    ensure_ascii=True,
+                    cls=FuncEncoder,
+                )
+        except Exception as e:
+            logger.error(
+                f"Error dumping config_dict: {e}, config_dict: {self.config_dict[task_name]}"
             )
         # If evaluator is not specified, skip evaluation
         if not self.config_dict[task_name].get("evaluator", None):
