@@ -16,6 +16,14 @@ os.environ["no_proxy"] = "127.0.0.1,localhost"
 logger = get_logger(__name__)
 
 
+class FuncEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if callable(obj):
+            # Convert function objects to their string representation
+            return f"<function {obj.__name__}>"
+        return json.JSONEncoder.default(self, obj)
+
+
 class EvaluationServer:
     def __init__(
         self,
@@ -82,7 +90,11 @@ class EvaluationServer:
         # Save config_dict as python file
         with open(osp.join(output_dir, f"{task_name}_config.json"), "w") as f:
             json.dump(
-                self.config_dict[task_name].to_dict(), f, indent=2, ensure_ascii=True
+                self.config_dict[task_name].to_dict(),
+                f,
+                indent=2,
+                ensure_ascii=True,
+                cls=FuncEncoder,
             )
         # If evaluator is not specified, skip evaluation
         if not self.config_dict[task_name].get("evaluator", None):
