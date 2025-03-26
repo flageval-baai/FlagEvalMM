@@ -16,11 +16,9 @@ os.environ["no_proxy"] = "127.0.0.1,localhost"
 logger = get_logger(__name__)
 
 
-class SetEncoder(json.JSONEncoder):
+class FuncEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, set):
-            return list(obj)
-        elif callable(obj):
+        if callable(obj):
             # Convert function objects to their string representation
             return f"<function {obj.__name__}>"
         return json.JSONEncoder.default(self, obj)
@@ -96,7 +94,7 @@ class EvaluationServer:
                 f,
                 indent=2,
                 ensure_ascii=True,
-                cls=SetEncoder,
+                cls=FuncEncoder,
             )
         # If evaluator is not specified, skip evaluation
         if not self.config_dict[task_name].get("evaluator", None):
