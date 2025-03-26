@@ -2,7 +2,7 @@
 
 Please download the dataset following the official instructions: <https://huggingface.co/datasets/OpenGVLab/MVBench>
 
-## Evaluation Results
+## Evaluation Results on Qwen2.5-VL-3B-Instruct
 
 | Task                      | Score       |
 |---------------------------|-------------|
