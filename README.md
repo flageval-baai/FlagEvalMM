@@ -47,6 +47,14 @@ pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.4/
 
 For detailed installation instructions, please refer to the [official SGLang documentation](https://sgl-project.github.io/start/install.html).
 
+#### LMDeploy Backend
+
+```bash
+pip install lmdeploy
+```
+
+For detailed installation instructions, please refer to the [official LMDeploy documentation](https://lmdeploy.readthedocs.io/en/latest/).
+
 #### Transformers
 
 For optimal performance for transformers, we recommend installing flash-attention

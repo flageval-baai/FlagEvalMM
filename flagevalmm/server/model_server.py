@@ -27,11 +27,18 @@ class ModelServer:
     ):
         self.model_name = model_name
         self.port = port
-        assert backend in ["vllm", "sglang"], "backend must be vllm or sglang"
+        assert backend in [
+            "vllm",
+            "sglang",
+            "lmdeploy",
+        ], "backend must be vllm or sglang or lmdeploy"
+        self.backend = backend
         # extra args is like "--limit-mm-per-prompt image=8 --max-model-len 32768"
         splited_args = shlex.split(extra_args) if extra_args else []
-        if backend == "vllm":
+        if self.backend == "vllm":
             self.get_cmd = self.get_vllm_cmd
+        elif self.backend == "lmdeploy":
+            self.get_cmd = self.get_lmdeploy_cmd
         else:
             self.get_cmd = self.get_sglang_cmd
         self.execute_cmd = None
@@ -39,6 +46,18 @@ class ModelServer:
 
     def get_vllm_cmd(self, args: List):
         cmd = ["vllm", "serve", self.model_name, "--port", str(self.port), *args]
+        return cmd
+
+    def get_lmdeploy_cmd(self, args: List):
+        cmd = [
+            "lmdeploy",
+            "serve",
+            "api_server",
+            self.model_name,
+            "--server-port",
+            str(self.port),
+            *args,
+        ]
         return cmd
 
     def get_sglang_cmd(self, args: List):
@@ -117,13 +136,13 @@ class ModelServer:
     def cleanup(self):
         if hasattr(self, "server_process"):
             self.server_process.terminate()
-            logger.info("VLLM server terminated")
+            logger.info(f"{self.backend} server terminated")
             try:
                 # Wait for the process to terminate fully
                 self.server_process.wait(timeout=10)
             except subprocess.TimeoutExpired:
                 logger.info(
-                    "VLLM server did not terminate within timeout, forcefully terminating"
+                    f"{self.backend} server did not terminate within timeout, forcefully terminating"
                 )
                 self.server_process.kill()
                 self.server_process.wait()
