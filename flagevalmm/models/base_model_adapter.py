@@ -248,9 +248,7 @@ class BaseModelAdapter:
             with self.accelerator.main_process_first():
                 dataset = dataset_cls(
                     task_name,
-                    self.server_ip,
-                    self.server_port,
-                    self.timeout,
+                    self.task_manager,
                     task_type=task_type,
                 )
                 data_loader = DataLoader(
