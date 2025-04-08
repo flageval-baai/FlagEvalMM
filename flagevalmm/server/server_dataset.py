@@ -1,7 +1,5 @@
 from torch.utils.data import Dataset
 
-from flagevalmm.server.utils import get_meta, get_data
-
 
 class ServerDataset(Dataset):
     """
@@ -11,17 +9,14 @@ class ServerDataset(Dataset):
     def __init__(
         self,
         task_name: str,
-        server_ip: str = "http://localhost",
-        server_port: int = 5000,
-        timeout: int = 1000,
+        task_manager,
         task_type: str = "vqa",
     ) -> None:
-        self.server_ip = server_ip
-        self.server_port = server_port
-        self.timeout = timeout
+        # from flagevalmm.models.base_model_adapter import TaskManager
+        self.task_manager = task_manager
         self.task_name = task_name
         self.task_type = task_type
-        meta_info = get_meta(task_name, self.server_ip, self.server_port)
+        meta_info = self.task_manager.get_meta_info(task_name)
         self.datasetname = meta_info["name"]
         self.length: int = meta_info["length"]
 
@@ -41,5 +36,5 @@ class ServerDataset(Dataset):
         return question_id, multi_modal_data, qs
 
     def get_data(self, index: int):
-        data = get_data(index, self.task_name, self.server_ip, self.server_port)
+        data = self.task_manager.get_data(self.task_name, index)
         return data

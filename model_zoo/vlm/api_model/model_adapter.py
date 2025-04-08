@@ -1,7 +1,6 @@
-import argparse
 import re
 import os
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import atexit
 import signal
@@ -13,33 +12,9 @@ from flagevalmm.models import HttpClient, Claude, Gemini, GPT, Hunyuan
 from flagevalmm.server.model_server import ModelServer
 from flagevalmm.server.utils import get_random_port
 from flagevalmm.common.logger import get_logger
+from flagevalmm.server.utils import parse_args
 
 logger = get_logger(__name__)
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description="Model Adapter")
-    parser.add_argument(
-        "--server_ip", "--server-ip", type=str, default="http://localhost"
-    )
-    parser.add_argument("--server_port", "--server-port", type=int, default=5000)
-    parser.add_argument("--timeout", type=int, default=1000)
-    parser.add_argument("--cfg", "-c", type=str, default=None)
-    parser.add_argument("--num-workers", "--num-workers", type=int)
-    parser.add_argument(
-        "--model-type",
-        type=str,
-        default=None,
-        choices=["http", "claude", "gemini", "gpt", "hunyuan"],
-        help="type of the model",
-    )
-    parser.add_argument(
-        "--backend",
-        type=str,
-        default=None,
-        help="backend of the http model, like vllm or sglang",
-    )
-    return parser.parse_args()
 
 
 class ModelAdapter(BaseModelAdapter):
@@ -50,6 +25,9 @@ class ModelAdapter(BaseModelAdapter):
         timeout: int,
         model_type: Optional[str] = None,
         extra_cfg: Optional[Union[str, Dict]] = None,
+        local_mode: bool = False,
+        task_names: List[str] = None,
+        **kwargs,
     ):
         self.model_type = model_type
         super().__init__(
@@ -57,6 +35,9 @@ class ModelAdapter(BaseModelAdapter):
             server_port=server_port,
             timeout=timeout,
             extra_cfg=extra_cfg,
+            local_mode=local_mode,
+            task_names=task_names,
+            **kwargs,
         )
 
         atexit.register(self.cleanup)
@@ -150,9 +131,9 @@ class ModelAdapter(BaseModelAdapter):
         self.dataset = ServerDataset(
             task_name,
             task_type=meta_info["type"],
-            server_ip=self.server_ip,
-            server_port=self.server_port,
+            task_manager=self.task_manager,
         )
+
         results = []
         num_workers = self.task_info.get("num_workers", 1)
         with ThreadPoolExecutor(max_workers=num_workers) as executor:
@@ -176,5 +157,11 @@ if __name__ == "__main__":
         timeout=args.timeout,
         model_type=args.model_type,
         extra_cfg=args.cfg,
+        local_mode=args.local_mode,
+        task_names=args.tasks,
+        output_dir=args.output_dir,
+        model_path=args.model,
+        debug=args.debug,
+        quiet=args.quiet,
     )
     model_adapter.run()

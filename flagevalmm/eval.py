@@ -39,6 +39,9 @@ def parse_args():
     parser.add_argument("--cfg", type=str, help="config file")
     parser.add_argument("--num-workers", "--num-workers", type=int)
     parser.add_argument("--backend", type=str)
+    parser.add_argument(
+        "--local-mode", "-l", action="store_true", help="run without evaluation server"
+    )
     parser.add_argument("--disable-evaluation-server", "-ds", action="store_true")
     parser.add_argument("--skip", action="store_true", help="skip finished tasks")
     parser.add_argument("--server-port", type=int, help="port of evaluation server")
@@ -110,6 +113,7 @@ class ServerWrapper:
         self.cfg = update_cfg_from_args(args)
         self.port = None
         self.evaluation_server_ip = args.server_ip
+        self.local_mode = args.local_mode
         self.evaluation_server = None
         self.evaluation_server_pid = None
         self.infer_process = None
@@ -170,6 +174,7 @@ class ServerWrapper:
                 "--server_port",
                 str(self.port),
             ]
+
         else:
             assert osp.exists(f"{self.exec}/run.sh"), f"run.sh not found in {self.exec}"
             command += [
@@ -178,11 +183,26 @@ class ServerWrapper:
                 self.evaluation_server_ip,
                 str(self.port),
             ]
+        if self.local_mode:
+            command.extend(
+                [
+                    "--local-mode",
+                    "--tasks",
+                    *self.args.tasks,
+                    "--output-dir",
+                    self.cfg["output_dir"],
+                ]
+            )
+            if self.args.debug or self.args.try_run:
+                command.append("--debug")
+            if self.args.data_root:
+                command.append("--data-root")
+                command.append(self.args.data_root)
         command.extend(["--cfg", f"{json.dumps(self.cfg)}"])
         return command
 
     def maybe_launch_evaluation_server(self, args, output_dir):
-        if args.disable_evaluation_server:
+        if args.disable_evaluation_server or self.local_mode:
             self.evaluation_server = None
             self.port = args.server_port if args.server_port else 5000
             return

@@ -36,6 +36,7 @@ class EvaluationServer:
         host: str = "127.0.0.1",
         debug: bool = True,
         quiet: bool = False,
+        local_mode: bool = False,
     ) -> None:
         self.debug = debug
         self.port = port
@@ -46,16 +47,20 @@ class EvaluationServer:
         self.active_task: OrderedDict[str, Any] = OrderedDict()
         self.max_active_task_num = 10
         self.quiet = quiet
-        self.app = Flask(__name__)
+        if not local_mode:
+            self.app = Flask(__name__)
+        else:
+            self.app = None
         self.active_processes: Dict[str, multiprocessing.Process] = {}
 
         if self.quiet:
             # Disable Flask's default logging
-            self.app.logger.disabled = True
+            if self.app is not None:
+                self.app.logger.disabled = True
             log = logging.getLogger("werkzeug")
             log.disabled = True
-
-        self.set_routes()
+        if not local_mode:
+            self.set_routes()
 
     def load_dataset(self, task_name: str) -> None:
         logger.info(f"Loading dataset for task {task_name}")
