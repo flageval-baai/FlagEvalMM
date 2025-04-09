@@ -92,8 +92,8 @@ class TestHttpClientModel(BaseTestModel, unittest.TestCase):
     def setUp(self):
         self.model = HttpClient(
             model_name="gpt-4o-mini",
-            api_key=os.environ.get("BAAI_OPENAI_API_KEY"),
-            url="https://api.openai.com/v1/chat/completions",
+            api_key=os.environ.get("FLAGEVAL_API_KEY"),
+            url=os.environ.get("FLAGEVAL_URL"),
         )
 
 
