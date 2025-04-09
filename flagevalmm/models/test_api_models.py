@@ -78,6 +78,16 @@ class TestClaudeModel(BaseTestModel, unittest.TestCase):
         )
 
 
+class TestHttpClientModelStream(BaseTestModel, unittest.TestCase):
+    def setUp(self):
+        self.model = HttpClient(
+            model_name="qvq-max",
+            api_key=os.environ.get("QWEN_API_KEY"),
+            url="https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+            stream=True,
+        )
+
+
 class TestHttpClientModel(BaseTestModel, unittest.TestCase):
     def setUp(self):
         self.model = HttpClient(
@@ -93,4 +103,4 @@ class TestGeminiModel(BaseTestModel, unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main(defaultTest="TestHttpClientModel")
+    unittest.main(defaultTest="TestHttpClientModelStream")

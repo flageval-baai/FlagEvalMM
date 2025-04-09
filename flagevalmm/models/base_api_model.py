@@ -26,6 +26,7 @@ class BaseApiModel:
         max_num_frames: Optional[int] = 8,
         use_cache: bool = False,
         stream: bool = False,
+        **kwargs,
     ) -> None:
         self.model_name = model_name
         self.chat_name = chat_name if chat_name else model_name
@@ -43,7 +44,8 @@ class BaseApiModel:
         }
         if max_tokens is not None:
             self.chat_args["max_tokens"] = max_tokens
-
+        if self.stream:
+            self.chat_args["stream"] = True
         self.cache = ModelCache(self.chat_name) if use_cache else None
 
     def add_to_cache(self, chat_messages, response) -> None:
