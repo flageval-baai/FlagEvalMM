@@ -97,6 +97,13 @@ class Hunyuan(BaseApiModel):
         past_messages: Optional[List] = None,
     ) -> List:
         messages = past_messages if past_messages else []
+        if system_prompt:
+            messages.append(
+                {
+                    "Role": "system",
+                    "Contents": [{"Type": "text", "Text": system_prompt}],
+                }
+            )
         messages.append({"Role": "user", "Contents": [{"Type": "text", "Text": query}]})
 
         def add_image_to_message(data_path):
