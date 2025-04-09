@@ -32,20 +32,6 @@ class CustomDataset(ServerDataset):
 
 
 class ModelAdapter(BaseModelAdapter):
-    def __init__(
-        self,
-        server_ip: str,
-        server_port: int,
-        timeout: int = 1000,
-        extra_cfg: str | Dict | None = None,
-    ) -> None:
-        super().__init__(
-            server_ip,
-            server_port,
-            timeout=timeout,
-            extra_cfg=extra_cfg,
-            enable_accelerate=False,
-        )
 
     def model_init(self, task_info: Dict):
         ckpt_path = task_info["model_path"]
@@ -103,5 +89,11 @@ if __name__ == "__main__":
         server_port=args.server_port,
         timeout=args.timeout,
         extra_cfg=args.cfg,
+        local_mode=args.local_mode,
+        task_names=args.tasks,
+        output_dir=args.output_dir,
+        model_path=args.model,
+        debug=args.debug,
+        quiet=args.quiet,
     )
     model_adapter.run()

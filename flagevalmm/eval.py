@@ -1,4 +1,3 @@
-import argparse
 import subprocess
 import requests
 import time
@@ -9,59 +8,11 @@ from mmengine.config import Config
 from flagevalmm.common.logger import get_logger
 from flagevalmm.server.utils import get_random_port
 from flagevalmm.registry import EVALUATORS, DATASETS
-from flagevalmm.server.utils import maybe_register_class, merge_args
+from flagevalmm.server.utils import maybe_register_class, merge_args, parse_args
 import os
 import signal
 
 logger = get_logger(__name__)
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description="Infer a model")
-    parser.add_argument("--tasks", nargs="+", required=True, help="tasks to run")
-    parser.add_argument("--exec", type=str, help="model path in examples")
-    parser.add_argument("--debug", action="store_true", help="debug mode")
-    parser.add_argument(
-        "--try-run",
-        action="store_true",
-        help="try run mode, only run the first 32 samples",
-    )
-    parser.add_argument("--output-dir", type=str, help="output dir")
-    parser.add_argument("--data-root", type=str, help="data root")
-    parser.add_argument("--model", type=str, help="model name or path")
-    parser.add_argument(
-        "--model-type",
-        type=str,
-        default=None,
-        choices=["http", "claude", "gemini", "gpt", "hunyuan"],
-        help="type of the model",
-    )
-    parser.add_argument("--cfg", type=str, help="config file")
-    parser.add_argument("--num-workers", "--num-workers", type=int)
-    parser.add_argument("--backend", type=str)
-    parser.add_argument("--disable-evaluation-server", "-ds", action="store_true")
-    parser.add_argument("--skip", action="store_true", help="skip finished tasks")
-    parser.add_argument("--server-port", type=int, help="port of evaluation server")
-    parser.add_argument(
-        "--server-ip",
-        type=str,
-        default="http://localhost",
-        help="ip of evaluation server",
-    )
-    parser.add_argument("--quiet", "-q", action="store_true", help="quiet mode")
-    parser.add_argument(
-        "--without-infer", "-wi", action="store_true", help="without inference"
-    )
-    parser.add_argument("--url", type=str, help="url of api model")
-    parser.add_argument("--api-key", type=str, help="api key of api model")
-    parser.add_argument(
-        "--use-cache", action="store_true", help="use cache of api model"
-    )
-    parser.add_argument(
-        "--extra-args", type=str, help="extra args of local server model"
-    )
-    args = parser.parse_args()
-    return args
 
 
 def update_cfg_from_args(args):
@@ -110,6 +61,7 @@ class ServerWrapper:
         self.cfg = update_cfg_from_args(args)
         self.port = None
         self.evaluation_server_ip = args.server_ip
+        self.local_mode = args.local_mode
         self.evaluation_server = None
         self.evaluation_server_pid = None
         self.infer_process = None
@@ -170,6 +122,7 @@ class ServerWrapper:
                 "--server_port",
                 str(self.port),
             ]
+
         else:
             assert osp.exists(f"{self.exec}/run.sh"), f"run.sh not found in {self.exec}"
             command += [
@@ -178,11 +131,27 @@ class ServerWrapper:
                 self.evaluation_server_ip,
                 str(self.port),
             ]
+        if self.local_mode:
+            command.extend(
+                [
+                    "--local-mode",
+                    "True",
+                    "--tasks",
+                    *self.args.tasks,
+                    "--output-dir",
+                    self.cfg["output_dir"],
+                ]
+            )
+            if self.args.debug or self.args.try_run:
+                command.append("--debug")
+            if self.args.data_root:
+                command.append("--data-root")
+                command.append(self.args.data_root)
         command.extend(["--cfg", f"{json.dumps(self.cfg)}"])
         return command
 
     def maybe_launch_evaluation_server(self, args, output_dir):
-        if args.disable_evaluation_server:
+        if args.disable_evaluation_server or self.local_mode:
             self.evaluation_server = None
             self.port = args.server_port if args.server_port else 5000
             return

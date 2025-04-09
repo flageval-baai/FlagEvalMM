@@ -262,5 +262,11 @@ if __name__ == "__main__":
         server_port=args.server_port,
         timeout=args.timeout,
         extra_cfg=args.cfg,
+        local_mode=args.local_mode,
+        task_names=args.tasks,
+        output_dir=args.output_dir,
+        model_path=args.model,
+        debug=args.debug,
+        quiet=args.quiet,
     )
     model_adapter.run()

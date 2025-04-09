@@ -54,7 +54,11 @@ class HttpClient(BaseApiModel):
         response = requests.post(
             self.url, headers=self.headers, data=json.dumps(data), timeout=300
         )
-        response_json = response.json()
+        try:
+            response_json = response.json()
+        except Exception as e:
+            raise Exception(f"Error: {response.text}, {e}")
+
         if response.status_code != 200:
             if "error" not in response_json:
                 yield f"Error code: {response_json['message']}"
@@ -74,7 +78,11 @@ class HttpClient(BaseApiModel):
         if "choices" in response_json:
             message = response_json["choices"][0]["message"]
             if "content" in message:
-                yield message["content"]
+                res = ""
+                if message.get("reasoning_content", None):
+                    res = f"<think>{message['reasoning_content']}</think>\n"
+                res += message["content"]
+                yield res
             else:
                 yield ""
         else:
