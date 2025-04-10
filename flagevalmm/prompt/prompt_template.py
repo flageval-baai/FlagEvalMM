@@ -1,6 +1,12 @@
 from typing import Optional, Callable, Union
 from flagevalmm.registry import PROMPTS
 
+cot_math_prompt = (
+    "Answer the preceding question. The last line of your response should follow this format: "
+    "'Answer: \\boxed{$FINAL_ANSWER}' (without quotes), where 'FINAL_ANSWER' is your choice option or conclusion "
+    "based on the reasoning provided.  If it is a multiple choice question, only one letter is allowed in the \\boxed{$FINAL_ANSWER} ."
+    "Think step by step logically, considering all relevant information before answering."
+)
 
 @PROMPTS.register_module()
 class PromptTemplate:
@@ -11,10 +17,12 @@ class PromptTemplate:
         post_prompt: Optional[Union[str, Callable]] = None,
         examples: Optional[Union[str, Callable]] = None,
         prompt_func: Optional[Callable] = None,
+        use_cot_math: bool = False,
     ) -> None:
         self.pre_prompt = pre_prompt
         self.post_prompt = post_prompt
         self.examples = examples
+        self.use_cot_math = use_cot_math
         self.build_prompt = (
             self.default_prompt_func if prompt_func is None else prompt_func
         )
@@ -39,11 +47,15 @@ class PromptTemplate:
             "yes-no": "Answer with 'yes' or 'no'.",
             "cloze": "Fill in the answers directly on all the horizontal lines or in the blank spaces of the article.",
             "default": "Answer the question using a single word or phrase.",
+            "cot-math": cot_math_prompt,
         }
 
         instructions = cn_instructions if is_cn else en_instructions
 
-        instruct = instructions.get(question_type, instructions["default"])
+        if self.use_cot_math:
+            instruct = cot_math_prompt
+        else:
+            instruct = instructions.get(question_type, instructions["default"])
 
         return instruct
 
