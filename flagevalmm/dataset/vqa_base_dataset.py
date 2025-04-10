@@ -42,7 +42,11 @@ class VqaBaseDataset(Dataset):
 
     def load_annotations(self, anno_file: Union[str, List[str]]):
         if isinstance(anno_file, str):
-            annotations = json.load(open(osp.join(self.data_root, anno_file)))
+            # if anno_file is absolute path, use it directly
+            if osp.isabs(anno_file):
+                annotations = json.load(open(anno_file))
+            else:
+                annotations = json.load(open(osp.join(self.data_root, anno_file)))
         else:
             annotations = []
             for file in anno_file:

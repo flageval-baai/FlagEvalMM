@@ -134,8 +134,6 @@ class ServerWrapper:
         if self.local_mode:
             command.extend(
                 [
-                    "--local-mode",
-                    "True",
                     "--tasks",
                     *self.args.tasks,
                     "--output-dir",
