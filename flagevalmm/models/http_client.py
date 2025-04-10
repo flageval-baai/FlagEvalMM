@@ -39,6 +39,7 @@ class HttpClient(BaseApiModel):
             max_long_side=max_long_side,
             max_num_frames=max_num_frames,
             use_cache=use_cache,
+            **kwargs,
         )
         self.url = url
         self.headers = {"Content-Type": "application/json"}
@@ -51,6 +52,13 @@ class HttpClient(BaseApiModel):
         chat_args = self.chat_args.copy()
         chat_args.update(kwargs)
         data = {"model": f"{self.model_name}", "messages": chat_messages, **chat_args}
+        if self.stream is False:
+            yield from self._non_streaming_chat(data)
+        else:
+            yield from self._streaming_chat(data)
+
+    def _non_streaming_chat(self, data):
+        """Handle non-streaming API requests."""
         response = requests.post(
             self.url, headers=self.headers, data=json.dumps(data), timeout=300
         )
@@ -87,6 +95,58 @@ class HttpClient(BaseApiModel):
                 yield ""
         else:
             yield response_json["completions"][0]["text"]
+
+    def _streaming_chat(self, data):
+        """Handle streaming API requests."""
+        think_start = False
+        with requests.post(
+            self.url,
+            headers=self.headers,
+            data=json.dumps(data),
+            stream=True,
+            timeout=300,
+        ) as response:
+            if response.status_code != 200:
+                raise Exception(
+                    f"Stream request failed with status code {response.status_code}: {response.text}"
+                )
+
+            for line in response.iter_lines():
+                if line:
+                    # Remove "data: " prefix if it exists (common in SSE)
+                    line_text = line.decode("utf-8")
+                    if line_text.startswith("data: "):
+                        line_text = line_text[6:]
+
+                    # Skip heartbeat or empty messages
+                    if line_text.strip() == "" or line_text == "[DONE]":
+                        continue
+
+                    try:
+                        chunk = json.loads(line_text)
+                        # Extract content from the chunk based on API response format
+                        if "choices" in chunk:
+                            delta = chunk["choices"][0].get("delta", {})
+                            if (
+                                "reasoning_content" in delta
+                                and delta["reasoning_content"]
+                            ):
+                                content = delta["reasoning_content"]
+                                if think_start is False:
+                                    think_start = True
+                                    content = f"<think>{content}"
+                                yield content
+                            if "content" in delta and delta["content"]:
+                                content = delta["content"]
+                                if think_start:
+                                    content = f"</think>\n{content}"
+                                    think_start = False
+                                yield content
+                    except json.JSONDecodeError as e:
+                        logger.warning(
+                            f"Failed to parse chunk: {line_text}, error: {e}"
+                        )
+                        continue
 
     def build_message(
         self,
