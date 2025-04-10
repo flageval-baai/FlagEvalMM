@@ -143,10 +143,9 @@ class HttpClient(BaseApiModel):
                                     think_start = False
                                 yield content
                     except json.JSONDecodeError as e:
-                        logger.warning(
+                        raise Exception(
                             f"Failed to parse chunk: {line_text}, error: {e}"
                         )
-                        continue
 
     def build_message(
         self,

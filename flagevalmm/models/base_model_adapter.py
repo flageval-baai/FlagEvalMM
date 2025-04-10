@@ -214,6 +214,13 @@ class BaseModelAdapter:
             with open(output_file, "w") as f:
                 json.dump(result, f, indent=2, ensure_ascii=True)
 
+    def save_item(
+        self, result: Dict[str, Any], question_id: str, meta_info: Dict[str, Any]
+    ):
+        output_dir = osp.join(meta_info["output_dir"], "items")
+        with open(osp.join(output_dir, f"{question_id}.json"), "w") as f:
+            json.dump(result, f, indent=2, ensure_ascii=False)
+
     def collect_results_and_save(
         self,
         meta_info: Dict[str, Any],

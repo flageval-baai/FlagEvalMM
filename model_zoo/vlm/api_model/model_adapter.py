@@ -1,5 +1,7 @@
 import re
 import os
+import os.path as osp
+import json
 from typing import Dict, Any, Optional, Union, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import atexit
@@ -109,8 +111,15 @@ class ModelAdapter(BaseModelAdapter):
                 task_info["important_packages"].append(f"{package} not installed")
         return model_server
 
-    def process_single_item(self, i):
+    def process_single_item(self, i, inter_results_dir):
         question_id, multi_modal_data, qs = self.dataset[i]
+        inter_results_file = osp.join(inter_results_dir, f"{question_id}.json")
+        if osp.exists(inter_results_file):
+            logger.info(f"Skipping {question_id} because it already exists")
+            with open(inter_results_file, "r") as f:
+                result = json.load(f)["answer"]
+            return {"question_id": question_id, "question": qs, "answer": result}
+        logger.info(f"Processing {question_id}")
         logger.info(qs)
         messages = self.model.build_message(qs, multi_modal_data=multi_modal_data)
         try:
@@ -136,14 +145,17 @@ class ModelAdapter(BaseModelAdapter):
 
         results = []
         num_workers = self.task_info.get("num_workers", 1)
+        inter_results_dir = osp.join(meta_info["output_dir"], "items")
+        os.makedirs(inter_results_dir, exist_ok=True)
         with ThreadPoolExecutor(max_workers=num_workers) as executor:
             future_to_item = {
-                executor.submit(self.process_single_item, i): i
+                executor.submit(self.process_single_item, i, inter_results_dir): i
                 for i in range(len(self.dataset))
             }
 
             for future in as_completed(future_to_item):
                 result = future.result()
+                self.save_item(result, result["question_id"], meta_info)
                 results.append(result)
 
         self.save_result(results, meta_info)

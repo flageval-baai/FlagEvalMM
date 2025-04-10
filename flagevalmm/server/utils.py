@@ -98,7 +98,10 @@ def parse_args():
     parser.add_argument("--num-workers", "--num_workers", type=int)
     parser.add_argument("--backend", type=str)
     parser.add_argument(
-        "--local-mode", type=bool, default=True, help="run without evaluation server"
+        "--no-local-mode",
+        action="store_false",
+        dest="local_mode",
+        help="disable local mode (use evaluation server)",
     )
     parser.add_argument("--disable-evaluation-server", "-ds", action="store_true")
     parser.add_argument("--skip", action="store_true", help="skip finished tasks")
