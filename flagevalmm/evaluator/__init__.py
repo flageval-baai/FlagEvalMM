@@ -8,6 +8,7 @@ from .clip_score_evaluator import CLIPScoreEvaluator
 from .aggregation_evaluator import AggregationEvaluator
 from .one_align_evaluator import OneAlignEvaluator
 from .video_score_evaluator import VideoScoreEvaluator
+from .box_evaluator import BoxEvaluator
 
 __all__ = [
     "BaseEvaluator",
@@ -20,4 +21,5 @@ __all__ = [
     "AggregationEvaluator",
     "OneAlignEvaluator",
     "VideoScoreEvaluator",
+    "BoxEvaluator",
 ]
