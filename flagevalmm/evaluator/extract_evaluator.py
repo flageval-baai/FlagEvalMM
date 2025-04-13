@@ -1,24 +1,15 @@
-import os
 import re
-from collections import defaultdict
-import signal
 from flagevalmm.registry import EVALUATORS
 from flagevalmm.evaluator import BaseEvaluator
 import json
-import re
-from collections import defaultdict
 import os.path as osp
 from torch.utils.data import Dataset
 from typing import Optional, Dict, List, Tuple, Callable, Union, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from threading import Lock
 from tqdm import tqdm
 
-from flagevalmm.server.utils import get_random_port
-from flagevalmm.registry import EVALUATORS
 from flagevalmm.models import HttpClient
 from flagevalmm.common.logger import get_logger
-from flagevalmm.server.model_server import ModelServer
 
 logger = get_logger(__name__)
 
@@ -98,6 +89,7 @@ class ExtractEvaluator(BaseEvaluator):
     """
     The evaluation method is implemented to utilize the llm to extract the answer from the model response.
     """
+
     def __init__(
         self,
         eval_model_name: str,
@@ -116,7 +108,9 @@ class ExtractEvaluator(BaseEvaluator):
         self.num_threads = num_threads
         # replace port in url
 
-        self.base_url = kwargs.pop("base_url", "http://localhost:8000/v1/chat/completions")
+        self.base_url = kwargs.pop(
+            "base_url", "http://localhost:8000/v1/chat/completions"
+        )
         if "localhost" in self.base_url:
             self.base_url = re.sub(
                 r":(\d+)/",
@@ -133,10 +127,8 @@ class ExtractEvaluator(BaseEvaluator):
             api_key=self.api_key,
         )
 
-    def extract_answer_by_llm(self, gt: Dict, pred: Dict) -> str:
-        prompt = demo_prompt_extract.format(
-            answer=pred["answer"]
-        )
+    def extract_answer_by_llm(self, gt: Dict, pred: Dict):
+        prompt = demo_prompt_extract.format(answer=pred["answer"])
         try:
             message = self.llm_evaluator.build_message(query=prompt)
             extracted_answer = self.llm_evaluator.infer(
@@ -146,12 +138,14 @@ class ExtractEvaluator(BaseEvaluator):
         except Exception as e:
             logger.error(f"Error in evaluating by llm: {e}")
             return "[FAILED]"
-    
+
     def compare_answer(self, gt: Dict, extracted_answer: str):
         string_compare = gt["answer"] == extracted_answer
 
         prompt = demo_prompt_score.format(
-            question=gt["question"], answer=gt["answer"], extracted_answer=extracted_answer
+            question=gt["question"],
+            answer=gt["answer"],
+            extracted_answer=extracted_answer,
         )
         message = self.llm_evaluator.build_message(query=prompt)
         try:
@@ -168,17 +162,17 @@ class ExtractEvaluator(BaseEvaluator):
         """Process a single prediction in a thread-safe manner"""
         extracted_answer = self.extract_answer_by_llm(gt, pred)
         is_correct_by_llm = self.compare_answer(gt, extracted_answer)
-        
-        if is_correct_by_llm in ['0', '1']:
+
+        if is_correct_by_llm in ["0", "1"]:
             is_correct_by_llm = int(is_correct_by_llm)
         else:
             is_correct_by_llm = 0
-            
+
         pred_result = pred.copy()  # Create a copy to avoid thread safety issues
         pred_result["extracted_answer"] = extracted_answer
         pred_result["correct"] = is_correct_by_llm
         pred_result["label"] = gt["answer"]
-        
+
         return pred_result, is_correct_by_llm
 
     def cal_accuracy(
@@ -186,7 +180,7 @@ class ExtractEvaluator(BaseEvaluator):
     ) -> Dict:
         right = 0
         processed_predictions = []
-        
+
         # Create a thread pool
         with ThreadPoolExecutor(max_workers=self.num_threads) as executor:
             # Submit all tasks
@@ -194,11 +188,11 @@ class ExtractEvaluator(BaseEvaluator):
                 executor.submit(
                     self.process_single_prediction,
                     pred,
-                    annotations[str(pred["question_id"])]
+                    annotations[str(pred["question_id"])],
                 ): pred
                 for pred in predictions
             }
-            
+
             # Process results as they complete with progress bar
             with tqdm(total=len(predictions), desc="Processing predictions") as pbar:
                 for future in as_completed(future_to_pred):
@@ -216,16 +210,16 @@ class ExtractEvaluator(BaseEvaluator):
                         pred["label"] = annotations[str(pred["question_id"])]["answer"]
                         processed_predictions.append(pred)
                         pbar.update(1)
-        
+
         # Replace the original predictions with processed ones
         predictions.clear()
         predictions.extend(processed_predictions)
-        
+
         results = {
             "accuracy": round(right / len(predictions) * 100, 2),
         }
         return results
-    
+
     def process(self, dataset: Dataset, output_dir: str, **kwargs) -> Dict:
         """
         Args:
@@ -244,4 +238,3 @@ class ExtractEvaluator(BaseEvaluator):
 
         self.save(results, predictions + filtered_predictions, dataset.name, output_dir)
         return results
-
