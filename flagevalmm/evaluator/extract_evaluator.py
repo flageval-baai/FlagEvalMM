@@ -86,9 +86,7 @@ Judgement: """
 
 @EVALUATORS.register_module()
 class ExtractEvaluator(BaseEvaluator):
-    """
-    The evaluation method is implemented to utilize the llm to extract the answer from the model response.
-    """
+    """The evaluation method is implemented to utilize the llm to extract the answer from the model response."""
 
     def __init__(
         self,
@@ -97,16 +95,20 @@ class ExtractEvaluator(BaseEvaluator):
         backend: str = "vllm",
         port: int = 8001,
         eval_func: Optional[Union[Callable, str]] = None,
-        num_threads: int = 8,  # New parameter for controlling number of threads
+        num_threads: int = 8,
         **kwargs,
     ) -> None:
+        super().__init__(
+            use_llm_evaluator=False,
+            eval_func=eval_func,
+            **kwargs,
+        )
+
         self.use_llm_evaluator = use_llm_evaluator
         self.model_name = eval_model_name
         self.backend = backend
         self.port = port
-        self.eval_func = self.get_eval_func(eval_func)
         self.num_threads = num_threads
-        # replace port in url
 
         self.base_url = kwargs.pop(
             "base_url", "http://localhost:8000/v1/chat/completions"
@@ -121,7 +123,7 @@ class ExtractEvaluator(BaseEvaluator):
         self.extra_args = kwargs.pop("extra_args", None)
         assert use_llm_evaluator, "use_llm_evaluator must be True"
 
-        self.llm_evaluator = HttpClient(
+        self.llm_evaluator = HttpClient(  # type: ignore
             model_name=self.model_name,
             url=self.base_url,
             api_key=self.api_key,
