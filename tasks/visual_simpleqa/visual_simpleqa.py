@@ -1,7 +1,7 @@
 import os
 
 config = dict(
-    dataset_path="/share/project/yesliu/datasets/VisualSimpleQA/",
+    dataset_path="WYLing/VisualSimpleQA",
     split="data",
     processed_dataset_path="visual_simpleqa",
     processor="process.py",
