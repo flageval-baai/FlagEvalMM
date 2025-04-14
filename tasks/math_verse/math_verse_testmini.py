@@ -11,7 +11,11 @@ config = dict(
 dataset = dict(
     type="VqaBaseDataset",
     config=config,
-    prompt_template=dict(type="PromptTemplate", pre_prompt="", post_prompt=""),
+    prompt_template=dict(
+        type="PromptTemplate",
+        pre_prompt="Please solve the problem and put your answer in one '\\boxed{}'",
+        post_prompt="",
+    ),
     name="math_verse_testmini",
 )
 
