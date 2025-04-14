@@ -13,8 +13,8 @@ dataset = dict(
     config=config,
     prompt_template=dict(
         type="PromptTemplate",
-        pre_prompt="Please solve the problem and put your answer in one '\\boxed{}'",
-        post_prompt="",
+        pre_prompt="",
+        post_prompt="Please solve the problem and put your answer in one '\\boxed{}'",
     ),
     name="math_verse_testmini",
 )
