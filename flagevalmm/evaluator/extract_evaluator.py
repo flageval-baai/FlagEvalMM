@@ -6,7 +6,6 @@ import os.path as osp
 from torch.utils.data import Dataset
 from typing import Optional, Dict, List, Tuple, Callable, Union, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from tqdm import tqdm
 
 from flagevalmm.models import HttpClient
 from flagevalmm.common.logger import get_logger
@@ -200,7 +199,10 @@ class ExtractEvaluator(BaseEvaluator):
         self.num_threads = num_threads
         self.eval_method = eval_method
 
-        assert eval_method in ["extract_compare", "simpleqa"], "eval_method must be either 'extract_compare' or 'simpleqa'"
+        assert eval_method in [
+            "extract_compare",
+            "simpleqa",
+        ], "eval_method must be either 'extract_compare' or 'simpleqa'"
 
         self.base_url = kwargs.pop(
             "base_url", "http://localhost:8000/v1/chat/completions"
