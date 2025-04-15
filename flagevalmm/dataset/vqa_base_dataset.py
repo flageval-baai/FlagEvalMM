@@ -82,7 +82,7 @@ class VqaBaseDataset(Dataset):
     def __getitem__(self, index: int) -> Dict[str, Any]:
         annotation = self.annotations[index]
         img_path = []
-        if annotation["img_path"] is not None:
+        if annotation.get("img_path", None) is not None:
             if isinstance(annotation["img_path"], list):
                 for path in annotation["img_path"]:
                     img_path.append(osp.join(self.data_root, path))
