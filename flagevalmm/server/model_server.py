@@ -31,7 +31,8 @@ class ModelServer:
             "vllm",
             "sglang",
             "lmdeploy",
-        ], "backend must be vllm or sglang or lmdeploy"
+            "flagscale",
+        ], "backend must be vllm or sglang or lmdeploy or flagscale"
         self.backend = backend
         # extra args is like "--limit-mm-per-prompt image=8 --max-model-len 32768"
         splited_args = shlex.split(extra_args) if extra_args else []
@@ -39,6 +40,8 @@ class ModelServer:
             self.get_cmd = self.get_vllm_cmd
         elif self.backend == "lmdeploy":
             self.get_cmd = self.get_lmdeploy_cmd
+        elif self.backend == "flagscale":
+            self.get_cmd = self.get_flagscale_cmd
         else:
             self.get_cmd = self.get_sglang_cmd
         self.execute_cmd = None
@@ -56,6 +59,15 @@ class ModelServer:
             self.model_name,
             "--server-port",
             str(self.port),
+            *args,
+        ]
+        return cmd
+
+    def get_flagscale_cmd(self, args: List):
+        cmd = [
+            "flagscale",
+            "serve",
+            self.model_name,
             *args,
         ]
         return cmd

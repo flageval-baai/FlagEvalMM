@@ -83,7 +83,10 @@ class ModelAdapter(BaseModelAdapter):
         self.model = model_type_map[model_type](**model_config)
 
     def launch_model(self, task_info: Dict):
-        port = get_random_port()
+        if task_info.get("server_port"):
+            port = task_info.get("server_port")
+        else:
+            port = get_random_port()
         # replace port in url
         url = re.sub(
             r":(\d+)/",
