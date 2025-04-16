@@ -55,6 +55,19 @@ pip install lmdeploy
 
 For detailed installation instructions, please refer to the [official LMDeploy documentation](https://lmdeploy.readthedocs.io/en/latest/).
 
+
+#### FlagScale Backend
+
+```bash
+git clone https://github.com/FlagOpen/FlagScale.git
+cd FlagScale/install
+./install-requirements.sh --env inference
+cd vllm
+pip install .
+```
+
+For detailed installation instructions, please refer to the [official FlagScale documentation](https://lmdeploy.readthedocs.io/en/latest/).
+
 #### Transformers
 
 For optimal performance for transformers, we recommend installing flash-attention
