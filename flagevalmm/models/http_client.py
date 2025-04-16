@@ -2,7 +2,7 @@ import requests.models
 import json
 import requests
 import httpx
-
+import re
 from typing import Optional, List, Any, Union, Dict
 from flagevalmm.common.logger import get_logger
 from flagevalmm.models.base_api_model import BaseApiModel
@@ -11,6 +11,8 @@ from flagevalmm.common.video_utils import load_image_or_video
 from PIL import Image
 
 logger = get_logger(__name__)
+
+IMAGE_REGEX = r"<image \d+>"
 
 
 class HttpClient(BaseApiModel):
@@ -147,6 +149,20 @@ class HttpClient(BaseApiModel):
                             f"Failed to parse chunk: {line_text}, error: {e}"
                         )
 
+    def add_image_to_message(self, image_data, messages):
+        base64_image = encode_image(
+            image_data,
+            max_size=self.max_image_size,
+            min_short_side=self.min_short_side,
+            max_long_side=self.max_long_side,
+        )
+        messages[-1]["content"].append(
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+            }
+        )
+
     def build_message(
         self,
         query: str,
@@ -157,6 +173,28 @@ class HttpClient(BaseApiModel):
         messages = past_messages if past_messages else []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
+        if not multi_modal_data:
+            messages.append(
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": query,
+                        },
+                    ],
+                },
+            )
+        for data_type, data_list in multi_modal_data.items():
+            # TODO: merge video and image
+            if data_type == "image":
+                self.build_interleaved_message(query, messages, data_list)
+            elif data_type == "video":
+                self.build_video_message(query, messages, data_list)
+
+        return messages
+
+    def build_video_message(self, query: str, messages: List, video_data: str):
         messages.append(
             {
                 "role": "user",
@@ -168,30 +206,61 @@ class HttpClient(BaseApiModel):
                 ],
             },
         )
+        frames = load_image_or_video(
+            video_data, max_num_frames=self.max_num_frames, return_tensors=False
+        )
+        for frame in frames:
+            self.add_image_to_message(Image.fromarray(frame), messages)
 
-        def add_image_to_message(image_data):
-            base64_image = encode_image(
-                image_data,
+    def build_interleaved_message(
+        self, query: str, messages: List, image_data: List[Union[str, Image.Image]]
+    ):
+        referenced_numbers = [
+            int(re.search(r"\d+", ref).group())
+            for ref in re.findall(IMAGE_REGEX, query)
+        ]
+        content = []
+        # Check if all referenced numbers are valid
+        if referenced_numbers:
+            max_ref = max(referenced_numbers)
+            min_ref = min(referenced_numbers)
+            if max_ref > len(image_data) or min_ref < 1:
+                raise ValueError("Invalid image reference in question.")
+
+        base64_images = [
+            encode_image(
+                data,
                 max_size=self.max_image_size,
                 min_short_side=self.min_short_side,
                 max_long_side=self.max_long_side,
             )
-            messages[-1]["content"].append(
-                {
-                    "type": "image_url",
-                    "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
-                }
-            )
+            for data in image_data
+        ]
 
-        for data_type, data_path in multi_modal_data.items():
-            if data_type == "image":
-                for img_path in data_path:
-                    add_image_to_message(img_path)
-            elif data_type == "video":
-                frames = load_image_or_video(
-                    data_path, max_num_frames=self.max_num_frames, return_tensors=False
+        parts = re.split(r"(<image \d+>)", query)
+        for part in parts:
+            if not part:
+                continue
+            if re.match(IMAGE_REGEX, part):
+                # It's an image reference
+                num = int(re.search(r"\d+", part).group())
+                base64_image = base64_images[num - 1]
+                content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                    }
                 )
-                for frame in frames:
-                    add_image_to_message(Image.fromarray(frame))
-
-        return messages
+            else:
+                # It's a text part
+                content.append({"type": "text", "text": part})
+        # If there are no referenced images, add all images to the message, not interleaved
+        if not referenced_numbers:
+            for base64_image in base64_images:
+                content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+                    }
+                )
+        messages.append({"role": "user", "content": content})

@@ -155,7 +155,8 @@ class ModelAdapter(BaseModelAdapter):
 
             for future in as_completed(future_to_item):
                 result = future.result()
-                self.save_item(result, result["question_id"], meta_info)
+                if not result["answer"].startswith("Error code"):
+                    self.save_item(result, result["question_id"], meta_info)
                 results.append(result)
 
         self.save_result(results, meta_info)
