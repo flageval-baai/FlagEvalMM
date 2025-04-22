@@ -35,31 +35,29 @@ def process(cfg):
             " Please answer directly with only the letter of the correct option and nothing else.",
             "",
         )
-        images_base64 = annotation["images_base64"]
+        images = annotation["images"]
         visual_indices = annotation.get("visual_indices", [])
 
         # save img
-        for i, image_base64 in enumerate(images_base64):
+        for i, image in enumerate(images):
             image_path = osp.join("img", f"{question_id}_{i + 1}.jpg")
             info["img_path"].append(image_path)
             full_image_path = osp.join(output_dir, image_path)
             os.makedirs(osp.dirname(full_image_path), exist_ok=True)
-            image_data = base64.b64decode(image_base64)
             try:
-                with open(full_image_path, "wb") as image_file:
-                    image_file.write(image_data)
+                image.save(full_image_path)
             except Exception as e:
                 print(f"Error saving image {question_id}: {e}")
 
         # contents: mix images and text according to visual_indices
         if not visual_indices or all(idx == 0 for idx in visual_indices):
             contents = []
-            for i in range(len(images_base64)):
+            for i in range(len(images)):
                 contents.append(f"<image {i + 1}>")
             contents.append(question)
         else:
             # Sort by visual_indices and insert images into the specified text positions
-            pairs = list(zip(range(len(images_base64)), visual_indices))
+            pairs = list(zip(range(len(images)), visual_indices))
             pairs.sort(key=lambda x: x[1])
             last_pos = 0
             contents = []
@@ -75,7 +73,7 @@ def process(cfg):
             if last_pos < len(question):
                 contents.append(question[last_pos:])
             if not contents:
-                for i in range(len(images_base64)):
+                for i in range(len(images)):
                     contents.append(f"<image {i + 1}>")
                 contents.append(question)
 
