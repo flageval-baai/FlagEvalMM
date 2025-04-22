@@ -1,7 +1,6 @@
 import json
 import os
 import os.path as osp
-import base64
 from datasets import load_dataset
 
 
