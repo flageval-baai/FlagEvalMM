@@ -5,6 +5,7 @@ from flagevalmm.models.base_api_model import BaseApiModel
 from flagevalmm.prompt.prompt_tools import encode_image
 from flagevalmm.common.video_utils import load_image_or_video
 from PIL import Image
+import httpx
 
 logger = get_logger(__name__)
 
@@ -36,6 +37,7 @@ class Claude(BaseApiModel):
         use_cache: bool = False,
         api_key: Optional[str] = None,
         stream: bool = False,
+        use_proxy: bool = False,
         **kwargs,
     ) -> None:
         _load_anthropic_packages()
@@ -53,7 +55,13 @@ class Claude(BaseApiModel):
         self.stream = stream
         if api_key is None:
             api_key = os.getenv("ANTHROPIC_API_KEY")
-        self.client = anthropic.Anthropic(api_key=api_key)
+        if use_proxy:
+            proxy_url = os.getenv("PROXY_URL")
+            assert proxy_url is not None, "PROXY_URL is not set"
+            client = httpx.Client(proxies={"http://": proxy_url, "https://": proxy_url})
+        else:
+            client = None
+        self.client = anthropic.Client(api_key=api_key, http_client=client)
 
     def _chat(self, chat_messages: Any, **kwargs):
         system_prompt = (
@@ -70,8 +78,35 @@ class Claude(BaseApiModel):
                 model=self.model_name,
                 **chat_args,
             ) as stream:
-                for text in stream.text_stream:
-                    yield text
+                thinking_mode = (
+                    "thinking" in chat_args
+                    and chat_args["thinking"]["type"] == "enabled"
+                )
+                begin_thinking = False
+                finished_thinking = False
+                for event in stream:
+                    if event.type == "content_block_start":
+                        if not thinking_mode:
+                            yield ""
+                        elif begin_thinking:
+                            yield "\n"
+                        else:
+                            yield "<think>"
+                        begin_thinking = True
+
+                    elif event.type == "content_block_delta":
+                        if event.delta.type == "thinking_delta":
+                            yield event.delta.thinking
+                            # print(f"Thinking: {event.delta.thinking}", end="", flush=True)
+                        elif event.delta.type == "text_delta":
+                            yield event.delta.text
+                            # print(f"Response: {event.delta.text}", end="", flush=True)
+                    elif event.type == "content_block_stop":
+                        if thinking_mode and begin_thinking and not finished_thinking:
+                            yield "</think>"
+                            finished_thinking = True
+                        else:
+                            yield ""
         else:
             response = self.client.messages.create(
                 system=system_prompt,
