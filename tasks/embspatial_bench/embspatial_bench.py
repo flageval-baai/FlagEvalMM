@@ -1,6 +1,6 @@
 config = dict(
-    dataset_path="HelloGitHub/EmbSpatial-Bench",
-    split="train",
+    dataset_path="FlagEval/EmbSpatial-Bench",
+    split="test",
     processed_dataset_path="EmbSpatialBench",
     processor="process.py",
 )
