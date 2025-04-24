@@ -22,7 +22,7 @@ dataset = dict(
 
 evaluator = dict(
     type="ExtractEvaluator",
-    eval_model_name="gpt-4o-mini",
+    eval_model_name="gpt-4o-mini-2024-07-18",
     use_llm_evaluator=True,
     use_cache=True,
     base_url=os.getenv("FLAGEVAL_BASE_URL"),
