@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 from flagevalmm.registry import EVALUATORS
 from flagevalmm.common.video_utils import read_video_pyav
+from tqdm import tqdm
 
 from torchmetrics.multimodal.clip_score import CLIPScore
 
@@ -19,7 +20,7 @@ class CLIPSIMEvaluator:
     def get_metric_results(self, output_info, output_dir, annotations, **kwargs):
         score_sum = 0
         num = 0
-        for info in output_info:
+        for info in tqdm(output_info):
             video_path = osp.join(output_dir, info["video"])
             images = read_video_pyav(
                 video_path=video_path,

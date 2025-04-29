@@ -1,7 +1,7 @@
 import torch
 import json
 from diffusers import DiffusionPipeline
-import os
+from tqdm import tqdm
 from typing import Dict, Any
 from flagevalmm.server.utils import get_data, parse_args
 from flagevalmm.models.base_model_adapter import BaseModelAdapter
@@ -21,12 +21,13 @@ class ModelAdapter(BaseModelAdapter):
         text_num = meta_info["length"]
         output_dir = meta_info["output_dir"]
         output_info = []
-        for i in range(text_num):
+        for i in tqdm(range(text_num)):
             response = get_data(i, task_name, self.server_ip, self.server_port)
             prompt, question_id = response["prompt"], response["id"]
-            video_frames = self.pipe(prompt, num_frames=24).frames[0]
-            video_out_name = f"{output_dir}/{question_id}.mp4"
-            video_path = export_to_video(video_frames,video_out_name)
+            for j in range(5):
+                video_frames = self.pipe(prompt, num_frames=24).frames[0]
+                video_out_name = f"{output_dir}/{question_id}-{j}.mp4"
+                video_path = export_to_video(video_frames,video_out_name)
             output_info.append(
                 {"prompt": prompt, "id": question_id, "video": video_out_name}
             )

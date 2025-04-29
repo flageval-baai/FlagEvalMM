@@ -1,17 +1,30 @@
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from torch.utils.data import Dataset
 from flagevalmm.registry import DATASETS
+from flagevalmm.dataset.utils import get_data_root
+from flagevalmm.common.const import FLAGEVALMM_DATASETS_CACHE_DIR
+import os.path as osp
 
 
 @DATASETS.register_module()
 class Text2VideoBaseDataset(Dataset):
     def __init__(
-        self, data_root: str, name: str, debug: bool = False, **kwargs
+        self, name: str, data_root: Optional[str] = None,
+        anno_file: Optional[str] = None,
+        cache_dir: str = FLAGEVALMM_DATASETS_CACHE_DIR,
+        config: Optional[dict] = None,
+        base_dir: Optional[str] = None,
+        debug: bool = False,
+        **kwargs,
     ) -> None:
-        self.data_root = data_root
+        self.data_root = get_data_root(
+            data_root=data_root, config=config, cache_dir=cache_dir, base_dir=base_dir
+        )
+        anno_file = "data.json" if anno_file is None else anno_file
+        self.files = json.load(open(osp.join(self.data_root, anno_file)))
         self.name = name
-        self.files = json.load(open(data_root))
+        # self.files = json.load(open(data_root))
         self.debug = debug
         if debug:
             self.files = self.files[:32]

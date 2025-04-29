@@ -1,8 +1,16 @@
 task_name = "t2v"
 
+config = dict(
+    dataset_path="fierytrees/flag-eval-data",
+    processed_dataset_path="t2v/ucf",
+    processor="process.py",
+    split="test"
+)
+
+
 dataset = dict(
     type="Text2VideoBaseDataset",
-    data_root="/home/dengzijun/damo_video/ucf_prompts_reformat.json",
+    config=config,
     name="ucf-101",
 )
 
@@ -11,11 +19,11 @@ clipsim_evaluator = dict(
 )
 
 fvd_evaluator = dict(
-    type="FVDEvaluator", example_dir="/home/dengzijun/output/sora_prompt/", model_path="/home/dengzijun/damo_video/i3d_torchscript.pt", max_num_frames=48, start_method="spawn"
+    type="FVDEvaluator", config=config, model_path="flateon/FVD-I3D-torchscript", max_num_frames=48, start_method="spawn"
 )
 
 evaluator = dict(
     type="AggregationEvaluator",
-    evaluators=[clipsim_evaluator, fvd_evaluator],
+    evaluators=[fvd_evaluator, clipsim_evaluator],
     start_method="spawn"
 )

@@ -1,7 +1,6 @@
 import json
 from typing import Optional
 import os.path as osp
-import torch_fidelity
 from flagevalmm.dataset.utils import get_data_root
 from flagevalmm.common.const import FLAGEVALMM_DATASETS_CACHE_DIR
 import torch
@@ -9,9 +8,11 @@ import os
 import torch.nn.functional as F
 from flagevalmm.common.video_utils import read_video_pyav
 from flagevalmm.registry import EVALUATORS
+from huggingface_hub import hf_hub_download
 import numpy as np
 import math
 from scipy.linalg import sqrtm
+from tqdm import tqdm
 
 
 def compute_stats(feats: np.ndarray):
@@ -61,7 +62,6 @@ def preprocess_single(video, resolution=224, sequence_length=None):
     return video.contiguous()
 
 
-i3D_WEIGHTS_URL = "https://www.dropbox.com/s/ge9e5ujwgetktms/i3d_torchscript.pt"
 @EVALUATORS.register_module()
 class FVDEvaluator:
     def __init__(
@@ -72,14 +72,26 @@ class FVDEvaluator:
         config: Optional[dict] = None,
         **kwargs,
     ) -> None:
-        assert osp.isdir(example_dir), "example_dir is required for FVD"
         if not os.path.exists(model_path):
-            os.system(f"wget {i3D_WEIGHTS_URL} -O {model_path}")
+            model_path = hf_hub_download(
+                repo_id=model_path,
+                filename="i3d_torchscript.pt"
+            )
         # print(filepath)
         i3d = torch.jit.load(model_path).eval().to('cuda')
         i3d = torch.nn.DataParallel(i3d)
         self.i3d = i3d
-        self.example_dir = example_dir
+
+        if example_dir is None:
+            data_root = get_data_root(
+                data_root=None,
+                config=config,
+                cache_dir=FLAGEVALMM_DATASETS_CACHE_DIR,
+                base_dir=base_dir,
+            )
+            self.example_dir = osp.join(data_root, "video")
+        else:
+            self.example_dir = example_dir
 
     def get_feats(self, video):
         # videos : torch.tensor BCTHW [0, 1]
@@ -97,10 +109,8 @@ class FVDEvaluator:
         feats_real=[]
 
         video_extensions = ['.mp4', '.avi', '.mov', '.mkv', '.flv', '.webm']
-        # 遍历目录树
-        for root, _, files in os.walk(self.example_dir):
+        for root, _, files in tqdm(os.walk(self.example_dir)):
             for file in files:
-                # 检查文件扩展名是否是视频
                 if any(file.lower().endswith(ext) for ext in video_extensions):
                     video_path = os.path.join(root, file)                    
                     images = read_video_pyav(
@@ -110,7 +120,7 @@ class FVDEvaluator:
                     )
                     feats_real.append(self.get_feats(images))
 
-        for info in output_info:
+        for info in tqdm(output_info):
             video_path = osp.join(output_dir, info["video"])
             images = read_video_pyav(
                 video_path=video_path,
