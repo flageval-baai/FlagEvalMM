@@ -26,6 +26,7 @@ class BaseApiModel:
         max_num_frames: Optional[int] = 8,
         use_cache: bool = False,
         stream: bool = False,
+        system_prompt: Optional[str] = None,
         **kwargs,
     ) -> None:
         self.model_name = model_name
@@ -39,6 +40,7 @@ class BaseApiModel:
         self.use_cache = use_cache
         self.model_type = "base"
         self.stream = stream
+        self.system_prompt = system_prompt
         self.chat_args: Dict[str, Any] = {
             "temperature": self.temperature,
         }
