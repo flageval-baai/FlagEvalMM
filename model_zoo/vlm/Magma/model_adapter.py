@@ -22,9 +22,9 @@ def replace_images_symbol(text):
 
 
 class CustomDataset(ServerDataset):
-    def __init__(self, task_name, server_ip, server_port, timeout, max_num_frames=8):
-        super().__init__(task_name, server_ip, server_port, timeout)
-        self.max_num_frames = max_num_frames
+    def __init__(self, task_name: str, task_manager, task_type: str = "vqa", **kwargs):
+        super().__init__(task_name, task_manager, task_type)
+        self.max_num_frames = kwargs.get("max_num_frames", 8)
 
     def __getitem__(self, index):
         data = self.get_data(index)
@@ -69,10 +69,9 @@ class ModelAdapter(BaseModelAdapter):
         max_num_frames: int = 8,
     ):
         dataset = dataset_cls(
-            task_name,
-            self.server_ip,
-            self.server_port,
-            self.timeout,
+            task_name=task_name,
+            task_manager=self.task_manager,
+            task_type="vqa",
             max_num_frames=max_num_frames,
         )
         data_loader = DataLoader(
@@ -115,7 +114,6 @@ class ModelAdapter(BaseModelAdapter):
             task_name,
             collate_fn=collate_fn,
             batch_size=1,
-            max_num_frames=self.max_num_frames,
         )
 
         for question_id, question, images in data_loader:
