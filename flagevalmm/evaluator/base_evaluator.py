@@ -125,6 +125,9 @@ class BaseEvaluator:
     def evaluate_fill_blank_by_rule(
         self, gt: Dict, pred: Dict, simality_threshold: float = 0.7
     ) -> Tuple[bool, str]:
+        pred["raw_answer"] = pred["answer"]
+        if "</think>" in pred["answer"]:
+            pred["answer"] = pred["answer"].split("</think>")[1]
         splited_answer = pred["answer"].split("\n")
         cleaned_answers: List[str] = []
         for raw_answer in splited_answer:

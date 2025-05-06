@@ -171,6 +171,8 @@ class HttpClient(BaseApiModel):
         past_messages: Optional[List] = None,
     ) -> List:
         messages = past_messages if past_messages else []
+        system_prompt = system_prompt if system_prompt else self.system_prompt
+
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         if not multi_modal_data:
