@@ -5,6 +5,7 @@ import re
 from collections import defaultdict
 from io import BytesIO
 import base64
+import json
 
 
 def base64_to_mask(mask_base64):
@@ -14,7 +15,20 @@ def base64_to_mask(mask_base64):
     return mask
 
 
+def extract_points(raw_answer):
+    content = re.sub(
+        r"^```json|```$", "", raw_answer.strip(), flags=re.MULTILINE
+    ).strip()
+    try:
+        data = json.loads(content)
+        return str([tuple(item["point"]) for item in data if "point" in item])
+    except Exception:
+        return "[]"
+
+
 def text2pts(text, width=640, height=480):
+    if text.startswith("```json"):
+        text = extract_points(text)
     pattern = r"\(([-+]?\d+\.?\d*(?:,\s*[-+]?\d+\.?\d*)*?)\)"
     matches = re.findall(pattern, text)
     points = []
