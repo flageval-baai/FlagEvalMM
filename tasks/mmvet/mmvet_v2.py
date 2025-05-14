@@ -20,6 +20,6 @@ evaluator = dict(
     use_cache=True,
     base_url=os.getenv("FLAGEVAL_BASE_URL"),
     api_key=os.getenv("FLAGEVAL_API_KEY"),
-    model_name="gpt-4o-mini",
+    model_name="gpt-4o-mini-2024-07-18",
     chat_name="mmvet_v2_eval",
 )
