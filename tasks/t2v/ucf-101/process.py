@@ -4,7 +4,7 @@ import os.path as osp
 from datasets import load_dataset
 import rarfile
 from tqdm import tqdm
-from flagevalmm.download_util import download_file_with_progress
+from flagevalmm.common.download_utils import download_file_with_progress
 
 
 def unrar(file_path, outpath):

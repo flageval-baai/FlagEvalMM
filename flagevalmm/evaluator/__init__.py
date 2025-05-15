@@ -5,7 +5,6 @@ from .inception_metrics_evaluator import InceptionMetricsEvaluator
 from .retrieval_evaluator import RetrievalEvaluator
 from .vqascore_evaluator import VqascoreEvaluator
 from .clip_score_evaluator import CLIPScoreEvaluator
-from .clip_sim_evaluator import CLIPSIMEvaluator
 from .aggregation_evaluator import AggregationEvaluator
 from .one_align_evaluator import OneAlignEvaluator
 from .video_score_evaluator import VideoScoreEvaluator
@@ -20,7 +19,6 @@ __all__ = [
     "RetrievalEvaluator",
     "VqascoreEvaluator",
     "CLIPScoreEvaluator",
-    "CLIPSIMEvaluator",
     "AggregationEvaluator",
     "OneAlignEvaluator",
     "VideoScoreEvaluator",
