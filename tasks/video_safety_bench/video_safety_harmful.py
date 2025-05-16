@@ -13,7 +13,5 @@ dataset = dict(
         pre_prompt="These are frames of a video.\n",
     ),
     config=config,
-    name="Video-SafetyBench",
+    name="video_safety_harmful",
 )
-
-evaluator = dict(type="BaseEvaluator", eval_func="evaluate.py")
