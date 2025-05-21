@@ -121,16 +121,32 @@ class ModelAdapter(BaseModelAdapter):
         if osp.exists(inter_results_file):
             logger.info(f"Skipping {question_id} because it already exists")
             with open(inter_results_file, "r") as f:
-                result = json.load(f)["answer"]
-            return {"question_id": question_id, "question": qs, "answer": result}
+                data = json.load(f)
+                reason = data.get("reason", "")
+                result = data.get("answer", "")
+            return {
+                "question_id": question_id,
+                "question": qs,
+                "answer": result,
+                "reason": reason,
+            }
         logger.info(f"Processing {question_id}")
         logger.info(qs)
         messages = self.model.build_message(qs, multi_modal_data=multi_modal_data)
+        reason = ""
         try:
             result = self.model.infer(messages)
+            if "</think>" in result:
+                reason, result = result.split("</think>")
+                reason += "</think>"
         except Exception as e:
             result = "Error code " + str(e)
-        return {"question_id": question_id, "question": qs, "answer": result}
+        return {
+            "question_id": question_id,
+            "question": qs,
+            "answer": result,
+            "reason": reason,
+        }
 
     def cleanup(self):
         if hasattr(self, "model_server") and self.model_server is not None:
