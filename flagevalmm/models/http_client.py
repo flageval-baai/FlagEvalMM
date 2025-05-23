@@ -193,7 +193,6 @@ class HttpClient(BaseApiModel):
                 self.build_interleaved_message(query, messages, data_list)
             elif data_type == "video":
                 self.build_video_message(query, messages, data_list)
-
         return messages
 
     def build_video_message(self, query: str, messages: List, video_data: str):

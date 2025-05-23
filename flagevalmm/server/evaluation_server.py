@@ -114,6 +114,11 @@ class EvaluationServer:
                 f"No evaluator specified for task {task_name}, skipping evaluation"
             )
             return
+        if self.config_dict[task_name].evaluator.get("skip", False):
+            logger.warning(
+                f"Skipping evaluation for task {task_name} because evaluator is disabled in inference, please use evaluate_only (--wi) to evaluate"
+            )
+            return
         evaluator = EVALUATORS.build(self.config_dict[task_name].evaluator)
 
         start_method = self.config_dict[task_name].evaluator.get("start_method", "fork")
