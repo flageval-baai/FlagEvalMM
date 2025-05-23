@@ -249,11 +249,13 @@ def evaluate_only(args):
         task_cfg = Config.fromfile(task_file)
         task_cfg = merge_args(task_cfg, task_file, args)
         maybe_register_class(task_cfg, task_file)
+
         if args.try_run:
             task_cfg.dataset.debug = True
         if "evaluator" in task_cfg:
-            evaluator = EVALUATORS.build(task_cfg.evaluator)
             dataset = DATASETS.build(task_cfg.dataset)
+            evaluator = EVALUATORS.build(task_cfg.evaluator)
+
             task_name = task_cfg.dataset.name
             output_dir = osp.join(cfg["output_dir"], task_name)
             evaluator.process(dataset, output_dir, model_name=cfg.get("model_name", ""))

@@ -5,7 +5,7 @@ from datasets import load_dataset
 import tarfile
 
 
-def download_video(output_root, repo_id):
+def download_video(output_root, repo_id, hf_token):
     video_file_name = "video.tar.gz"
     local_filepath = osp.join(output_root, video_file_name)
     local_video_dirpath = osp.join(output_root, "video")
@@ -26,6 +26,8 @@ def download_video(output_root, repo_id):
             output_root,
             "--local-dir-use-symlinks",
             "False",
+            "--token",
+            hf_token,
         ]
         os.system(" ".join(cmd_list))
     if not osp.exists(local_video_dirpath) and osp.exists(local_filepath):
@@ -36,6 +38,10 @@ def download_video(output_root, repo_id):
 
 def process(cfg):
     """Process the dataset and save it in a standard format"""
+    hf_token = os.environ.get("HF_TOKEN", "")
+    assert (
+        hf_token
+    ), "HF_TOKEN is not set, please export HF_TOKEN=<your_huggingface_token>"
     data_dir, split = cfg.dataset_path, cfg.split
     name = cfg.get("dataset_name", "")
 
@@ -44,13 +50,13 @@ def process(cfg):
     output_dir = osp.join(cfg.processed_dataset_path, name, split)
     os.makedirs(output_dir, exist_ok=True)
     # download videos
-    download_video_dirpath = download_video(output_root, data_dir)
+    download_video_dirpath = download_video(output_root, data_dir, hf_token)
     video_dir = osp.join(output_dir, name, "video")
     if not osp.lexists(video_dir):
         os.symlink(download_video_dirpath, video_dir, target_is_directory=True)
 
     # load dataset
-    data = load_dataset(data_dir, name=name, split=split)
+    data = load_dataset(data_dir, name=name, split=split, token=hf_token)
     content = []
 
     # process each item
