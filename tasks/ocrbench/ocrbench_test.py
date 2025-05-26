@@ -1,5 +1,5 @@
 config = dict(
-    dataset_path="echo840/OCRBench",
+    dataset_path="/home/vlm/benchmarks/lmms-lab/OCRBench",
     split="test",
     processed_dataset_path="OCRBench",
     processor="process.py",

@@ -9,6 +9,7 @@ def process(cfg):
     data_dir, split = cfg.dataset_path, cfg.split
 
     name = cfg.get("dataset_name", "")
+    print(data_dir, split, name)
     output_dir = osp.join(cfg.processed_dataset_path, name, split)
     content = []
     data = load_dataset(data_dir, name=name, split=split)

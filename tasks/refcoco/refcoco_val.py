@@ -9,7 +9,7 @@ dataset = dict(
     type="VqaBaseDataset",
     prompt_template=dict(type="PromptTemplate"),
     config=config,
-    name="refcoco_val",
+    name="Ref-L4_val",
 )
 
 evaluator = dict(type="BaseEvaluator", eval_func="evaluate.py")

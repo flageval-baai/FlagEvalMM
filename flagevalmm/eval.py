@@ -21,6 +21,7 @@ def update_cfg_from_args(args):
     for key in keys:
         if getattr(args, key):
             cfg[key] = getattr(args, key)
+    print(args)
     if args.model:
         cfg["model_path"] = args.model
         cfg["model_name"] = args.model

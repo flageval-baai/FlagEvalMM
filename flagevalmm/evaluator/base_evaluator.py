@@ -256,7 +256,7 @@ class BaseEvaluator:
         annotations = dataset.get_annotation()
         result_file = osp.join(output_dir, dataset.name + ".json")
         predictions = json.load(open(result_file))
-
+        print(len(annotations), len(predictions), result_file)
         assert len(annotations) == len(predictions)
         results: Dict[str, Any] = {}
         predictions, filtered_predictions = self.filter_rejected(predictions, results)

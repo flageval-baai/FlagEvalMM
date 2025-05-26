@@ -1,5 +1,5 @@
 config = dict(
-    dataset_path="nyu-visionx/CV-Bench",
+    dataset_path="/share/project/benchmarks/CV-Bench",
     split="test",
     processed_dataset_path="CV-Bench",
     processor="process.py",

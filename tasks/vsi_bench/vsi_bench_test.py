@@ -1,5 +1,5 @@
 config = dict(
-    dataset_path="nyu-visionx/VSI-Bench",
+    dataset_path="/share/project/benchmarks/VSI-Bench",
     split="test",
     processed_dataset_path="VSI-Bench",
     processor="process.py",

@@ -1,5 +1,6 @@
+import os
 import torch
-from typing import Dict, Any
+from typing import Dict, Any, List
 import time
 from transformers import (
     Qwen2VLForConditionalGeneration,
@@ -11,6 +12,10 @@ from flagevalmm.server import ServerDataset
 from flagevalmm.models.base_model_adapter import BaseModelAdapter
 from flagevalmm.server.utils import parse_args, process_images_symbol
 from qwen_vl_utils import process_vision_info
+import  tqdm
+from flagevalmm.common.video_utils import load_image_or_video
+from flagevalmm.prompt.prompt_tools import encode_image
+from PIL import Image
 
 
 class CustomDataset(ServerDataset):
@@ -31,6 +36,8 @@ class CustomDataset(ServerDataset):
                 img_path_idx.append(img_path[i])
             else:
                 print("[warning] image index out of range")
+        if self.task_type == "video_qa":
+            return question_id, img_path, qs
         return question_id, img_path_idx, qs
 
 
@@ -40,7 +47,7 @@ class ModelAdapter(BaseModelAdapter):
         torch.set_grad_enabled(False)
         with self.accelerator.main_process_first():
             tokenizer = AutoTokenizer.from_pretrained(ckpt_path, trust_remote_code=True)
-            if "Qwen2.5" in ckpt_path:
+            if "Qwen2.5" in ckpt_path or "qwen2.5" in ckpt_path or "robobrain" in ckpt_path:
                 model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
                     ckpt_path,
                     device_map="auto",
@@ -70,53 +77,95 @@ class ModelAdapter(BaseModelAdapter):
         self,
         query: str,
         image_paths=[],
+        task_type="vqa",
     ) -> str:
         messages = []
+        if task_type == "video_qa":
+            self.build_video_message(query, messages, image_paths)
+        else:
+            messages.append(
+                {
+                    "role": "user",
+                    "content": [],
+                },
+            )
+            for img_path in image_paths:
+                messages[-1]["content"].append(
+                    {"type": "image", "image": img_path},
+                )
+            # add question
+            messages[-1]["content"].append(
+                {
+                    "type": "text",
+                    "text": query,
+                },
+            )
+        return messages
+
+    def build_video_message(self, query: str, messages: List, video_data: str):
         messages.append(
             {
                 "role": "user",
-                "content": [],
+                "content": [
+                    {
+                        "type": "text",
+                        "text": query,
+                    },
+                ],
             },
         )
-        for img_path in image_paths:
-            messages[-1]["content"].append(
-                {"type": "image", "image": img_path},
-            )
-        # add question
+        frames = load_image_or_video(
+            video_data, max_num_frames=16, return_tensors=False
+        )
+        for frame in frames:
+            self.add_image_to_message(Image.fromarray(frame), messages)
+
+
+    def add_image_to_message(self, image_data, messages):
+        base64_image = encode_image(
+            image_data,
+            max_size=8,
+            min_short_side=28,
+            max_long_side=1500,
+        )
         messages[-1]["content"].append(
             {
-                "type": "text",
-                "text": query,
-            },
+                "type": "image",
+                "image": f"data:image/jpeg;base64,{base64_image}",
+            }
         )
-        return messages
+
 
     def run_one_task(self, task_name: str, meta_info: Dict[str, Any]):
         results = []
         cnt = 0
+        print("------------------")
+        print(f"Running task: {task_name}")
+        print(meta_info)
+        print("------------------")
 
         data_loader = self.create_data_loader(
             CustomDataset,
             task_name,
-            batch_size=1,
-            num_workers=0,
+            batch_size=self.task_info.get("batch_size", 1),
+            num_workers=self.task_info.get("num_workers", 1),
             task_type=meta_info["type"],
         )
-        for question_id, img_path, qs in data_loader:
+        for question_ids, img_paths, qs, gt  in tqdm.tqdm(data_loader):
             if cnt == 1:
                 start_time = time.perf_counter()
             cnt += 1
-
-            question_id = question_id[0]
-            img_path_flaten = [p[0] for p in img_path]
-            qs = qs[0]
-            messages = self.build_message(qs, image_paths=img_path_flaten)
-            text = self.processor.apply_chat_template(
-                messages, tokenize=False, add_generation_prompt=True
-            )
-            image_inputs, video_inputs = process_vision_info(messages)
+            messages_list = []
+            for i in range(len(qs)):
+                if task_name.lower() == "vsi-bench":
+                    messages_list.append(self.build_message(qs[i], image_paths = [img_paths[0][i]], task_type=meta_info["type"]))
+                else:
+                    messages_list.append(self.build_message(qs[i], image_paths=img_paths[i], task_type=meta_info["type"]))
+            texts = [self.processor.apply_chat_template(m, tokenize=False, add_generation_prompt=True) for m in messages_list]
+            image_inputs, video_inputs = process_vision_info(messages_list)
+            self.processor.tokenizer.padding_side = "left"
             inputs = self.processor(
-                text=[text],
+                text=texts,
                 images=image_inputs,
                 videos=video_inputs,
                 padding=True,
@@ -134,12 +183,14 @@ class ModelAdapter(BaseModelAdapter):
                 generated_ids_trimmed,
                 skip_special_tokens=True,
                 clean_up_tokenization_spaces=False,
-            )[0]
+            )
 
             self.accelerator.print(f"{qs}\n{response}\n\n")
-            results.append(
-                {"question_id": question_id, "answer": response.strip(), "prompt": qs}
-            )
+            for qid, resp, q, g in zip(question_ids, response, qs, gt):
+                results.append(
+                    {"question_id": qid, "answer": resp.strip(), "prompt": q, "gt": g}
+                )
+                
         rank = self.accelerator.state.local_process_index
 
         self.save_result(results, meta_info, rank=rank)
@@ -170,3 +221,5 @@ if __name__ == "__main__":
         quiet=args.quiet,
     )
     model_adapter.run()
+
+

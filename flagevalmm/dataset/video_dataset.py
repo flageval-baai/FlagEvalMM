@@ -13,6 +13,7 @@ class VideoDataset(VqaBaseDataset):
             "question": self.build_prompt(annotation, []),
             "question_id": str(annotation["question_id"]),
             "type": annotation["question_type"],
+            "gt": annotation.get("answer", None),
         }
         if self.with_label and "answer" in annotation:
             ret["label"] = annotation["answer"]

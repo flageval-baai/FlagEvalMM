@@ -91,6 +91,7 @@ class ModelAdapter(BaseModelAdapter):
             task_info.get("url", "http://localhost:8000/v1/chat/completions"),
         )
         task_info["url"] = url
+        print(f'url={url}, port={port}')
 
         model_name = task_info["model_name"]
         backend = task_info.get("backend", "vllm")

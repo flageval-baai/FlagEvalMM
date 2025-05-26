@@ -1,7 +1,7 @@
 task_name = "vqa"
 
 config = dict(
-    dataset_path="lmms-lab/ChartQA",
+    dataset_path="/home/vlm/benchmarks/lmms-lab/ChartQA",
     split="test",
     processed_dataset_path="ChartQA",
     processor="process.py",

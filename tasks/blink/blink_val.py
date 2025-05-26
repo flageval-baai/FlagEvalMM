@@ -1,7 +1,7 @@
 task_name = "vqa"
 
 config = dict(
-    dataset_path="BLINK-Benchmark/BLINK",
+    dataset_path="/share/project/benchmarks/BLINK",
     split="val",
     processed_dataset_path="BLINK",
     processor="process.py",

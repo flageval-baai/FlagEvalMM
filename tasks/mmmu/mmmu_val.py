@@ -1,5 +1,6 @@
 config = dict(
-    dataset_path="lmms-lab/MMMU",
+    # dataset_path="lmms-lab/MMMU",
+    dataset_path="/home/vlm/benchmarks/MMMU",
     split="validation",
     processed_dataset_path="MMMU",
     processor="process.py",

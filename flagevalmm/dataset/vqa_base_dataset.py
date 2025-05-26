@@ -93,6 +93,7 @@ class VqaBaseDataset(Dataset):
             "question": self.build_prompt(annotation, img_path),
             "question_id": str(annotation["question_id"]),
             "type": annotation["question_type"],
+            "gt": annotation.get("answer", None),
         }
         if self.with_label:
             ret["label"] = annotation["answer"]
@@ -105,4 +106,5 @@ class VqaBaseDataset(Dataset):
         anno_dict = {}  # question_id: answer_dict
         for anno in self.annotations:
             anno_dict[str(anno["question_id"])] = anno
+        print("$$$$$$$$$$$$$$$$$$$$")
         return anno_dict

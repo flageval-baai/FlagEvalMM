@@ -53,7 +53,7 @@ def process(cfg):
 
         # save image
         try:
-            image_data = base64.b64decode(annotation["image"])
+            image_data = base64.b64decode(annotation["image_base64"])
             with open(osp.join(output_dir, img_name), "wb") as image_file:
                 image_file.write(image_data)
         except Exception as e:
