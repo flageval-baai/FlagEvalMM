@@ -6,6 +6,12 @@ We use the [Qwen2.5-72B-Instruct](https://huggingface.co/Qwen/Qwen2.5-72B-Instru
 
 ## Usage
 
+Before running the commands below, ensure that you have set the `HF_TOKEN` environment variable. This token is required for authentication with Hugging Face. You can set it using the following command:
+
+```bash
+export HF_TOKEN=your_huggingface_token
+```
+
 1.Model inference
 
 ```bash
