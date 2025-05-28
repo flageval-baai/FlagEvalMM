@@ -34,7 +34,7 @@ def process(cfg):
         # build information dictionary
         info = {
             "question_id": question_id,
-            "question": f'<image 1> {annotation["question"]}',
+            "question": f'{annotation["question"]}',
             "sub_task": annotation["question_type"],
             "answer": mask_path,
             "question_type": "point",
@@ -42,7 +42,6 @@ def process(cfg):
             "image_width": annotation["image"].width,
             "image_height": annotation["image"].height,
             "mask_path": mask_path,
-            "mask_base64": annotation["mask_base64"],
         }
         content.append(info)
 
