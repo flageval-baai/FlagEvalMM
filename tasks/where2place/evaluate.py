@@ -9,7 +9,7 @@ import os
 
 def text2pts(text, width=640, height=480):
     # Answer is in the last line
-    text = text.split("\n")[-1]
+    text = text.strip().split("\n")[-1]
     pattern = r"\(([-+]?\d+\.?\d*(?:,\s*[-+]?\d+\.?\d*)*?)\)"
     matches = re.findall(pattern, text)
     points = []
@@ -36,6 +36,16 @@ def text2pts(text, width=640, height=480):
 
 
 def draw_result(gt: Dict, mask_img: Image, score: float, points: List[Tuple[int, int]]):
+    """
+    Draws the result of a prediction on an image, including a mask overlay, points, and a score.
+    Parameters:
+        gt (Dict): Ground truth data containing metadata such as the image path and question ID.
+        mask_img (Image): Binary mask image indicating regions of interest.
+        score (float): Prediction score to display on the image.
+        points (List[Tuple[int, int]]): List of (x, y) coordinates to mark on the image.
+    Side Effects:
+        Saves the resulting image with overlays and annotations to the 'output/imgs' directory.
+    """
     # For debug
     # Load the original image
     img = Image.open(osp.join(gt["data_root"], gt["img_path"]))
@@ -92,7 +102,6 @@ def draw_result(gt: Dict, mask_img: Image, score: float, points: List[Tuple[int,
     draw.text((text_x, text_y), score_text, fill="black")
 
     output_dir = "output/imgs"
-
     os.makedirs(output_dir, exist_ok=True)
     img.save(osp.join(output_dir, f"{gt['question_id']}.png"))
 
