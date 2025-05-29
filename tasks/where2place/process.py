@@ -16,9 +16,9 @@ def process(cfg):
     # build output path
     output_dir = osp.join(cfg.processed_dataset_path, name, split)
     img_dir = osp.join(output_dir, "img")
-    mask_idr = osp.join(output_dir, "mask")
+    mask_dir = osp.join(output_dir, "mask")
     os.makedirs(img_dir, exist_ok=True)
-    os.makedirs(mask_idr, exist_ok=True)
+    os.makedirs(mask_dir, exist_ok=True)
 
     # load dataset
     data = load_dataset(data_dir, name=name, split=split)
