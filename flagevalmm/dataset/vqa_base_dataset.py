@@ -58,6 +58,7 @@ class VqaBaseDataset(Dataset):
                 anno["question_id"] not in question_id_set
             ), f"Duplicate question_id: {anno['question_id']}"
             question_id_set.add(anno["question_id"])
+            anno["data_root"] = self.data_root
         return annotations
 
     def __len__(self) -> int:
