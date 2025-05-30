@@ -22,10 +22,10 @@ def process(cfg):
     }
     output_dir = osp.join(cfg.processed_dataset_path, name, split)
     img_dir = osp.join(output_dir, "img")
-    # mask_dir = osp.join(output_dir, "mask")
+    mask_dir = osp.join(output_dir, "mask")
 
     os.makedirs(img_dir, exist_ok=True)
-    # os.makedirs(mask_dir, exist_ok= True)
+    os.makedirs(mask_dir, exist_ok=True)
     content = []
     for split in splits:
         data = load_dataset(data_dir, name=name, split=split)
@@ -34,9 +34,10 @@ def process(cfg):
             image_path = f"img/{question_id}.jpg"
 
             item["img"].save(osp.join(output_dir, image_path))
-            # if split == "context":
-            #     mask_path = f"mask/{question_id}.jpg"
-            #     item["mask"].save(osp.join(output_dir, mask_path))
+            if split == "context":
+                mask_path = f"mask/{question_id}.jpg"
+                item["mask"].save(osp.join(output_dir, mask_path))
+                item["mask_path"] = mask_path
             question = item["question"]
             for s in need_to_replace:
                 question = question.replace(s, "").strip()
@@ -47,6 +48,7 @@ def process(cfg):
                 "answer": item["answer"],
                 "question_type": question_type_map[split],
                 "img_path": image_path,
+                "mask_path": item.get("mask_path", ""),
                 "image_width": item["img"].width,
                 "image_height": item["img"].height,
             }

@@ -28,10 +28,11 @@ pre_prompt = "These are frames of a video.\n"
 
 
 def post_prompt(question_type: str, **kwargs) -> str:
+    prompt = "Carefully analyze the question above and reason through it step by step. Conclude your response with a line in the following format:"
     if question_type in MCA_QUESTION_TYPES:
-        return "Answer with the option's letter from the given choices directly."
+        return f"{prompt}\nAnswer: $LETTER (without quotes), where $LETTER corresponds to the correct option."
     elif question_type in NA_QUESTION_TYPES:
-        return "Please answer the question using a single word or phrase."
+        return f"{prompt}\nAnswer: $NUMBER (without quotes), where $NUMBER is a number (integer or float) corresponds to the correct answer."
     else:
         raise ValueError(f"Unknown question type: {question_type}")
 
