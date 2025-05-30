@@ -23,7 +23,7 @@ class BaseApiModel:
         max_image_size: Optional[int] = None,
         min_short_side: Optional[int] = None,
         max_long_side: Optional[int] = None,
-        max_num_frames: Optional[int] = 8,
+        max_num_frames: Optional[int] = 16,
         use_cache: bool = False,
         stream: bool = False,
         system_prompt: Optional[str] = None,
