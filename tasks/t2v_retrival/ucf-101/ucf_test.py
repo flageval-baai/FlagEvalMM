@@ -1,8 +1,8 @@
-task_name = "tv_retrieval"
+task_name = "t2v_retrieval"
 
 config = dict(
     dataset_path="fierytrees/flag-eval-data",
-    processed_dataset_path="tv_retrieval/ucf",
+    processed_dataset_path="t2v_retrieval/ucf",
     processor="process.py",
     split="test"
 )

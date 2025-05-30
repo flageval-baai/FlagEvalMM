@@ -1,4 +1,4 @@
-task_name = "t2v"
+task_name = "t2v_generation"
 
 config = dict(
     dataset_path="fierytrees/flag-eval-data",
@@ -15,7 +15,7 @@ dataset = dict(
 )
 
 clipsim_evaluator = dict(
-    type="CLIPScoreEvaluator", model="openai/clip-vit-large-patch14", max_num_frames=48, start_method="spawn"
+    type="CLIPScoreEvaluator", model_name_or_path="openai/clip-vit-large-patch14", max_num_frames=48, start_method="spawn"
 )
 
 fvd_evaluator = dict(

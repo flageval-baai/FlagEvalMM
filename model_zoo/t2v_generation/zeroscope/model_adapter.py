@@ -24,7 +24,7 @@ class ModelAdapter(BaseModelAdapter):
         for i in tqdm(range(text_num)):
             response = get_data(i, task_name, self.server_ip, self.server_port)
             prompt, question_id = response["prompt"], response["id"]
-            for j in range(5):
+            for j in range(1):
                 video_frames = self.pipe(prompt, num_frames=24).frames[0]
                 video_out_name = f"{output_dir}/{question_id}-{j}.mp4"
                 video_path = export_to_video(video_frames,video_out_name)

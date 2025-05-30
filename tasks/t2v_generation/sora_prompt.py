@@ -1,4 +1,4 @@
-task_name = "t2v"
+task_name = "t2v_generation"
 
 dataset = dict(
     type="Text2VideoBaseDataset",
