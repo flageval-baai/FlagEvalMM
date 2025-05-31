@@ -132,6 +132,12 @@ def parse_args():
     parser.add_argument(
         "--extra-args", type=str, help="extra args of local server model"
     )
+    parser.add_argument(
+        "--num-infers",
+        type=int,
+        default=1,
+        help="number of inferences to perform for each question (when temperature >= 0)",
+    )
     args = parser.parse_args()
     return args
 

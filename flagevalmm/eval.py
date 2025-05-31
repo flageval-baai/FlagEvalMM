@@ -17,7 +17,15 @@ logger = get_logger(__name__)
 
 def update_cfg_from_args(args):
     cfg = json.load(open(args.cfg)) if args.cfg else {}
-    keys = ["num_workers", "backend", "url", "api_key", "use_cache", "extra_args"]
+    keys = [
+        "num_workers",
+        "backend",
+        "url",
+        "api_key",
+        "use_cache",
+        "extra_args",
+        "num_infers",
+    ]
     for key in keys:
         if getattr(args, key):
             cfg[key] = getattr(args, key)
