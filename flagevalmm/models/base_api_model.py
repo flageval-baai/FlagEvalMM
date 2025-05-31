@@ -27,6 +27,7 @@ class BaseApiModel:
         use_cache: bool = False,
         stream: bool = False,
         system_prompt: Optional[str] = None,
+        num_infers: int = 1,
         **kwargs,
     ) -> None:
         self.model_name = model_name
@@ -41,6 +42,7 @@ class BaseApiModel:
         self.model_type = "base"
         self.stream = stream
         self.system_prompt = system_prompt
+        self.num_infers = num_infers if temperature >= 0 else 1
         self.chat_args: Dict[str, Any] = {
             "temperature": self.temperature,
         }
@@ -63,17 +65,41 @@ class BaseApiModel:
         before_sleep=before_sleep_log(logger, logging.INFO),
         stop=stop_after_attempt(5),
     )
+    def _single_infer(self, chat_messages, **kwargs):
+        final_answer = ""
+        for res in self._chat(chat_messages, **kwargs):
+            print(res, end="", flush=True)  # noqa T201
+            final_answer += res
+        return final_answer
+
     def infer(self, chat_messages, **kwargs):
-        if self.use_cache:
+        if self.use_cache and self.num_infers == 1:
             result = self.cache.get([chat_messages, kwargs])
             if result:
                 logger.info(f"Found in cache\n{result}")
                 return result
 
-        final_answer = ""
-        for res in self._chat(chat_messages, **kwargs):
-            print(res, end="", flush=True)  # noqa T201
-            final_answer += res
-        print()  # noqa T201
-        self.add_to_cache([chat_messages, kwargs], final_answer)
-        return final_answer
+        if self.num_infers == 1:
+            final_answer = self._single_infer(chat_messages, **kwargs)
+            self.add_to_cache([chat_messages, kwargs], final_answer)
+            return final_answer
+        else:
+            logger.info(
+                f"Performing {self.num_infers} inferences with temperature {self.temperature}"
+            )
+            results = []
+            for i in range(self.num_infers):
+                logger.info(f"Inference {i+1}/{self.num_infers}")
+                if self.use_cache:
+                    result = self.cache.get(
+                        [chat_messages, kwargs, i, self.temperature]
+                    )
+                    if result:
+                        logger.info(f"Found in cache\n{result}")
+                        results.append(result)
+                        continue
+                result = self._single_infer(chat_messages, **kwargs)
+                results.append(result)
+                self.add_to_cache([chat_messages, kwargs, i, self.temperature], result)
+
+            return results

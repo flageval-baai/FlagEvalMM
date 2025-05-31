@@ -70,8 +70,35 @@ class ModelAdapter(BaseModelAdapter):
             "max_num_frames",
             "stream",
             "system_prompt",
+            "num_infers",
         ]
         model_config = {k: task_info[k] for k in model_config_keys if k in task_info}
+
+        # Parse extra_args and add any parameters that exist in model_config_keys
+        if task_info.get("extra_args"):
+            extra_args_str = task_info["extra_args"]
+            if isinstance(extra_args_str, str):
+                # Parse key=value pairs separated by commas
+                for param in extra_args_str.split(","):
+                    param = param.strip()
+                    if "=" in param:
+                        key, value = param.split("=", 1)
+                        key = key.strip()
+                        value = value.strip()
+                        # Add to model_config if key is in model_config_keys
+                        if key in model_config_keys:
+                            # Try to convert to appropriate type
+                            try:
+                                # Try to convert to float first, then int, otherwise keep as string
+                                if "." in value:
+                                    model_config[key] = float(value)
+                                else:
+                                    model_config[key] = int(value)
+                            except ValueError:
+                                # Keep as string if conversion fails
+                                model_config[key] = value
+        print(f"task_info: {task_info}")
+        print(f'model_config_temperature: {model_config["temperature"]}')
 
         model_type_map = {
             "http": HttpClient,
@@ -124,28 +151,59 @@ class ModelAdapter(BaseModelAdapter):
                 data = json.load(f)
                 reason = data.get("reason", "")
                 result = data.get("answer", "")
-            return {
-                "question_id": question_id,
-                "question": qs,
-                "answer": result,
-                "reason": reason,
-            }
+                multiple_answers = data.get("multiple_answers", [])
+                return {
+                    "question_id": question_id,
+                    "question": qs,
+                    "answer": result,
+                    "reason": reason,
+                    "multiple_answers": multiple_answers,
+                }
         logger.info(f"Processing {question_id}")
         logger.info(qs)
         messages = self.model.build_message(qs, multi_modal_data=multi_modal_data)
         reason = ""
+        multiple_answers = {}
+
         try:
             result = self.model.infer(messages)
-            if "</think>" in result:
-                reason, result = result.split("</think>")
-                reason += "</think>"
+
+            if isinstance(result, list):
+                multiple_answers = {}
+                processed_results = []
+                for i, single_result in enumerate(result):
+                    if "</think>" in single_result:
+                        single_reason, single_answer = single_result.split(
+                            "</think>", 1
+                        )
+                        single_reason += "</think>"
+                        if not reason:
+                            reason = single_reason
+                    else:
+                        single_answer = single_result
+                    multiple_answers[f"inference_{i}"] = single_answer
+                    processed_results.append(single_answer)
+                result = multiple_answers
+                logger.info(
+                    f"Multiple inferences completed. Got {len(multiple_answers)} results."
+                )
+            else:
+                # 单次推理
+                if "</think>" in result:
+                    reason, result = result.split("</think>", 1)
+                    reason += "</think>"
+                multiple_answers = [result]
+
         except Exception as e:
             result = "Error code " + str(e)
+            multiple_answers = [result]
+
         return {
             "question_id": question_id,
             "question": qs,
             "answer": result,
             "reason": reason,
+            "multiple_answers": multiple_answers,
         }
 
     def cleanup(self):
@@ -175,10 +233,13 @@ class ModelAdapter(BaseModelAdapter):
 
             for future in as_completed(future_to_item):
                 result = future.result()
-                if not result["answer"].startswith("Error code"):
+                if isinstance(result["answer"], str) and result["answer"].startswith(
+                    "Error code"
+                ):
+                    continue
+                else:
                     self.save_item(result, result["question_id"], meta_info)
                 results.append(result)
-
         self.save_result(results, meta_info)
 
 
