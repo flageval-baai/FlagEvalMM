@@ -173,17 +173,31 @@ def evaluate_answer(ground_truth, generated_answer):
             return False, is_binary, parsed_answer, is_parsable
 
 
-def text2pts(text, width, height):
+def text2pts(text, width=640, height=480):
     # Answer is in the last line
     text = text.strip().split("\n")[-1]
     pattern = r"\(([-+]?\d+\.?\d*(?:,\s*[-+]?\d+\.?\d*)*?)\)"
     matches = re.findall(pattern, text)
     points = []
     for match in matches:
-        vector = [float(num) for num in match.split(",")]
+        vector = [float(num) if "." in num else int(num) for num in match.split(",")]
         if len(vector) == 2:
             x, y = vector
-            points.append((int(x * width), int(y * height)))
+            if isinstance(x, float) or isinstance(y, float):
+                x = int(x * width)
+                y = int(y * height)
+            points.append((x, y))
+        elif len(vector) == 4:
+            x0, y0, x1, y1 = vector
+            if isinstance(x0, float):
+                x0 = int(x0 * width)
+                y0 = int(y0 * height)
+                x1 = int(x1 * width)
+                y1 = int(y1 * height)
+            mask = np.zeros((height, width), dtype=bool)
+            mask[y0:y1, x0:x1] = True
+            y_coords, x_coords = np.where(mask)
+            points.extend(list(np.stack([x_coords, y_coords], axis=1)))
     return points
 
 
