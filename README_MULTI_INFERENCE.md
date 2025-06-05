@@ -37,10 +37,10 @@ evaluator = dict(type="MultiInferenceEvaluator", detailed_keys=["sub_task"])
 
 ```
 
-When start a task, add "nums-infer" argument and add `temperature` in --extra-args, such as: 
+When starting a task, add the `--num-infers` and `--temperature` arguments, such as: 
 
 ```bash
-flagevalmm --tasks tasks/blink/blink_val.py  --exec model_zoo/vlm/api_model/model_adapter.py --model gpt-4o-mini --num-workers 8 --output-dir ./results_temperature/gpt-4o-mini --url openai_url --api-key openai_api_key --num-infers 3 --try-run --use-cache --extra-args "temperature=0.6"
+flagevalmm --tasks tasks/blink/blink_val.py  --exec model_zoo/vlm/api_model/model_adapter.py --model gpt-4o-mini --num-workers 8 --output-dir ./results_temperature/gpt-4o-mini --url openai_url --api-key openai_api_key --num-infers 5 --temperature 0.6 --try-run --use-cache
 ```
 
 ## Output Format

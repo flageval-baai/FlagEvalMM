@@ -25,6 +25,7 @@ def update_cfg_from_args(args):
         "use_cache",
         "extra_args",
         "num_infers",
+        "temperature",
     ]
     for key in keys:
         if getattr(args, key):

@@ -72,33 +72,8 @@ class ModelAdapter(BaseModelAdapter):
             "system_prompt",
             "num_infers",
         ]
-        model_config = {k: task_info[k] for k in model_config_keys if k in task_info}
-
-        # Parse extra_args and add any parameters that exist in model_config_keys
-        if task_info.get("extra_args"):
-            extra_args_str = task_info["extra_args"]
-            if isinstance(extra_args_str, str):
-                # Parse key=value pairs separated by commas
-                for param in extra_args_str.split(","):
-                    param = param.strip()
-                    if "=" in param:
-                        key, value = param.split("=", 1)
-                        key = key.strip()
-                        value = value.strip()
-                        # Add to model_config if key is in model_config_keys
-                        if key in model_config_keys:
-                            # Try to convert to appropriate type
-                            try:
-                                # Try to convert to float first, then int, otherwise keep as string
-                                if "." in value:
-                                    model_config[key] = float(value)
-                                else:
-                                    model_config[key] = int(value)
-                            except ValueError:
-                                # Keep as string if conversion fails
-                                model_config[key] = value
         print(f"task_info: {task_info}")
-        print(f'model_config_temperature: {model_config["temperature"]}')
+        model_config = {k: task_info[k] for k in model_config_keys if k in task_info}
 
         model_type_map = {
             "http": HttpClient,
@@ -188,7 +163,7 @@ class ModelAdapter(BaseModelAdapter):
                     f"Multiple inferences completed. Got {len(multiple_answers)} results."
                 )
             else:
-                # 单次推理
+                # single inference
                 if "</think>" in result:
                     reason, result = result.split("</think>", 1)
                     reason += "</think>"

@@ -42,7 +42,11 @@ class BaseApiModel:
         self.model_type = "base"
         self.stream = stream
         self.system_prompt = system_prompt
-        self.num_infers = num_infers if temperature >= 0 else 1
+        self.num_infers = num_infers
+        if num_infers > 1:
+            if temperature == 0:
+                logger.warning("set temperature to 1")
+                temperature = 1
         self.chat_args: Dict[str, Any] = {
             "temperature": self.temperature,
         }

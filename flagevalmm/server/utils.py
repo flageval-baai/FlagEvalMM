@@ -138,6 +138,12 @@ def parse_args():
         default=1,
         help="number of inferences to perform for each question (when temperature >= 0)",
     )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=0,
+        help="temperature of the model",
+    )
     args = parser.parse_args()
     return args
 

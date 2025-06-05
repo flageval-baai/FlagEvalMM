@@ -1,5 +1,6 @@
 import json
 from collections import defaultdict
+from dataclasses import dataclass
 from typing import Callable, Optional, Dict, List, Tuple, Union
 import os.path as osp
 from flagevalmm.evaluator.base_evaluator import BaseEvaluator
@@ -7,6 +8,14 @@ from flagevalmm.registry import EVALUATORS
 from flagevalmm.common.logger import get_logger
 
 logger = get_logger(__name__)
+
+
+@dataclass
+class QuestionMapping:
+    original_question_id: str
+    is_multi_inference: bool
+    inference_index: int
+    total_inferences: int
 
 
 @EVALUATORS.register_module()
@@ -35,7 +44,7 @@ class MultiInferenceEvaluator(BaseEvaluator):
 
     def expand_multi_inference_predictions(
         self, predictions: List[Dict]
-    ) -> Tuple[List[Dict], Dict]:
+    ) -> Tuple[List[Dict], Dict[int, QuestionMapping]]:
         """
         Expand multiple inference predictions into individual predictions.
 
@@ -52,12 +61,12 @@ class MultiInferenceEvaluator(BaseEvaluator):
             if len(multiple_answers) == 1:
                 # Single inference - keep as is
                 expanded_predictions.append(pred)
-                question_mapping[len(expanded_predictions) - 1] = {
-                    "original_question_id": pred["question_id"],
-                    "is_multi_inference": False,
-                    "inference_index": 0,
-                    "total_inferences": 1,
-                }
+                question_mapping[len(expanded_predictions) - 1] = QuestionMapping(
+                    original_question_id=pred["question_id"],
+                    is_multi_inference=False,
+                    inference_index=0,
+                    total_inferences=1,
+                )
             else:
                 # Multiple inferences - expand into separate predictions
                 for idx, answer in multiple_answers.items():
@@ -69,17 +78,19 @@ class MultiInferenceEvaluator(BaseEvaluator):
                     )
                     expanded_predictions.append(expanded_pred)
 
-                    question_mapping[len(expanded_predictions) - 1] = {
-                        "original_question_id": pred["question_id"],
-                        "is_multi_inference": True,
-                        "inference_index": i,
-                        "total_inferences": len(multiple_answers),
-                    }
+                    question_mapping[len(expanded_predictions) - 1] = QuestionMapping(
+                        original_question_id=pred["question_id"],
+                        is_multi_inference=True,
+                        inference_index=i,
+                        total_inferences=len(multiple_answers),
+                    )
 
         return expanded_predictions, question_mapping
 
     def aggregate_multi_inference_results(
-        self, expanded_predictions: List[Dict], question_mapping: Dict
+        self,
+        expanded_predictions: List[Dict],
+        question_mapping: Dict[int, QuestionMapping],
     ) -> Tuple[List[Dict], Dict]:
         """
         Aggregate results from expanded predictions back to original questions.
@@ -93,15 +104,15 @@ class MultiInferenceEvaluator(BaseEvaluator):
 
         for i, pred in enumerate(expanded_predictions):
             mapping = question_mapping[i]
-            original_qid = mapping["original_question_id"]
+            original_qid = mapping.original_question_id
 
             question_results[original_qid].append(
                 {
-                    "inference_index": mapping["inference_index"],
+                    "inference_index": mapping.inference_index,
                     "correct": pred["correct"],
                     "answer": pred["answer"],
-                    "is_multi_inference": mapping["is_multi_inference"],
-                    "total_inferences": mapping["total_inferences"],
+                    "is_multi_inference": mapping.is_multi_inference,
+                    "total_inferences": mapping.total_inferences,
                     "expanded_pred": pred,
                 }
             )
@@ -222,14 +233,5 @@ class MultiInferenceEvaluator(BaseEvaluator):
         self.save(results, all_predictions, dataset_name, output_dir)
 
         logger.info(f"Overall Accuracy: {results.get('overall_accuracy', 0):.2f}%")
-
-        if "multi_inference_accuracy" in results:
-            logger.info(
-                f"Multi-inference Accuracy: {results['multi_inference_accuracy']:.2f}%"
-            )
-        if "single_inference_accuracy" in results:
-            logger.info(
-                f"Single-inference Accuracy: {results['single_inference_accuracy']:.2f}%"
-            )
 
         return results
