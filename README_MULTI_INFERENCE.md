@@ -39,8 +39,13 @@ evaluator = dict(type="MultiInferenceEvaluator", detailed_keys=["sub_task"])
 
 When starting a task, add the `--num-infers` and `--temperature` arguments, such as: 
 
+### GPT-4o-mini:
 ```bash
 flagevalmm --tasks tasks/blink/blink_val.py  --exec model_zoo/vlm/api_model/model_adapter.py --model gpt-4o-mini --num-workers 8 --output-dir ./results_temperature/gpt-4o-mini --url openai_url --api-key openai_api_key --num-infers 5 --temperature 0.6 --try-run --use-cache
+```
+### Qwen2.5-VL-7B-Instruct:
+```bash
+ flagevalmm --tasks tasks/blink/blink_val.py --cfg model_configs/open/Qwen2.5-VL-7B-Instruct.json --quiet --output-dir ./results/Qwen2.5-VL-7B-Instruct --exec model_zoo/vlm/api_model/model_adapter.py --backend vllm --num-infers 3 --try-run --temperature 0.6
 ```
 
 ## Output Format
@@ -58,7 +63,7 @@ For each question with multiple inferences, the result includes:
         "inference_3": "extracted_result4",
         "inference_4": "extracted_result5"
     },
-    "multiple_answers": ["result1", "result2", "result3", "result4", "result5"],
+    "multiple_raw_answers": ["result1", "result2", "result3", "result4", "result5"],
     "correct": 0.8,
     "inference_scores": [1, 1, 0, 1, 1],
     "num_inferences": 5

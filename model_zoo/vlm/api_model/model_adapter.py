@@ -126,25 +126,25 @@ class ModelAdapter(BaseModelAdapter):
                 data = json.load(f)
                 reason = data.get("reason", "")
                 result = data.get("answer", "")
-                multiple_answers = data.get("multiple_answers", [])
+                multiple_raw_answers = data.get("multiple_raw_answers", [])
                 return {
                     "question_id": question_id,
                     "question": qs,
                     "answer": result,
                     "reason": reason,
-                    "multiple_answers": multiple_answers,
+                    "multiple_raw_answers": multiple_raw_answers,
                 }
         logger.info(f"Processing {question_id}")
         logger.info(qs)
         messages = self.model.build_message(qs, multi_modal_data=multi_modal_data)
         reason = ""
-        multiple_answers = {}
+        multiple_raw_answers = {}
 
         try:
             result = self.model.infer(messages)
 
             if isinstance(result, list):
-                multiple_answers = {}
+                multiple_raw_answers = {}
                 processed_results = []
                 for i, single_result in enumerate(result):
                     if "</think>" in single_result:
@@ -156,29 +156,29 @@ class ModelAdapter(BaseModelAdapter):
                             reason = single_reason
                     else:
                         single_answer = single_result
-                    multiple_answers[f"inference_{i}"] = single_answer
+                    multiple_raw_answers[f"inference_{i}"] = single_answer
                     processed_results.append(single_answer)
-                result = multiple_answers
+                result = multiple_raw_answers
                 logger.info(
-                    f"Multiple inferences completed. Got {len(multiple_answers)} results."
+                    f"Multiple inferences completed. Got {len(multiple_raw_answers)} results."
                 )
             else:
                 # single inference
                 if "</think>" in result:
                     reason, result = result.split("</think>", 1)
                     reason += "</think>"
-                multiple_answers = [result]
+                multiple_raw_answers = [result]
 
         except Exception as e:
             result = "Error code " + str(e)
-            multiple_answers = [result]
+            multiple_raw_answers = [result]
 
         return {
             "question_id": question_id,
             "question": qs,
             "answer": result,
             "reason": reason,
-            "multiple_answers": multiple_answers,
+            "multiple_raw_answers": multiple_raw_answers,
         }
 
     def cleanup(self):

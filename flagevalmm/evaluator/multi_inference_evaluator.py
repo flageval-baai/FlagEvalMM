@@ -56,9 +56,9 @@ class MultiInferenceEvaluator(BaseEvaluator):
         question_mapping = {}
 
         for pred in predictions:
-            multiple_answers = pred.get("multiple_answers", [pred["answer"]])
+            multiple_raw_answers = pred.get("multiple_raw_answers", [pred["answer"]])
 
-            if len(multiple_answers) == 1:
+            if len(multiple_raw_answers) == 1:
                 # Single inference - keep as is
                 expanded_predictions.append(pred)
                 question_mapping[len(expanded_predictions) - 1] = QuestionMapping(
@@ -68,8 +68,9 @@ class MultiInferenceEvaluator(BaseEvaluator):
                     total_inferences=1,
                 )
             else:
+                print(multiple_raw_answers)
                 # Multiple inferences - expand into separate predictions
-                for idx, answer in multiple_answers.items():
+                for idx, answer in multiple_raw_answers.items():
                     i = int(idx.split("_")[-1])
                     expanded_pred = pred.copy()
                     expanded_pred["answer"] = answer
@@ -82,7 +83,7 @@ class MultiInferenceEvaluator(BaseEvaluator):
                         original_question_id=pred["question_id"],
                         is_multi_inference=True,
                         inference_index=i,
-                        total_inferences=len(multiple_answers),
+                        total_inferences=len(multiple_raw_answers),
                     )
 
         return expanded_predictions, question_mapping
