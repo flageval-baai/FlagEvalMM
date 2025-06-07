@@ -129,6 +129,4 @@ ChangeLog
 internal
 
 # results
-results/
-
-.json
+result*/
