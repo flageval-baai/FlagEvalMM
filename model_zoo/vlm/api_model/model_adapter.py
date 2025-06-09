@@ -70,7 +70,9 @@ class ModelAdapter(BaseModelAdapter):
             "max_num_frames",
             "stream",
             "system_prompt",
+            "num_infers",
         ]
+        print(f"task_info: {task_info}")
         model_config = {k: task_info[k] for k in model_config_keys if k in task_info}
 
         model_type_map = {
@@ -124,28 +126,59 @@ class ModelAdapter(BaseModelAdapter):
                 data = json.load(f)
                 reason = data.get("reason", "")
                 result = data.get("answer", "")
-            return {
-                "question_id": question_id,
-                "question": qs,
-                "answer": result,
-                "reason": reason,
-            }
+                multiple_raw_answers = data.get("multiple_raw_answers", [])
+                return {
+                    "question_id": question_id,
+                    "question": qs,
+                    "answer": result,
+                    "reason": reason,
+                    "multiple_raw_answers": multiple_raw_answers,
+                }
         logger.info(f"Processing {question_id}")
         logger.info(qs)
         messages = self.model.build_message(qs, multi_modal_data=multi_modal_data)
         reason = ""
+        multiple_raw_answers = {}
+
         try:
             result = self.model.infer(messages)
-            if "</think>" in result:
-                reason, result = result.split("</think>")
-                reason += "</think>"
+
+            if isinstance(result, list):
+                multiple_raw_answers = {}
+                processed_results = []
+                for i, single_result in enumerate(result):
+                    if "</think>" in single_result:
+                        single_reason, single_answer = single_result.split(
+                            "</think>", 1
+                        )
+                        single_reason += "</think>"
+                        if not reason:
+                            reason = single_reason
+                    else:
+                        single_answer = single_result
+                    multiple_raw_answers[f"inference_{i}"] = single_answer
+                    processed_results.append(single_answer)
+                result = multiple_raw_answers
+                logger.info(
+                    f"Multiple inferences completed. Got {len(multiple_raw_answers)} results."
+                )
+            else:
+                # single inference
+                if "</think>" in result:
+                    reason, result = result.split("</think>", 1)
+                    reason += "</think>"
+                multiple_raw_answers = [result]
+
         except Exception as e:
             result = "Error code " + str(e)
+            multiple_raw_answers = [result]
+
         return {
             "question_id": question_id,
             "question": qs,
             "answer": result,
             "reason": reason,
+            "multiple_raw_answers": multiple_raw_answers,
         }
 
     def cleanup(self):
@@ -175,10 +208,13 @@ class ModelAdapter(BaseModelAdapter):
 
             for future in as_completed(future_to_item):
                 result = future.result()
-                if not result["answer"].startswith("Error code"):
+                if isinstance(result["answer"], str) and result["answer"].startswith(
+                    "Error code"
+                ):
+                    continue
+                else:
                     self.save_item(result, result["question_id"], meta_info)
                 results.append(result)
-
         self.save_result(results, meta_info)
 
 
