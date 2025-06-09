@@ -17,7 +17,16 @@ logger = get_logger(__name__)
 
 def update_cfg_from_args(args):
     cfg = json.load(open(args.cfg)) if args.cfg else {}
-    keys = ["num_workers", "backend", "url", "api_key", "use_cache", "extra_args"]
+    keys = [
+        "num_workers",
+        "backend",
+        "url",
+        "api_key",
+        "use_cache",
+        "extra_args",
+        "num_infers",
+        "temperature",
+    ]
     for key in keys:
         if getattr(args, key):
             cfg[key] = getattr(args, key)
@@ -249,11 +258,13 @@ def evaluate_only(args):
         task_cfg = Config.fromfile(task_file)
         task_cfg = merge_args(task_cfg, task_file, args)
         maybe_register_class(task_cfg, task_file)
+
         if args.try_run:
             task_cfg.dataset.debug = True
         if "evaluator" in task_cfg:
-            evaluator = EVALUATORS.build(task_cfg.evaluator)
             dataset = DATASETS.build(task_cfg.dataset)
+            evaluator = EVALUATORS.build(task_cfg.evaluator)
+
             task_name = task_cfg.dataset.name
             output_dir = osp.join(cfg["output_dir"], task_name)
             evaluator.process(dataset, output_dir, model_name=cfg.get("model_name", ""))

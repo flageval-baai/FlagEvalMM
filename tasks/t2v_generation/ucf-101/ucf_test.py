@@ -1,7 +1,7 @@
 task_name = "t2v_generation"
 
 config = dict(
-    dataset_path="fierytrees/flag-eval-data",
+    dataset_path="fierytrees/UCF",
     processed_dataset_path="t2v/ucf",
     processor="process.py",
     split="test"

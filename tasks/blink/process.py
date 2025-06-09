@@ -7,22 +7,26 @@ import tqdm
 
 def process(cfg):
     data_dir, split = cfg.dataset_path, cfg.split
-    dataset_names = [
-        "Art_Style",
-        "Counting",
-        "Forensic_Detection",
-        "Functional_Correspondence",
-        "IQ_Test",
-        "Jigsaw",
-        "Multi-view_Reasoning",
-        "Object_Localization",
-        "Relative_Depth",
-        "Relative_Reflectance",
-        "Semantic_Correspondence",
-        "Spatial_Relation",
-        "Visual_Correspondence",
-        "Visual_Similarity",
-    ]
+    dataset_names = cfg.dataset_names
+    # if "dataset_names" in cfg:
+    #     dataset_names = cfg.dataset_names
+    # else:
+    #     dataset_names = [
+    #         "Art_Style",
+    #         "Counting",
+    #         "Forensic_Detection",
+    #         "Functional_Correspondence",
+    #         "IQ_Test",
+    #         "Jigsaw",
+    #         "Multi-view_Reasoning",
+    #         "Object_Localization",
+    #         "Relative_Depth",
+    #         "Relative_Reflectance",
+    #         "Semantic_Correspondence",
+    #         "Spatial_Relation",
+    #         "Visual_Correspondence",
+    #         "Visual_Similarity",
+    #     ]
     content = []
     max_image_num = 4
     output_base_dir = osp.join(cfg.processed_dataset_path, split)
@@ -49,5 +53,6 @@ def process(cfg):
                 img_prefix += f"<image {i+1}> "
             new_data["question"] = img_prefix + new_data["question"]
             content.append(new_data)
-    with open(osp.join(output_base_dir, "data.json"), "w") as f:
+    output_name = "data.json" if "anno_file" not in cfg else cfg.anno_file
+    with open(osp.join(output_base_dir, output_name), "w") as f:
         json.dump(content, f, indent=2, ensure_ascii=True)

@@ -17,11 +17,11 @@ def process(cfg):
     data_dir, split = cfg.dataset_path, cfg.split
     name = cfg.get("dataset_name", "")
     output_dir = osp.join(cfg.processed_dataset_path, name, split)
-    data = load_dataset(data_dir,split="train")
+    data = load_dataset(data_dir,data_files='ucf_prompts_reformat.json')['train']
     if not osp.exists(osp.join(output_dir, "video")):
         os.makedirs(osp.join(output_dir, "video"))
         path=osp.join(output_dir, "UCF101.zip")
-        download_file_with_progress('https://huggingface.co/fierytrees/UCF101/resolve/main/UCF101.zip?download=true',path)
+        download_file_with_progress('https://huggingface.co/datasets/fierytrees/UCF/resolve/main/UCF101.zip?download=true',path)
         print('decompressing...')
         unzip(path,osp.join(output_dir, "video"))
 

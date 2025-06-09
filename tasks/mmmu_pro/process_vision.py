@@ -25,17 +25,3 @@ def process(cfg):
         info["img_path"] = image_path
         content.append(info)
     json.dump(content, open(osp.join(output_dir, "data.json"), "w"), indent=2)
-
-
-if __name__ == "__main__":
-    process(
-        "/share/projset/mmdataset/huggingface_format/MMMU",
-        "validation",
-        "/share/projset/mmdataset/MMMU_converted",
-    )
-
-    # process('/share/projset/mmdataset/huggingface_format/MMMU_Pro/standard', 'test', '/share/projset/mmdataset/MMMU_Pro_converted/standard')
-    # process_vision(
-    #     '/share/projset/mmdataset/huggingface_format/MMMU_Pro/vision', 'test',
-    #     '/share/projset/mmdataset/MMMU_Pro_converted/vision'
-    # )

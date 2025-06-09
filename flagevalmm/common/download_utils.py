@@ -100,8 +100,8 @@ def download_file_with_progress(url, save_path=None, chunk_size=1024*1024, max_t
 
 
 if __name__ == "__main__":
-    url = "https://huggingface.co/datasets/fierytrees/UCF/resolve/main/UCF101.rar?download=true"
-    save_path = "1.rar"
+    url = "https://huggingface.co/datasets/fierytrees/UCF/resolve/main/UCF101.zip?download=true"
+    save_path = "1.zip"
     
     download_file_with_progress(
         url=url,

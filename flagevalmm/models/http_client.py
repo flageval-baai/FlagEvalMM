@@ -78,7 +78,7 @@ class HttpClient(BaseApiModel):
                 if (
                     err_msg["code"] == "data_inspection_failed"
                     or err_msg["code"] == "1301"
-                    or "No candidates" in err_msg["message"]
+                    or "no candidates" in err_msg["message"].lower()
                 ):
                     yield err_msg["message"]
                     return
@@ -171,6 +171,8 @@ class HttpClient(BaseApiModel):
         past_messages: Optional[List] = None,
     ) -> List:
         messages = past_messages if past_messages else []
+        system_prompt = system_prompt if system_prompt else self.system_prompt
+
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         if not multi_modal_data:
@@ -191,7 +193,6 @@ class HttpClient(BaseApiModel):
                 self.build_interleaved_message(query, messages, data_list)
             elif data_type == "video":
                 self.build_video_message(query, messages, data_list)
-
         return messages
 
     def build_video_message(self, query: str, messages: List, video_data: str):
