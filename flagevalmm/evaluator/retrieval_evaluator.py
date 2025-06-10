@@ -11,12 +11,15 @@ def i2t(probs: np.ndarray, return_ranks: bool = False):
     npts = probs.shape[0]
     ranks = np.zeros(npts)
     top1 = np.zeros(npts)
+    # captions per imae
+    k = probs.shape[1] // probs.shape[0]
+
     for index in range(npts):
         inds = np.argsort(probs[index])[::-1]
 
         # Score
         rank = 1e20
-        for i in range(5 * index, 5 * index + 5, 1):
+        for i in range(k * index, k * index + k, 1):
             tmp = np.where(inds == i)[0][0]
             if tmp < rank:
                 rank = tmp
@@ -38,15 +41,17 @@ def i2t(probs: np.ndarray, return_ranks: bool = False):
 
 def t2i(probs: np.ndarray, return_ranks: bool = False):
     npts = probs.shape[0]
-    ranks = np.zeros(5 * npts)
-    top1 = np.zeros(5 * npts)
+    # captions per imae
+    k = probs.shape[1] // probs.shape[0]
+    ranks = np.zeros(k * npts)
+    top1 = np.zeros(k * npts)
     probs = probs.T
 
     for index in range(npts):
-        for i in range(5):
-            inds = np.argsort(probs[5 * index + i])[::-1]
-            ranks[5 * index + i] = np.where(inds == index)[0][0]
-            top1[5 * index + i] = inds[0]
+        for i in range(k):
+            inds = np.argsort(probs[k * index + i])[::-1]
+            ranks[k * index + i] = np.where(inds == index)[0][0]
+            top1[k * index + i] = inds[0]
 
     # Compute metrics
     r1 = float(100.0 * len(np.where(ranks < 1)[0]) / len(ranks))
