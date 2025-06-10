@@ -10,7 +10,6 @@ import os
 
 class ModelAdapter(BaseModelAdapter):
     def model_init(self, task_info: Dict) -> None:
-        return
         self.tasks = task_info["task_names"]
 
         self.model = AutoModelForCausalLM.from_pretrained(
