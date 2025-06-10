@@ -12,9 +12,6 @@ class ModelAdapter(BaseModelAdapter):
     def model_init(self, task_info: Dict) -> None:
         self.tasks = task_info["task_names"]
 
-        # pipe = DiffusionPipeline.from_pretrained("cerspense/zeroscope_v2_576w", torch_dtype=torch.float16)
-        # model_name = "DAMO-NLP-SG/VideoLLaMA3-7B"
-
         self.model = AutoModelForCausalLM.from_pretrained(
             pretrained_model_name_or_path=task_info["model_path"],
             trust_remote_code=True,
