@@ -3,7 +3,6 @@ from torch.utils.data import Dataset
 import json
 import os
 import os.path as osp
-from PIL import Image
 from flagevalmm.registry import DATASETS
 from flagevalmm.common.const import FLAGEVALMM_DATASETS_CACHE_DIR
 from flagevalmm.dataset.utils import get_data_root
@@ -36,17 +35,14 @@ class VideoRetrievalDataset(Dataset):
             self.annotations = self.annotations[:160]
         # flatten the caption list
 
-        self.captions = [
-            annotation["prompt"]
-            for annotation in self.annotations
-        ]
+        self.captions = [annotation["prompt"] for annotation in self.annotations]
 
     def __getitem__(self, index: int) -> Tuple[str, List[str]]:
         root = self.data_root
         annotation = self.annotations[index]
-        video_folder = os.path.join(root, 'video', self.name, annotation["class_name"])
+        video_folder = os.path.join(root, "video", self.name, annotation["class_name"])
         lst = os.listdir(video_folder)
-        video_path = os.path.join(video_folder, lst[randint(0,len(lst))])
+        video_path = os.path.join(video_folder, lst[randint(0, len(lst))])
 
         return video_path, annotation["caption"]
 
@@ -59,9 +55,11 @@ class VideoRetrievalDataset(Dataset):
     def get_video(self, video_index: int) -> Dict[str, str]:
         assert video_index < self.video_number()
         annotation = self.annotations[video_index]
-        video_folder = os.path.join(self.data_root, 'video', self.name, annotation["class_name"])
+        video_folder = os.path.join(
+            self.data_root, "video", self.name, annotation["class_name"]
+        )
         lst = os.listdir(video_folder)
-        video_path = os.path.join(video_folder, lst[randint(0,len(lst))])
+        video_path = os.path.join(video_folder, lst[randint(0, len(lst))])
         print(video_path)
         return {"video_path": video_path}
 

@@ -12,7 +12,7 @@ def i2t(probs: np.ndarray, return_ranks: bool = False):
     ranks = np.zeros(npts)
     top1 = np.zeros(npts)
     # captions per imae
-    k = probs.shape[1]//probs.shape[0]
+    k = probs.shape[1] // probs.shape[0]
 
     for index in range(npts):
         inds = np.argsort(probs[index])[::-1]
@@ -42,7 +42,7 @@ def i2t(probs: np.ndarray, return_ranks: bool = False):
 def t2i(probs: np.ndarray, return_ranks: bool = False):
     npts = probs.shape[0]
     # captions per imae
-    k = probs.shape[1]//probs.shape[0]
+    k = probs.shape[1] // probs.shape[0]
     ranks = np.zeros(k * npts)
     top1 = np.zeros(k * npts)
     probs = probs.T

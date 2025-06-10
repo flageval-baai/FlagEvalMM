@@ -11,5 +11,5 @@ __all__ = [
     "Text2ImageBaseDataset",
     "Text2VideoBaseDataset",
     "RetrievalBaseDataset",
-    "VideoRetrievalDataset"
+    "VideoRetrievalDataset",
 ]

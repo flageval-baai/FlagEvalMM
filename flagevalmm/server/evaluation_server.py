@@ -198,7 +198,7 @@ class EvaluationServer:
             index = request.args.get("index", type=int)
             data_type = request.args.get("type", type=str)
             task_name = request.args.get("task")
-            if data_type not in ["img", "text", 'video']:
+            if data_type not in ["img", "text", "video"]:
                 return "Invalid data type", 400
             try:
                 if task_name not in self.active_task:

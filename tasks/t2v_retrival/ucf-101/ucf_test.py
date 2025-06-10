@@ -4,7 +4,7 @@ config = dict(
     dataset_path="fierytrees/UCF",
     processed_dataset_path="t2v_retrieval/ucf",
     processor="process.py",
-    split="test"
+    split="test",
 )
 
 

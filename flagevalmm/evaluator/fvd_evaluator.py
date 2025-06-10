@@ -16,8 +16,8 @@ from tqdm import tqdm
 
 
 def compute_stats(feats: np.ndarray):
-    mu = feats.mean(axis=0) # [d]
-    sigma = np.cov(feats, rowvar=False) # [d, d]
+    mu = feats.mean(axis=0)  # [d]
+    sigma = np.cov(feats, rowvar=False)  # [d, d]
     return mu, sigma
 
 
@@ -26,12 +26,13 @@ def frechet_distance(feats_fake: np.ndarray, feats_real: np.ndarray) -> float:
     mu_real, sigma_real = compute_stats(feats_real)
 
     m = np.square(mu_gen - mu_real).sum()
-    s, _ = sqrtm(np.dot(sigma_gen, sigma_real), disp=False) # pylint: disable=no-member
+    s, _ = sqrtm(np.dot(sigma_gen, sigma_real), disp=False)  # pylint: disable=no-member
     fid = np.real(m + np.trace(sigma_gen + sigma_real - s * 2))
     return float(fid)
 
+
 def preprocess_single(video, resolution=224, sequence_length=None):
-    video=video.permute(1,0,2,3)
+    video = video.permute(1, 0, 2, 3)
     # video: CTHW, [0, 1]
     c, t, h, w = video.shape
 
@@ -46,16 +47,16 @@ def preprocess_single(video, resolution=224, sequence_length=None):
         target_size = (resolution, math.ceil(w * scale))
     else:
         target_size = (math.ceil(h * scale), resolution)
-    video = F.interpolate(video, size=target_size, mode='bilinear', align_corners=False)
+    video = F.interpolate(video, size=target_size, mode="bilinear", align_corners=False)
 
     # center crop
     c, t, h, w = video.shape
     w_start = (w - resolution) // 2
     h_start = (h - resolution) // 2
-    video = video[:, :, h_start:h_start + resolution, w_start:w_start + resolution]
+    video = video[:, :, h_start : h_start + resolution, w_start : w_start + resolution]
 
     # [0, 1] -> [-1, 1]
-    video = F.normalize(video, p = 1, dim = 1)
+    video = F.normalize(video, p=1, dim=1)
     video = (video - 0.5) * 2
     # print(video)
 
@@ -66,7 +67,7 @@ def preprocess_single(video, resolution=224, sequence_length=None):
 class FVDEvaluator:
     def __init__(
         self,
-        model_path='i3d_torchscript.pt',
+        model_path="i3d_torchscript.pt",
         example_dir: Optional[str] = None,
         base_dir: Optional[str] = None,
         config: Optional[dict] = None,
@@ -74,11 +75,10 @@ class FVDEvaluator:
     ) -> None:
         if not os.path.exists(model_path):
             model_path = hf_hub_download(
-                repo_id=model_path,
-                filename="i3d_torchscript.pt"
+                repo_id=model_path, filename="i3d_torchscript.pt"
             )
         # print(filepath)
-        i3d = torch.jit.load(model_path).eval().to('cuda')
+        i3d = torch.jit.load(model_path).eval().to("cuda")
         i3d = torch.nn.DataParallel(i3d)
         self.i3d = i3d
 
@@ -95,24 +95,33 @@ class FVDEvaluator:
 
     def get_feats(self, video):
         # videos : torch.tensor BCTHW [0, 1]
-        detector_kwargs = dict(rescale=False, resize=False, return_features=True) # Return raw features before the softmax layer.
+        # detector_kwargs = dict(
+        #     rescale=False, resize=False, return_features=True
+        # )  # Return raw features before the softmax layer.
         feats = np.empty((0, 400))
         device = torch.device("cuda")
-        video=preprocess_single(video).unsqueeze(0).to(device)
+        video = preprocess_single(video).unsqueeze(0).to(device)
         with torch.no_grad():
-            feats = np.vstack([feats, self.i3d(x=video, rescale=False, resize=False, return_features=True).detach().cpu().numpy()])
+            feats = np.vstack(
+                [
+                    feats,
+                    self.i3d(x=video, rescale=False, resize=False, return_features=True)
+                    .detach()
+                    .cpu()
+                    .numpy(),
+                ]
+            )
         return feats
 
-
     def get_metric_results(self, output_info, output_dir, **kwargs):
-        feats_fake=[]
-        feats_real=[]
+        feats_fake = []
+        feats_real = []
 
-        video_extensions = ['.mp4', '.avi', '.mov', '.mkv', '.flv', '.webm']
+        video_extensions = [".mp4", ".avi", ".mov", ".mkv", ".flv", ".webm"]
         for root, _, files in tqdm(os.walk(self.example_dir)):
             for file in files:
                 if any(file.lower().endswith(ext) for ext in video_extensions):
-                    video_path = os.path.join(root, file)                    
+                    video_path = os.path.join(root, file)
                     images = read_video_pyav(
                         video_path=video_path,
                         max_num_frames=16,
@@ -142,7 +151,9 @@ class FVDEvaluator:
         result_file = osp.join(output_dir, f"{dataset_name}.json")
         output_info = json.load(open(result_file))
 
-        results = self.get_metric_results(output_dir=output_dir,output_info=output_info)
+        results = self.get_metric_results(
+            output_dir=output_dir, output_info=output_info
+        )
         json.dump(
             results, open(osp.join(output_dir, f"{dataset_name}_result.json"), "w")
         )
@@ -154,5 +165,3 @@ class FVDEvaluator:
             indent=2,
         )
         return results
-
-

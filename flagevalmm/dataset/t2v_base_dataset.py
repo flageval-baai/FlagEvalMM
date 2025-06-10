@@ -10,7 +10,9 @@ import os.path as osp
 @DATASETS.register_module()
 class Text2VideoBaseDataset(Dataset):
     def __init__(
-        self, name: str, data_root: Optional[str] = None,
+        self,
+        name: str,
+        data_root: Optional[str] = None,
         anno_file: Optional[str] = None,
         cache_dir: str = FLAGEVALMM_DATASETS_CACHE_DIR,
         config: Optional[dict] = None,

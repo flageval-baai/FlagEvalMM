@@ -13,8 +13,10 @@ class ModelAdapter(BaseModelAdapter):
         self.tasks = task_info["task_names"]
 
         # pipe = DiffusionPipeline.from_pretrained("cerspense/zeroscope_v2_576w", torch_dtype=torch.float16)
-        pipe = DiffusionPipeline.from_pretrained(task_info["model_path"], torch_dtype=torch.float16)
-        
+        pipe = DiffusionPipeline.from_pretrained(
+            task_info["model_path"], torch_dtype=torch.float16
+        )
+
         self.pipe = pipe.to("cuda")
 
     def run_one_task(self, task_name: str, meta_info: Dict[str, Any]):
@@ -27,7 +29,7 @@ class ModelAdapter(BaseModelAdapter):
             for j in range(1):
                 video_frames = self.pipe(prompt, num_frames=24).frames[0]
                 video_out_name = f"{output_dir}/{question_id}-{j}.mp4"
-                video_path = export_to_video(video_frames,video_out_name)
+                export_to_video(video_frames, video_out_name)
             output_info.append(
                 {"prompt": prompt, "id": question_id, "video": video_out_name}
             )
