@@ -3,7 +3,7 @@ import os
 import os.path as osp
 from datasets import load_dataset
 import zipfile
-from flagevalmm.common.download_utils import download_file_with_progress
+from huggingface_hub import hf_hub_download
 
 
 def unzip(file_path, outpath):
@@ -17,14 +17,17 @@ def process(cfg):
     output_dir = osp.join(cfg.processed_dataset_path, name, split)
     data = load_dataset(data_dir, data_files="ucf_prompts_reformat.json")["train"]
     if not osp.exists(osp.join(output_dir, "video")):
-        os.makedirs(osp.join(output_dir, "video"))
-        path = osp.join(output_dir, "UCF101.zip")
-        download_file_with_progress(
-            "https://huggingface.co/datasets/fierytrees/UCF/resolve/main/UCF101.zip?download=true",
-            path,
+        # Use official Hugging Face download function
+        downloaded_file = hf_hub_download(
+            repo_id=data_dir,
+            filename="UCF101.zip",
+            repo_type="dataset",
+            local_dir=output_dir,
+            local_dir_use_symlinks=False,
         )
+        os.makedirs(osp.join(output_dir, "video"), exist_ok=True)
         print("decompressing...")
-        unzip(path, osp.join(output_dir, "video"))
+        unzip(downloaded_file, osp.join(output_dir, "video"))
 
     content = []
     selected_keys = ["prompt", "id", "class_name"]

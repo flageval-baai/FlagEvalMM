@@ -32,7 +32,7 @@ class VideoRetrievalDataset(Dataset):
         self.annotations = json.load(open(osp.join(self.data_root, anno_file)))
         self.name = name
         if debug:
-            self.annotations = self.annotations[:160]
+            self.annotations = self.annotations[:16]
         # flatten the caption list
 
         self.captions = [annotation["prompt"] for annotation in self.annotations]
@@ -53,6 +53,9 @@ class VideoRetrievalDataset(Dataset):
         return len(self.captions)
 
     def get_video(self, video_index: int) -> Dict[str, str]:
+        import pdb
+
+        pdb.set_trace()
         assert video_index < self.video_number()
         annotation = self.annotations[video_index]
         video_folder = os.path.join(
