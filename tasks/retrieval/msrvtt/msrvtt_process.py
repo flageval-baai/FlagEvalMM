@@ -1,60 +1,86 @@
+import json
 import os
+import os.path as osp
+import pandas as pd
+import shutil
+from pathlib import Path
 import subprocess
-import zipfile
 
 
-# from dataloaders.rawframe_util import RawFrameExtractor
 def process(cfg):
-    download_and_extract_dataset(cfg.dataset_path, "./", cfg.extract_dir)
-
-
-def download_and_extract_dataset(repo_id, cache_dir, extract_dir):
     """
-    Download Hugging Face dataset and extract it to the specified path.
-
-    Parameters:
-        repo_id (str): The name of the dataset (e.g., "shiyili1111/MSR-VTT").
-        cache_dir (str): The directory to cache the downloaded file.
-        extract_dir (str): The directory to extract the dataset.
+    Process the MSRVTT dataset for video retrieval tasks.
     """
-    # Ensure the cache directory exists
-    os.makedirs(cache_dir, exist_ok=True)
+    data_dir, split = cfg.dataset_path, cfg.split
+    name = cfg.get("dataset_name", "")
+    output_dir = osp.join(cfg.processed_dataset_path, name, split)
+    print(f"output_dir:{output_dir}")
+    
+    # Create output directory
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Download dataset
+    download_dataset(data_dir, output_dir)
+    
+    # Process CSV file
+    csv_path = os.path.join(output_dir, "MSRVTT_JSFUSION_test.csv")
+    if not os.path.exists(csv_path):
+        print(f"Error: CSV file not found at {csv_path}")
+        return
+    
+    # Create video directory structure
+    video_dir = os.path.join(output_dir, "video")
+    os.makedirs(video_dir, exist_ok=True)
+    
+    # Process data
+    df = pd.read_csv(csv_path)
+    content = []
+    
+    for _, row in df.iterrows():
+        video_id = row['video_id']
+        caption = row['sentence']
+        
+        # Create class directory
+        class_name = video_id  # Using video_id as class_name
+        class_dir = os.path.join(video_dir, class_name)
+        os.makedirs(class_dir, exist_ok=True)
+        
+        # Copy or link video file
+        src_video = os.path.join(output_dir, "MSRVTT_Videos", f"{video_id}.mp4")
+        dst_video = os.path.join(class_dir, f"{video_id}.mp4")
+        
+        if os.path.exists(src_video) and not os.path.exists(dst_video):
+            try:
+                # Create symbolic link
+                os.symlink(os.path.abspath(src_video), dst_video)
+            except OSError:
+                # If symlink fails, copy the file
+                shutil.copy2(src_video, dst_video)
+        
+        # Add to content
+        info = {
+            "prompt": caption,
+            "id": video_id,
+            "class_name": class_name
+        }
+        content.append(info)
+    
+    # Save data.json
+    json.dump(content, open(osp.join(output_dir, "data.json"), "w"), indent=2)
+    print(f"Processed {len(content)} entries. Data saved to {output_dir}/data.json")
 
-    # Download the dataset
+
+def download_dataset(repo_id, output_dir):
+    """
+    Download the MSRVTT dataset from Hugging Face.
+    """
+    # Download dataset files
     command = (
-        f"export HF_ENDPOINT=https://hf-mirror.com && "
-        f"huggingface-cli download {repo_id} --repo-type dataset --local-dir {cache_dir}"
+        f"huggingface-cli download --repo-type dataset {repo_id} "
+        f"--local-dir {output_dir} --resume-download"
     )
     try:
-        result = subprocess.run(
-            command, shell=True, check=True, text=True, capture_output=True
-        )
-        print("Download successful!")
-        print(result.stdout)
+        subprocess.run(command, shell=True, check=True)
+        print(f"Dataset downloaded successfully from {repo_id}")
     except subprocess.CalledProcessError as e:
-        print("Download failed!")
-        print(e.stderr)
-        return  # If download fails, return immediately
-
-    # Locate the downloaded ZIP file
-    zip_file_path = os.path.join(
-        cache_dir, "MSRVTT_Videos.zip"
-    )  # Assume the ZIP file is named MSRVTT_Videos.zip
-    if not os.path.exists(zip_file_path):
-        print(f"Error: ZIP file '{zip_file_path}' not found.")
-        return
-
-    # Ensure the extraction directory exists
-    os.makedirs(extract_dir, exist_ok=True)
-
-    # Extract the ZIP file
-    try:
-        with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
-            zip_ref.extractall(extract_dir)
-        print(f"ZIP file extracted successfully to: {extract_dir}")
-    except zipfile.BadZipFile:
-        print("Error: The file is not a valid ZIP file.")
-    except FileNotFoundError:
-        print(f"Error: The file '{zip_file_path}' does not exist.")
-    except Exception as e:
-        print(f"An error occurred: {e}")
+        print(f"Error downloading dataset: {e}")
