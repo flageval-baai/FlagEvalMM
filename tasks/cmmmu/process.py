@@ -6,18 +6,23 @@ import tqdm
 import re
 
 
-def replace_images(input_string, start_id=1):
+def replace_images(input_string, id_mp):
     pattern = r'<img="([^"]+)">'
-    image_counter = start_id
 
     def replace(match):
-        nonlocal image_counter
-        replacement = f"<image {image_counter}>"
-        image_counter += 1
+        replacement = f"<image {id_mp[match.group(1)]}>"
         return replacement
 
+    # get the pattern from the input_string
+    img_name = re.findall(pattern, input_string)
+    s = len(id_mp)
+    for p in img_name:
+        if p not in id_mp:
+            s += 1
+            id_mp[p] = s
+
     output_string = re.sub(pattern, replace, input_string)
-    return output_string, image_counter
+    return output_string, id_mp
 
 
 def process(cfg):
@@ -54,14 +59,12 @@ def process(cfg):
         info = {}
         for filed in fileds:
             info[filed] = row[filed]
-        info["question"], img_counter = replace_images(row["question"], 1)
+        info["question"], id_mp = replace_images(row["question"], {})
         info["question_id"] = info.pop("id")
         options = []
         for i in range(option_num):
             if row[f"option{i + 1}"] != "-":
-                new_option, img_counter = replace_images(
-                    row[f"option{i + 1}"], img_counter
-                )
+                new_option, id_mp = replace_images(row[f"option{i + 1}"], id_mp)
                 options.append(new_option)
         info["question_type"] = type_map[info.pop("type")]
         info["options"] = options
@@ -74,7 +77,7 @@ def process(cfg):
                 img = img.convert("RGB")
             img_name = row[f"image_{i+1}_filename"]
             file_name = f"image/{img_name}"
-            img.save(osp.join(output_dir, file_name))
+            # img.save(osp.join(output_dir, file_name))
             image_path.append(file_name)
         info["img_path"] = image_path
         content.append(info)

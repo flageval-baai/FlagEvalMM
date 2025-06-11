@@ -5,7 +5,7 @@ from PIL import Image
 import re
 import math
 
-from transformers import AutoTokenizer, AutoModel
+from transformers import AutoTokenizer, AutoModel, AutoConfig
 import torchvision.transforms as T
 
 from torchvision.transforms.functional import InterpolationMode
@@ -16,18 +16,23 @@ from flagevalmm.server.utils import parse_args
 
 
 # modified from https://huggingface.co/OpenGVLab/InternVL2_5-78B
-def split_model(model_name):
+def split_model(model_name, model_path):
     device_map = {}
     world_size = torch.cuda.device_count()
-    num_layers = {
-        "InternVL2_5-1B": 24,
-        "InternVL2_5-2B": 24,
-        "InternVL2_5-4B": 36,
-        "InternVL2_5-8B": 32,
-        "InternVL2_5-26B": 48,
-        "InternVL2_5-38B": 64,
-        "InternVL2_5-78B": 80,
-    }[model_name]
+    print(model_name)
+    if "InternVL2_5" in model_name:
+        num_layers = {
+            "InternVL2_5-1B": 24,
+            "InternVL2_5-2B": 24,
+            "InternVL2_5-4B": 36,
+            "InternVL2_5-8B": 32,
+            "InternVL2_5-26B": 48,
+            "InternVL2_5-38B": 64,
+            "InternVL2_5-78B": 80,
+        }[model_name]
+    else:
+        config = AutoConfig.from_pretrained(model_path, trust_remote_code=True)
+        num_layers = config.llm_config.num_hidden_layers
     # Since the first GPU will be used for ViT, treat it as half a GPU.
     num_layers_per_gpu = math.ceil(num_layers / (world_size - 0.5))
     num_layers_per_gpu = [num_layers_per_gpu] * world_size
@@ -207,7 +212,8 @@ class ModelAdapter(BaseModelAdapter):
             tokenizer = AutoTokenizer.from_pretrained(
                 ckpt_path, trust_remote_code=True, use_fast=False
             )
-            device_map = split_model(ckpt_path.split("/")[-1])
+            device_map = split_model(ckpt_path.split("/")[-1], ckpt_path)
+            print(device_map)
             model = AutoModel.from_pretrained(
                 ckpt_path,
                 torch_dtype=torch.bfloat16,
@@ -241,12 +247,13 @@ class ModelAdapter(BaseModelAdapter):
             image_tensor = image_tensor[0]
             if image_tensor is not None:
                 image_tensor = image_tensor.cuda()
+            # print(query[0], len(image_tensor), num_patches_list)
             response = self.model.chat(
                 self.tokenizer,
                 image_tensor,
                 query[0],
                 self.generation_config,
-                num_patches_list=num_patches_list[0],
+                num_patches_list=num_patches_list,
             )
             self.accelerator.print(f"{query[0]}\n{response}\n\n")
             results.append(
@@ -279,5 +286,11 @@ if __name__ == "__main__":
         server_port=args.server_port,
         timeout=args.timeout,
         extra_cfg=args.cfg,
+        local_mode=args.local_mode,
+        task_names=args.tasks,
+        output_dir=args.output_dir,
+        model_path=args.model,
+        debug=args.debug,
+        quiet=args.quiet,
     )
     model_adapter.run()

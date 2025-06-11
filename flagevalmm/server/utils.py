@@ -75,18 +75,77 @@ def get_retrieval_data(
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Model Adapter")
-    parser.add_argument("--server_ip", type=str, default="http://localhost")
-    parser.add_argument("--server_port", type=int, default=5000)
-    parser.add_argument("--timeout", type=int, default=1000)
+    parser = argparse.ArgumentParser(description="Infer a model")
+    parser.add_argument("--tasks", nargs="+", help="tasks to run")
+    parser.add_argument("--exec", type=str, help="model path in examples")
+    parser.add_argument("--debug", action="store_true", help="debug mode")
     parser.add_argument(
-        "--cfg",
-        "-c",
+        "--try-run",
+        action="store_true",
+        help="try run mode, only run the first 32 samples",
+    )
+    parser.add_argument("--output-dir", type=str, help="output dir")
+    parser.add_argument("--data-root", type=str, help="data root")
+    parser.add_argument("--model", type=str, help="model name or path")
+    parser.add_argument(
+        "--model-type",
         type=str,
         default=None,
+        choices=["http", "claude", "gemini", "gpt", "hunyuan"],
+        help="type of the model",
     )
-    parser.add_argument("--num-workers", "--num-workers", type=int)
-    return parser.parse_args()
+    parser.add_argument("--cfg", "-c", type=str, help="config file")
+    parser.add_argument("--num-workers", "--num_workers", type=int)
+    parser.add_argument("--backend", type=str)
+    parser.add_argument(
+        "--no-local-mode",
+        action="store_false",
+        dest="local_mode",
+        help="disable local mode (use evaluation server)",
+    )
+    parser.add_argument("--disable-evaluation-server", "-ds", action="store_true")
+    parser.add_argument("--skip", action="store_true", help="skip finished tasks")
+    parser.add_argument(
+        "--server-port",
+        "--server_port",
+        type=int,
+        help="port of evaluation server",
+        default=5000,
+    )
+    parser.add_argument(
+        "--server-ip",
+        "--server_ip",
+        type=str,
+        default="http://localhost",
+        help="ip of evaluation server",
+    )
+    parser.add_argument("--timeout", type=int, default=1000)
+    parser.add_argument("--quiet", "-q", action="store_true", help="quiet mode")
+    parser.add_argument(
+        "--without-infer", "-wi", action="store_true", help="without inference"
+    )
+    parser.add_argument("--url", type=str, help="url of api model")
+    parser.add_argument("--api-key", type=str, help="api key of api model")
+    parser.add_argument(
+        "--use-cache", action="store_true", help="use cache of api model"
+    )
+    parser.add_argument(
+        "--extra-args", type=str, help="extra args of local server model"
+    )
+    parser.add_argument(
+        "--num-infers",
+        type=int,
+        default=1,
+        help="number of inferences to perform for each question (when temperature >= 0)",
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=0,
+        help="temperature of the model",
+    )
+    args = parser.parse_args()
+    return args
 
 
 def process_images_symbol(

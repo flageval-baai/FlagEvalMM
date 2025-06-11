@@ -1,4 +1,3 @@
-import argparse
 import os
 import os.path as osp
 import json
@@ -6,21 +5,10 @@ import asyncio
 from typing import Dict
 from flagevalmm.models import Kolors, SenseMirage, HunyuanImage, DoubaoImage, Flux
 from flagevalmm.common.logger import get_logger
-from flagevalmm.server.utils import get_meta, submit, get_data
+from flagevalmm.server.utils import get_meta, submit, get_data, parse_args
 from flagevalmm.models.base_model_adapter import BaseModelAdapter
 
 logger = get_logger(__name__)
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description="Infer a model")
-    parser.add_argument("--model-name", help="model name")
-    parser.add_argument(
-        "--server_ip", "--server-ip", type=str, default="http://localhost"
-    )
-    parser.add_argument("--server_port", "--server-port", type=int, default=5000)
-    parser.add_argument("--cfg", "-c", type=str, default=None)
-    return parser.parse_args()
 
 
 class ImageGenerator(BaseModelAdapter):
@@ -121,6 +109,13 @@ class ImageGenerator(BaseModelAdapter):
 if __name__ == "__main__":
     args = parse_args()
     generator = ImageGenerator(
-        server_ip=args.server_ip, server_port=args.server_port, extra_cfg=args.cfg
+        server_ip=args.server_ip,
+        server_port=args.server_port,
+        extra_cfg=args.cfg,
+        local_mode=args.local_mode,
+        task_names=args.tasks,
+        output_dir=args.output_dir,
+        model_path=args.model,
+        debug=args.debug,
     )
     generator.run()

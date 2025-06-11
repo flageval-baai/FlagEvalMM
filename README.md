@@ -47,6 +47,27 @@ pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.4/
 
 For detailed installation instructions, please refer to the [official SGLang documentation](https://sgl-project.github.io/start/install.html).
 
+#### LMDeploy Backend
+
+```bash
+pip install lmdeploy
+```
+
+For detailed installation instructions, please refer to the [official LMDeploy documentation](https://lmdeploy.readthedocs.io/en/latest/).
+
+
+#### FlagScale Backend
+
+```bash
+git clone https://github.com/FlagOpen/FlagScale.git
+cd FlagScale/install
+./install-requirements.sh --env inference
+cd vllm
+pip install .
+```
+
+For detailed installation instructions, please refer to the [official FlagScale documentation](https://lmdeploy.readthedocs.io/en/latest/).
+
 #### Transformers
 
 For optimal performance for transformers, we recommend installing flash-attention
@@ -123,6 +144,36 @@ flagevalmm --tasks tasks/mmmu_pro/mmmu_pro_standard_test.py tasks/ocrbench/ocrbe
         --exec model_zoo/vlm/api_model/model_adapter.py \
         --cfg qwen2_vl_72b_instruct.json
 ```
+
+## Multi-task and Multi-model Evaluation
+
+For evaluating multiple models on the same benchmarks, FlagEvalMM provides a batch execution tool with automatic GPU management:
+
+```bash
+python tools/run_models.py --config tools/configs/example_batch.py --models-base-dir /path/to/models
+```
+
+The batch configuration file format:
+
+```python
+# List of models and their backends
+model_info = [
+    ["Qwen2-VL-7B-Instruct", "api_model"],
+    ["InternVL2-8B", "api_model"],
+    ["Phi-3.5-vision-instruct", "Phi_3.5_v"],
+]
+
+# List of tasks to evaluate
+tasks = [
+    "tasks/mmmu/mmmu_val.py",
+    "tasks/mmvet/mmvet_v2.py",
+]
+
+# Optional: Default output directory for results
+output_dir = "./results/batch_eval" 
+```
+
+The tool automatically allocates GPUs based on model requirements, runs models in parallel, and logs outputs to separate files. For more details, see `tools/README.md`.
 
 Example of evaluating models without vllm (using transformers instead):
 

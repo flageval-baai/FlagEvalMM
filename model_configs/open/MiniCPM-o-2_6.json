@@ -1,0 +1,7 @@
+{
+    "model_name": "MiniCPM-o-2_6",
+    "api_key": "EMPTY",
+    "url": "http://localhost:8000/v1/chat/completions",
+    "num_workers": 8,
+    "extra_args": "--limit-mm-per-prompt image=18 --max-model-len 32768 --trust-remote-code --max-num-seqs 5"
+}

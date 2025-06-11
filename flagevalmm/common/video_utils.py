@@ -26,7 +26,11 @@ def read_video_pyav(video_path: str, max_num_frames: int, return_tensors: bool =
         if i >= start_index and i in indices:
             frames.append(frame)
     if return_tensors:
-        tensors = torch.from_numpy(frames).float().cuda()
+        tensors = (
+            torch.from_numpy(np.stack([x.to_ndarray(format="rgb24") for x in frames]))
+            .float()
+            .cuda()
+        )
         tensors = tensors.permute(0, 3, 1, 2)
         return tensors
     return np.stack([x.to_ndarray(format="rgb24") for x in frames])

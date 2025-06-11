@@ -179,7 +179,10 @@ class MmmuEvaluator(BaseEvaluator):
             question_id = str(answer["question_id"])
             gt = annotation[question_id]
 
-            if gt["question_type"] == "multiple-choice":
+            if (
+                gt["question_type"] == "multiple-choice"
+                or gt["question_type"] == "vision"
+            ):
                 is_correct = self.evaluate_multiple_choice(gt, answer)
             else:
                 pred = parse_open_response(answer["answer"])
