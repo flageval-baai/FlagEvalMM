@@ -2,13 +2,20 @@ from datasets import load_dataset
 import os.path as osp
 import json
 import tqdm
+import os
+import zipfile
 
 
 def process(cfg):
     data_dir, split = cfg.dataset_path, cfg.split
     name = cfg.get("dataset_name", "")
-    output_dir = osp.join(cfg.processed_dataset_path, name, split)
-    dataset = load_dataset(data_dir, split=split)
+    # download VSI-Bench
+    output_root = osp.join(cfg.processed_dataset_path, name)
+    output_dir = osp.join(output_root, split)
+    os.makedirs(output_dir, exist_ok=True)
+    cmd = f"huggingface-cli download --repo-type dataset --resume-download {data_dir} --local-dir {output_root}"
+    os.system(cmd)
+    dataset = load_dataset(output_root, split=split)
     content = []
     # The indexes follow https://github.com/vision-x-nyu/thinking-in-space/blob/9d2ab309f875018a6898ad847d70e255bb184e79/lmms_eval/tasks/vsibench/utils.py#L79
     subset_indexes = set(
@@ -436,6 +443,12 @@ def process(cfg):
         json.dump(content, f, indent=2)
     with open(osp.join(output_dir, "data_tiny.json"), "w") as f:
         json.dump(content_mini, f, indent=2)
+    # unzip the datasets
+    for dataset in ["arkitscenes", "scannetpp", "scannet"]:
+        zip_path = osp.join(output_root, f"{dataset}.zip")
+        if osp.exists(zip_path):
+            with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                zip_ref.extractall(output_dir)
     print(
         "\033[91m"
         + f"Please unzip arkitscenes.zip, scannetpp.zip, and scannet.zip in {output_dir} manually."

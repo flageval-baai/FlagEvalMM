@@ -8,7 +8,6 @@ from flagevalmm.models.gemini import Gemini
 
 
 class BaseTestModel:
-
     def test_generate_joke(self):
         system_prompt = "Answer all questions in Chinese"
         query = "Tell me a joke about Mars and Pokemon, it should be very funny"
@@ -22,7 +21,9 @@ class BaseTestModel:
 
     def test_generate_joke_with_image(self):
         query = "Look at this image and create a funny joke based on what you see"
-        messages = self.model.build_message(query, image_paths=["assets/test_1.jpg"])
+        messages = self.model.build_message(
+            query, multi_modal_data={"image": ["assets/test_1.jpg"]}
+        )
         answer = self.model.infer(messages)
 
         # Add assertions to verify the result
@@ -67,7 +68,7 @@ class TestYiChat(BaseTestModel, unittest.TestCase):
 
 class TestHunyuanModel(BaseTestModel, unittest.TestCase):
     def setUp(self):
-        self.model = Hunyuan(model_name="hunyuan-vision", use_cache=False)
+        self.model = Hunyuan(model_name="hunyuan-turbos-vision", use_cache=False)
 
 
 class TestClaudeModel(BaseTestModel, unittest.TestCase):
@@ -77,12 +78,22 @@ class TestClaudeModel(BaseTestModel, unittest.TestCase):
         )
 
 
+class TestHttpClientModelStream(BaseTestModel, unittest.TestCase):
+    def setUp(self):
+        self.model = HttpClient(
+            model_name="qvq-max",
+            api_key=os.environ.get("QWEN_API_KEY"),
+            url="https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+            stream=True,
+        )
+
+
 class TestHttpClientModel(BaseTestModel, unittest.TestCase):
     def setUp(self):
         self.model = HttpClient(
             model_name="gpt-4o-mini",
-            api_key=os.environ.get("BAAI_OPENAI_API_KEY"),
-            url="https://api.openai.com/v1/chat/completions",
+            api_key=os.environ.get("FLAGEVAL_API_KEY"),
+            url=os.environ.get("FLAGEVAL_URL"),
         )
 
 
@@ -92,4 +103,4 @@ class TestGeminiModel(BaseTestModel, unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main(defaultTest="TestGeminiModel")
+    unittest.main(defaultTest="TestHttpClientModelStream")

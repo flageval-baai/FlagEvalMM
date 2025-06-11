@@ -26,6 +26,15 @@ def process_multiple_choice(answer):
     if matches:
         return matches.group(1)
     key_words = [
+        "boxed",
+        "Answer:",
+        "Answer is",
+        "answer is",
+        "option is",
+        "Correct option",
+        "correct option",
+        "Answer",
+        "answer",
         "故选",
         "选择",
         "正确选项为",
@@ -34,11 +43,6 @@ def process_multiple_choice(answer):
         "答案是",
         "因此",
         "答案",
-        "Answer:",
-        "Answer is",
-        "answer is",
-        "Answer",
-        "answer",
     ]
 
     for key_word in key_words:
@@ -108,7 +112,7 @@ def convert_circled_numbers(text):
 
 def normalize_string(raw_answer):
     if "$" not in raw_answer:
-        wrong_answer_words = ["\\times", "不对", "不正确", "×", "x", "X"]
+        wrong_answer_words = ["\\times", "不对", "不正确", "×"]
         for word in wrong_answer_words:
             raw_answer = raw_answer.replace(word, "错误")
     raw_answer = re.sub(r"\\text\s*\{(.*?)\}", r"\1", raw_answer)

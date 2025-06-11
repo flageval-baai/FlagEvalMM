@@ -8,10 +8,22 @@ from flagevalmm.common.logger import get_logger
 import logging
 import multiprocessing
 import time
+import json
 
-# multiprocessing.set_start_method("spawn", force=True)
+# Set no_proxy environment variable for localhost connections
+os.environ["no_proxy"] = "127.0.0.1,localhost"
 
 logger = get_logger(__name__)
+
+
+class FuncEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, set):
+            return list(obj)
+        elif callable(obj):
+            # Convert function objects to their string representation
+            return f"<function {obj.__name__}>"
+        return json.JSONEncoder.default(self, obj)
 
 
 class EvaluationServer:
@@ -24,6 +36,7 @@ class EvaluationServer:
         host: str = "127.0.0.1",
         debug: bool = True,
         quiet: bool = False,
+        local_mode: bool = False,
     ) -> None:
         self.debug = debug
         self.port = port
@@ -34,16 +47,20 @@ class EvaluationServer:
         self.active_task: OrderedDict[str, Any] = OrderedDict()
         self.max_active_task_num = 10
         self.quiet = quiet
-        self.app = Flask(__name__)
+        if not local_mode:
+            self.app = Flask(__name__)
+        else:
+            self.app = None
         self.active_processes: Dict[str, multiprocessing.Process] = {}
 
         if self.quiet:
             # Disable Flask's default logging
-            self.app.logger.disabled = True
+            if self.app is not None:
+                self.app.logger.disabled = True
             log = logging.getLogger("werkzeug")
             log.disabled = True
-
-        self.set_routes()
+        if not local_mode:
+            self.set_routes()
 
     def load_dataset(self, task_name: str) -> None:
         logger.info(f"Loading dataset for task {task_name}")
@@ -74,15 +91,41 @@ class EvaluationServer:
         # Create a unique process ID using timestamp
         process_id = f"{task_name}_{model_name}_{int(time.time() * 1000)}"
 
+        output_dir = (
+            new_output_dir if new_output_dir else osp.join(self.output_dir, task_name)
+        )
+        # Save config_dict as python file
+        try:
+            with open(osp.join(output_dir, f"{task_name}_config.json"), "w") as f:
+                json.dump(
+                    self.config_dict[task_name].to_dict(),
+                    f,
+                    indent=2,
+                    ensure_ascii=True,
+                    cls=FuncEncoder,
+                )
+        except Exception as e:
+            logger.error(
+                f"Error dumping config_dict: {e}, config_dict: {self.config_dict[task_name]}"
+            )
+        # If evaluator is not specified, skip evaluation
+        if not self.config_dict[task_name].get("evaluator", None):
+            logger.warning(
+                f"No evaluator specified for task {task_name}, skipping evaluation"
+            )
+            return
+        if self.config_dict[task_name].evaluator.get("skip", False):
+            logger.warning(
+                f"Skipping evaluation for task {task_name} because evaluator is disabled in inference, please use evaluate_only (--wi) to evaluate"
+            )
+            return
         evaluator = EVALUATORS.build(self.config_dict[task_name].evaluator)
+
         start_method = self.config_dict[task_name].evaluator.get("start_method", "fork")
         if task_name not in self.active_task:
             self.load_dataset(task_name)
         dataset = self.active_task[task_name]
         logger.info(f"Starting evaluation process for task {task_name}")
-        output_dir = (
-            new_output_dir if new_output_dir else osp.join(self.output_dir, task_name)
-        )
 
         # Get the specific context for this process
         ctx = multiprocessing.get_context(start_method)

@@ -1,6 +1,7 @@
 import re
 import json
 import os.path as osp
+from typing import Dict, List
 from flagevalmm.registry import EVALUATORS
 from flagevalmm.evaluator import BaseEvaluator
 
@@ -14,6 +15,7 @@ class CocoEvaluator(BaseEvaluator):
     """
 
     def __init__(self, keep_digital=2, **kwargs):
+        super().__init__(**kwargs)
         self.keep_digital = keep_digital
         self.contractions = {
             "aint": "ain't",
@@ -187,22 +189,13 @@ class CocoEvaluator(BaseEvaluator):
         data = self.process_digit_article(data)
         return data
 
-    def process(self, dataset, output_dir, **kwargs):
-        """
-        Args:
-            dataset (Dataset): dataset instance
-            answers (list): list of answers
-        """
-        annotation = dataset.get_annotation()
-        dataset_name = dataset.name
-        result_file = osp.join(output_dir, dataset_name + ".json")
-        predictions = json.load(open(result_file))
-        results = {}
-        predictions, filtered_predictions = self.filter_rejected(predictions, results)
+    def cal_accuracy(
+        self, annotations: Dict, predictions: List[Dict], *args, **kwargs
+    ) -> Dict:
         acc_qa = []
         for prediction in predictions:
             question_id = str(prediction["question_id"])
-            gts = annotation[question_id]
+            gts = annotations[question_id]
             gts["answer"] = [self.preporcess_data(gt) for gt in gts["answer"]]
             res_ans = self.preporcess_data(prediction["answer"])
             gt_acc = []
@@ -217,9 +210,24 @@ class CocoEvaluator(BaseEvaluator):
             prediction["correct"] = avg_gt_acc
             prediction["label"] = gts["answer"]
 
-        results["accuracy"] = round(
-            100 * float(sum(acc_qa)) / len(acc_qa), self.keep_digital
-        )
+        results = {
+            "accuracy": round(100 * float(sum(acc_qa)) / len(acc_qa), self.keep_digital)
+        }
+        return results
+
+    def process(self, dataset, output_dir, **kwargs):
+        """
+        Args:
+            dataset (Dataset): dataset instance
+            answers (list): list of answers
+        """
+        annotation = dataset.get_annotation()
+        dataset_name = dataset.name
+        result_file = osp.join(output_dir, dataset_name + ".json")
+        predictions = json.load(open(result_file))
+        results = {}
+        predictions, filtered_predictions = self.filter_rejected(predictions, results)
+        results.update(self.cal_accuracy(annotation, predictions))
         self.save(results, predictions + filtered_predictions, dataset_name, output_dir)
         return results
 

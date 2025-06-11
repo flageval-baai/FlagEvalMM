@@ -17,8 +17,12 @@ def process(cfg):
         new_data = {
             "question_id": data["id"],
         }
+
         for key in select_keys:
             new_data[key] = data[key]
+        if new_data["question"].count("<image") == 1:
+            new_data["question"] = new_data["question"].replace("<image", "<image ")
+
         new_data["img_path"] = data["image"]
         if data["options"]:
             new_data["options"] = data["options"]

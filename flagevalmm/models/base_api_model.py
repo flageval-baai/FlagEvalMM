@@ -23,9 +23,12 @@ class BaseApiModel:
         max_image_size: Optional[int] = None,
         min_short_side: Optional[int] = None,
         max_long_side: Optional[int] = None,
-        max_num_frames: Optional[int] = 8,
+        max_num_frames: Optional[int] = 16,
         use_cache: bool = False,
         stream: bool = False,
+        system_prompt: Optional[str] = None,
+        num_infers: int = 1,
+        **kwargs,
     ) -> None:
         self.model_name = model_name
         self.chat_name = chat_name if chat_name else model_name
@@ -38,11 +41,19 @@ class BaseApiModel:
         self.use_cache = use_cache
         self.model_type = "base"
         self.stream = stream
+        self.system_prompt = system_prompt
+        self.num_infers = num_infers
+        if num_infers > 1:
+            if temperature == 0:
+                logger.warning("set temperature to 1")
+                temperature = 1
         self.chat_args: Dict[str, Any] = {
             "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
         }
-
+        if max_tokens is not None:
+            self.chat_args["max_tokens"] = max_tokens
+        if self.stream:
+            self.chat_args["stream"] = True
         self.cache = ModelCache(self.chat_name) if use_cache else None
 
     def add_to_cache(self, chat_messages, response) -> None:
@@ -58,17 +69,41 @@ class BaseApiModel:
         before_sleep=before_sleep_log(logger, logging.INFO),
         stop=stop_after_attempt(5),
     )
+    def _single_infer(self, chat_messages, **kwargs):
+        final_answer = ""
+        for res in self._chat(chat_messages, **kwargs):
+            print(res, end="", flush=True)  # noqa T201
+            final_answer += res
+        return final_answer
+
     def infer(self, chat_messages, **kwargs):
-        if self.use_cache:
+        if self.use_cache and self.num_infers == 1:
             result = self.cache.get([chat_messages, kwargs])
             if result:
                 logger.info(f"Found in cache\n{result}")
                 return result
 
-        final_answer = ""
-        for res in self._chat(chat_messages, **kwargs):
-            print(res, end="", flush=True)  # noqa T201
-            final_answer += res
-        print()  # noqa T201
-        self.add_to_cache([chat_messages, kwargs], final_answer)
-        return final_answer
+        if self.num_infers == 1:
+            final_answer = self._single_infer(chat_messages, **kwargs)
+            self.add_to_cache([chat_messages, kwargs], final_answer)
+            return final_answer
+        else:
+            logger.info(
+                f"Performing {self.num_infers} inferences with temperature {self.temperature}"
+            )
+            results = []
+            for i in range(self.num_infers):
+                logger.info(f"Inference {i+1}/{self.num_infers}")
+                if self.use_cache:
+                    result = self.cache.get(
+                        [chat_messages, kwargs, i, self.temperature]
+                    )
+                    if result:
+                        logger.info(f"Found in cache\n{result}")
+                        results.append(result)
+                        continue
+                result = self._single_infer(chat_messages, **kwargs)
+                results.append(result)
+                self.add_to_cache([chat_messages, kwargs, i, self.temperature], result)
+
+            return results

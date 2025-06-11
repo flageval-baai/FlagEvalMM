@@ -42,11 +42,23 @@ class VqaBaseDataset(Dataset):
 
     def load_annotations(self, anno_file: Union[str, List[str]]):
         if isinstance(anno_file, str):
-            annotations = json.load(open(osp.join(self.data_root, anno_file)))
+            # if anno_file is absolute path, use it directly
+            if osp.isabs(anno_file):
+                annotations = json.load(open(anno_file))
+            else:
+                annotations = json.load(open(osp.join(self.data_root, anno_file)))
         else:
             annotations = []
             for file in anno_file:
                 annotations.extend(json.load(open(osp.join(self.data_root, file))))
+        # find duplicate question_id
+        question_id_set = set()
+        for anno in annotations:
+            assert (
+                anno["question_id"] not in question_id_set
+            ), f"Duplicate question_id: {anno['question_id']}"
+            question_id_set.add(anno["question_id"])
+            anno["data_root"] = self.data_root
         return annotations
 
     def __len__(self) -> int:
@@ -71,7 +83,7 @@ class VqaBaseDataset(Dataset):
     def __getitem__(self, index: int) -> Dict[str, Any]:
         annotation = self.annotations[index]
         img_path = []
-        if annotation["img_path"] is not None:
+        if annotation.get("img_path", None) is not None:
             if isinstance(annotation["img_path"], list):
                 for path in annotation["img_path"]:
                     img_path.append(osp.join(self.data_root, path))

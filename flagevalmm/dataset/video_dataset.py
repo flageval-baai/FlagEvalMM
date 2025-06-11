@@ -6,7 +6,6 @@ from flagevalmm.dataset.vqa_base_dataset import VqaBaseDataset
 
 @DATASETS.register_module()
 class VideoDataset(VqaBaseDataset):
-
     def __getitem__(self, index: int) -> Dict[str, Any]:
         annotation = self.annotations[index]
         ret = {
@@ -15,7 +14,7 @@ class VideoDataset(VqaBaseDataset):
             "question_id": str(annotation["question_id"]),
             "type": annotation["question_type"],
         }
-        if self.with_label:
+        if self.with_label and "answer" in annotation:
             ret["label"] = annotation["answer"]
         return ret
 

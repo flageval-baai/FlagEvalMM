@@ -17,7 +17,10 @@ class CustomDataset(ServerDataset):
     def __getitem__(self, index):
         data = self.get_data(index)
         question_id = data["question_id"]
-        img_path = data["img_path"]
+        if self.task_type == "video_qa":
+            img_path = data["video_path"]
+        else:
+            img_path = data["img_path"]
         qs = data["question"]
         qs, idx = process_images_symbol(qs)
         qs = qs.strip()
@@ -93,7 +96,11 @@ class ModelAdapter(BaseModelAdapter):
         cnt = 0
 
         data_loader = self.create_data_loader(
-            CustomDataset, task_name, batch_size=1, num_workers=0
+            CustomDataset,
+            task_name,
+            batch_size=1,
+            num_workers=0,
+            task_type=meta_info["type"],
         )
         for question_id, img_path, qs in data_loader:
             if cnt == 1:
@@ -155,5 +162,11 @@ if __name__ == "__main__":
         server_port=args.server_port,
         timeout=args.timeout,
         extra_cfg=args.cfg,
+        local_mode=args.local_mode,
+        task_names=args.tasks,
+        output_dir=args.output_dir,
+        model_path=args.model,
+        debug=args.debug,
+        quiet=args.quiet,
     )
     model_adapter.run()

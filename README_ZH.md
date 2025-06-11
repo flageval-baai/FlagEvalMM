@@ -45,6 +45,28 @@ pip install flashinfer -i https://flashinfer.ai/whl/cu121/torch2.4/
 
 详细安装说明请参考 [SGLang 官方文档](https://sgl-project.github.io/start/install.html)。
 
+#### LMDeploy 后端
+
+```bash
+pip install lmdeploy
+```
+
+详细安装说明请参考 [LMDeploy 官方文档](https://lmdeploy.readthedocs.io/en/latest/)。
+
+
+#### FlagScale 后端
+
+```bash
+git clone https://github.com/FlagOpen/FlagScale.git
+cd FlagScale/install
+./install-requirements.sh --env inference
+cd vllm
+pip install .
+```
+
+详细安装说明请参考 [FlagScale 官方文档](https://github.com/FlagOpen/FlagScale)。
+
+
 #### Transformers
 
 为获得最佳性能，我们建议安装 flash-attention
