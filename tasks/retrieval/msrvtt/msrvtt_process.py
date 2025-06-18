@@ -1,11 +1,12 @@
 import os
 import subprocess
 import zipfile
+import shutil
 
 
 # from dataloaders.rawframe_util import RawFrameExtractor
 def process(cfg):
-    download_and_extract_dataset(cfg.dataset_path, "./", cfg.extract_dir)
+    download_and_extract_dataset(cfg.dataset_path, "./", cfg.processed_dataset_path)
 
 
 def download_and_extract_dataset(repo_id, cache_dir, extract_dir):
@@ -35,6 +36,8 @@ def download_and_extract_dataset(repo_id, cache_dir, extract_dir):
         print("Download failed!")
         print(e.stderr)
         return  # If download fails, return immediately
+    # Ensure the extraction directory exists
+    os.makedirs(extract_dir, exist_ok=True)
 
     # Locate the downloaded ZIP file
     zip_file_path = os.path.join(
@@ -44,8 +47,13 @@ def download_and_extract_dataset(repo_id, cache_dir, extract_dir):
         print(f"Error: ZIP file '{zip_file_path}' not found.")
         return
 
-    # Ensure the extraction directory exists
-    os.makedirs(extract_dir, exist_ok=True)
+    csv_name = "MSRVTT_JSFUSION_test.csv"
+    csv_src_path = os.path.join(cache_dir, csv_name)
+    if os.path.exists(csv_src_path):
+        shutil.copy(csv_src_path, extract_dir)
+        print(f"CSV file '{csv_name}' copied to: {extract_dir}")
+    else:
+        print(f"Warning: CSV file '{csv_name}' not found in '{cache_dir}'")
 
     # Extract the ZIP file
     try:

@@ -3,7 +3,7 @@ register_evaluator = {"video_retrieval_evaluator.py": "RetrievalMSRVTTEvaluator"
 
 config = dict(
     dataset_path="shiyili1111/MSR-VTT",
-    split="test",
+    split="",
     processed_dataset_path="retrival/msrvtt/MSRVTT_JSFUSION",
     processor="msrvtt_process.py",
 )
