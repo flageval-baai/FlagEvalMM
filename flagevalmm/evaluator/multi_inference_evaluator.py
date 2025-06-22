@@ -107,6 +107,7 @@ class MultiInferenceEvaluator(BaseEvaluator):
             mapping = question_mapping[i]
             original_qid = mapping.original_question_id
 
+            print(pred)
             question_results[original_qid].append(
                 {
                     "inference_index": mapping.inference_index,
@@ -212,27 +213,7 @@ class MultiInferenceEvaluator(BaseEvaluator):
 
         results.update(base_results)
 
-        total_score = sum(pred["correct"] for pred in aggregated_predictions)
-        total_questions = len(aggregated_predictions)
-        overall_accuracy = (
-            round(total_score / total_questions * 100, 2)
-            if total_questions > 0
-            else 0.0
-        )
-
-        results.update(
-            {
-                "overall_accuracy": overall_accuracy,
-                "total_questions": total_questions,
-                "total_score": total_score,
-                "single_inference_count": stats["single_inference_count"],
-                "multi_inference_count": stats["multi_inference_count"],
-            }
-        )
-
         all_predictions = aggregated_predictions + filtered_predictions
         self.save(results, all_predictions, dataset_name, output_dir)
-
-        logger.info(f"Overall Accuracy: {results.get('overall_accuracy', 0):.2f}%")
 
         return results

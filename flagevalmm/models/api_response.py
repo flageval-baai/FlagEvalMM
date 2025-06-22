@@ -70,7 +70,9 @@ class ProcessResult:
     ]  # Can be string or multiple inference results dictionary
     reason: str = ""
     multiple_raw_answers: Union[List[str], Dict[str, str]] = None
-    usage: Optional[Dict[str, Any]] = None
+    usage: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = (
+        None  # Can be single dict or list of dicts
+    )
 
     def __post_init__(self):
         """Post-initialization processing to ensure multiple_raw_answers has default values"""

@@ -152,13 +152,14 @@ class ModelAdapter(BaseModelAdapter):
                 # Multiple inferences case
                 multiple_raw_answers = {}
                 processed_results = []
+                usage_list = []  # Collect all usage information
                 for i, single_result in enumerate(result):
                     # Extract content and usage from ApiResponse
                     if isinstance(single_result, ApiResponse):
                         content = single_result.content
-                        if single_result.usage and not usage_info:
-                            # Use the first available usage info
-                            usage_info = single_result.usage.to_dict()
+                        if single_result.usage:
+                            # Collect all usage info instead of just the first
+                            usage_list.append(single_result.usage.to_dict())
                     else:
                         content = single_result
 
@@ -171,6 +172,9 @@ class ModelAdapter(BaseModelAdapter):
                         single_answer = content
                     multiple_raw_answers[f"inference_{i}"] = single_answer
                     processed_results.append(single_answer)
+
+                # Store usage as list when multiple inferences are performed
+                usage_info = usage_list if usage_list else None
                 result = multiple_raw_answers
                 logger.info(
                     f"Multiple inferences completed. Got {len(multiple_raw_answers)} results."
