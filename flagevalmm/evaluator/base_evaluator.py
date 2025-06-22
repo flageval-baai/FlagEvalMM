@@ -174,7 +174,12 @@ class BaseEvaluator:
             response = self.llm_evaluator.infer(
                 chat_messages=message, temperature=0, top_p=1, seed=42
             )
-            content = json.loads(response)
+            # Handle both ApiResponse and string returns
+            if hasattr(response, "content"):
+                response_content = response.content
+            else:
+                response_content = str(response)
+            content = json.loads(response_content)
         except Exception as e:
             logger.error(f"Error in evaluating by llm: {e}")
             return False, "[FAILED]"

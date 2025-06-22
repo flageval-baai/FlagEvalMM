@@ -230,7 +230,12 @@ class ExtractEvaluator(BaseEvaluator):
             extracted_answer = self.llm_evaluator.infer(
                 chat_messages=message, temperature=0, top_p=1, seed=42
             )
-            return extracted_answer.replace("Extracted answer: ", "").strip()
+            # Handle both ApiResponse and string returns
+            if hasattr(extracted_answer, "content"):
+                content = extracted_answer.content
+            else:
+                content = str(extracted_answer)
+            return content.replace("Extracted answer: ", "").strip()
         except Exception as e:
             logger.error(f"Error in evaluating by llm: {e}")
             return "[FAILED]"
@@ -248,7 +253,12 @@ class ExtractEvaluator(BaseEvaluator):
             compare_result = self.llm_evaluator.infer(
                 chat_messages=message, temperature=0, top_p=1, seed=42
             )
-            return compare_result.replace("Judgement: ", "").strip()
+            # Handle both ApiResponse and string returns
+            if hasattr(compare_result, "content"):
+                content = compare_result.content
+            else:
+                content = str(compare_result)
+            return content.replace("Judgement: ", "").strip()
 
         except Exception as e:
             logger.error(f"Error in evaluating by llm: {e}")
@@ -263,9 +273,14 @@ class ExtractEvaluator(BaseEvaluator):
         )
         try:
             message = self.llm_evaluator.build_message(query=prompt)
-            grade_letter = self.llm_evaluator.infer(
+            grade_letter_response = self.llm_evaluator.infer(
                 chat_messages=message, temperature=0, top_p=1, seed=42
-            ).strip()
+            )
+            # Handle both ApiResponse and string returns
+            if hasattr(grade_letter_response, "content"):
+                grade_letter = grade_letter_response.content.strip()
+            else:
+                grade_letter = str(grade_letter_response).strip()
 
             # Convert grade letter to score
             if grade_letter == "A":  # CORRECT

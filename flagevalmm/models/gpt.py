@@ -8,6 +8,7 @@ from PIL import Image
 from typing import Optional, List, Any, Union, Dict
 from flagevalmm.common.logger import get_logger
 from flagevalmm.models.base_api_model import BaseApiModel
+from flagevalmm.models.api_response import ApiResponse, ApiUsage
 from flagevalmm.prompt.prompt_tools import encode_image
 from flagevalmm.common.video_utils import load_image_or_video
 
@@ -70,21 +71,38 @@ class GPT(BaseApiModel):
             )
         except openai.APIStatusError as e:
             if e.status_code == openai.BadRequestError or e.status_code == 451:
-                yield e.message
+                yield ApiResponse.from_content(e.message)
                 return
             else:
                 raise e
         if self.stream:
             for chunk in response:
                 if len(chunk.choices) and chunk.choices[0].delta.content is not None:
-                    yield chunk.choices[0].delta.content
+                    yield ApiResponse.from_content(chunk.choices[0].delta.content)
         else:
             logger.info(f"token num: {response.usage.total_tokens}")
+
+            # Parse usage information
+            usage = None
+            if response.usage:
+                usage = ApiUsage(
+                    prompt_tokens=response.usage.prompt_tokens,
+                    completion_tokens=response.usage.completion_tokens,
+                    total_tokens=response.usage.total_tokens,
+                    # OpenAI response may not have these detailed fields
+                    prompt_tokens_details=getattr(
+                        response.usage, "prompt_tokens_details", None
+                    ),
+                    completion_tokens_details=getattr(
+                        response.usage, "completion_tokens_details", None
+                    ),
+                )
+
             message = response.choices[0].message
             if hasattr(message, "content"):
-                yield message.content
+                yield ApiResponse(content=message.content, usage=usage)
             else:
-                yield ""
+                yield ApiResponse(content="", usage=usage)
 
     def build_message(
         self,

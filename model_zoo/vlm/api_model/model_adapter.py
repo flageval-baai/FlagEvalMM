@@ -11,6 +11,7 @@ from importlib.metadata import version, PackageNotFoundError
 from flagevalmm.server import ServerDataset
 from flagevalmm.models.base_model_adapter import BaseModelAdapter
 from flagevalmm.models import HttpClient, Claude, Gemini, GPT, Hunyuan
+from flagevalmm.models.api_response import ApiResponse, ProcessResult
 from flagevalmm.server.model_server import ModelServer
 from flagevalmm.server.utils import get_random_port
 from flagevalmm.common.logger import get_logger
@@ -71,6 +72,7 @@ class ModelAdapter(BaseModelAdapter):
             "stream",
             "system_prompt",
             "num_infers",
+            "reasoning",
         ]
         print(f"task_info: {task_info}")
         model_config = {k: task_info[k] for k in model_config_keys if k in task_info}
@@ -127,35 +129,46 @@ class ModelAdapter(BaseModelAdapter):
                 reason = data.get("reason", "")
                 result = data.get("answer", "")
                 multiple_raw_answers = data.get("multiple_raw_answers", [])
-                return {
-                    "question_id": question_id,
-                    "question": qs,
-                    "answer": result,
-                    "reason": reason,
-                    "multiple_raw_answers": multiple_raw_answers,
-                }
+                usage_info = data.get("usage", None)
+                return ProcessResult(
+                    question_id=question_id,
+                    question=qs,
+                    answer=result,
+                    reason=reason,
+                    multiple_raw_answers=multiple_raw_answers,
+                    usage=usage_info,
+                )
         logger.info(f"Processing {question_id}")
         logger.info(qs)
         messages = self.model.build_message(qs, multi_modal_data=multi_modal_data)
         reason = ""
         multiple_raw_answers = {}
+        usage_info = None
 
         try:
             result = self.model.infer(messages)
 
             if isinstance(result, list):
+                # Multiple inferences case
                 multiple_raw_answers = {}
                 processed_results = []
                 for i, single_result in enumerate(result):
-                    if "</think>" in single_result:
-                        single_reason, single_answer = single_result.split(
-                            "</think>", 1
-                        )
+                    # Extract content and usage from ApiResponse
+                    if isinstance(single_result, ApiResponse):
+                        content = single_result.content
+                        if single_result.usage and not usage_info:
+                            # Use the first available usage info
+                            usage_info = single_result.usage.to_dict()
+                    else:
+                        content = single_result
+
+                    if "</think>" in content:
+                        single_reason, single_answer = content.split("</think>", 1)
                         single_reason += "</think>"
                         if not reason:
                             reason = single_reason
                     else:
-                        single_answer = single_result
+                        single_answer = content
                     multiple_raw_answers[f"inference_{i}"] = single_answer
                     processed_results.append(single_answer)
                 result = multiple_raw_answers
@@ -163,23 +176,47 @@ class ModelAdapter(BaseModelAdapter):
                     f"Multiple inferences completed. Got {len(multiple_raw_answers)} results."
                 )
             else:
-                # single inference
-                if "</think>" in result:
-                    reason, result = result.split("</think>", 1)
+                # Single inference case
+                if isinstance(result, ApiResponse):
+                    content = result.content
+                    if result.usage:
+                        usage_info = result.usage.to_dict()
+                else:
+                    content = result
+
+                if "</think>" in content:
+                    reason, result = content.split("</think>", 1)
                     reason += "</think>"
+                else:
+                    result = content
                 multiple_raw_answers = [result]
 
         except Exception as e:
             result = "Error code " + str(e)
             multiple_raw_answers = [result]
 
-        return {
+        # Save intermediate results with usage information
+        item_data = {
             "question_id": question_id,
             "question": qs,
             "answer": result,
             "reason": reason,
             "multiple_raw_answers": multiple_raw_answers,
         }
+        if usage_info:
+            item_data["usage"] = usage_info
+
+        with open(inter_results_file, "w") as f:
+            json.dump(item_data, f, indent=2, ensure_ascii=False)
+
+        return ProcessResult(
+            question_id=question_id,
+            question=qs,
+            answer=result,
+            reason=reason,
+            multiple_raw_answers=multiple_raw_answers,
+            usage=usage_info,
+        )
 
     def cleanup(self):
         if hasattr(self, "model_server") and self.model_server is not None:
@@ -208,12 +245,12 @@ class ModelAdapter(BaseModelAdapter):
 
             for future in as_completed(future_to_item):
                 result = future.result()
-                if isinstance(result["answer"], str) and result["answer"].startswith(
+                if isinstance(result.answer, str) and result.answer.startswith(
                     "Error code"
                 ):
                     continue
                 else:
-                    self.save_item(result, result["question_id"], meta_info)
+                    self.save_item(result, result.question_id, meta_info)
                 results.append(result)
         self.save_result(results, meta_info)
 
