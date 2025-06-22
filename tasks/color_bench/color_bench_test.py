@@ -7,9 +7,9 @@ config = dict(
 
 dataset = dict(
     type="VqaBaseDataset",
-    prompt_template=dict(type="PromptTemplate", post_prompt=""),
+    prompt_template=dict(type="PromptTemplate"),
     config=config,
     name="color_bench_test",
 )
 
-evaluator = dict(type="BaseEvaluator", eval_func="evaluate.py")
+evaluator = dict(type="BaseEvaluator", detailed_keys=["sub_task"])

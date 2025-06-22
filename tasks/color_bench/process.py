@@ -42,7 +42,7 @@ def process(cfg):
             "sub_task": data["task"],
             "img_path": save_image(data["image"], data["filename"], output_dir),
             "options": data['choices'],
-            "question": data['prompt'],
+            "question": data['question'],
             "answer": extract_answer(data['answer']),
         }
         content.append(item)
