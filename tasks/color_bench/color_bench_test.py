@@ -7,7 +7,7 @@ config = dict(
 
 dataset = dict(
     type="VqaBaseDataset",
-    prompt_template=dict(type="PromptTemplate"),
+    prompt_template=dict(type="PromptTemplate", post_prompt=""),
     config=config,
     name="color_bench_test",
 )
