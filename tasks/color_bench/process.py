@@ -6,7 +6,7 @@ import re
 
 
 def extract_answer(answer_str):
-    match = re.search(r'\((.*?)\)', answer_str)
+    match = re.search(r"\((.*?)\)", answer_str)
     return match.group(1)
 
 
@@ -14,6 +14,8 @@ def save_image(image, filename, output_dir) -> str:
     image_path = osp.join("img", filename)
     full_image_path = osp.join(output_dir, image_path)
     os.makedirs(osp.dirname(full_image_path), exist_ok=True)
+    if osp.exists(full_image_path):
+        return image_path
     try:
         if image.mode != "RGB":
             image = image.convert("RGB")
@@ -32,7 +34,7 @@ def process(cfg):
     content = []
     dataset = load_dataset(data_dir, split=split)
     for data in dataset:
-        if data.get('type') == 'Robustness': # Skip Robustness type
+        if data.get("type") == "Robustness":  # Skip Robustness type
             continue
 
         item = {
@@ -41,9 +43,9 @@ def process(cfg):
             "category": data["type"],
             "sub_task": data["task"],
             "img_path": save_image(data["image"], data["filename"], output_dir),
-            "options": data['choices'],
-            "question": data['question'],
-            "answer": extract_answer(data['answer']),
+            "options": data["choices"],
+            "question": f"{data['question']} Select from the following choices.",
+            "answer": extract_answer(data["answer"]),
         }
         content.append(item)
 
