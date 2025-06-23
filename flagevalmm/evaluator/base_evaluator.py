@@ -11,6 +11,14 @@ from flagevalmm.registry import EVALUATORS
 from flagevalmm.evaluator.pre_process import process_multiple_choice, normalize_string
 from flagevalmm.models import GPT
 from flagevalmm.common.logger import get_logger
+from flagevalmm.evaluator.common_types import (
+    normalize_answer,
+    is_numerical_answer_correct,
+    is_yes_no_answer_correct,
+    text2pts,
+    is_point_answer_correct,
+)
+from PIL import Image
 
 logger = get_logger(__name__)
 
@@ -122,6 +130,34 @@ class BaseEvaluator:
         is_correct = bool(gt["answer"].upper() == pred["answer"])
         return is_correct
 
+    def evaluate_numerical(self, gt: Dict, pred: Dict) -> bool:
+        pred["raw_answer"] = pred["answer"]
+        pred["answer"] = normalize_answer(pred["answer"])
+        is_correct = is_numerical_answer_correct(
+            model_answer=pred["answer"], label_answer=gt["answer"]
+        )
+        return is_correct
+
+    def evaluate_yes_no(self, gt: Dict, pred: Dict) -> bool:
+        pred["raw_answer"] = pred["answer"]
+        pred["answer"] = pred["answer"]
+        is_correct = is_yes_no_answer_correct(
+            model_answer=pred["answer"], label_answer=gt["answer"]
+        )
+        return is_correct
+
+    def evaluate_point(self, gt: Dict, pred: Dict) -> bool:
+        pred["raw_answer"] = pred["answer"]
+        points = text2pts(
+            pred.get("answer", ""),
+            width=gt["image_width"],
+            height=gt["image_height"],
+        )
+        pred["answer"] = str(points)
+        mask_img = Image.open(osp.join(gt["data_root"], gt["mask_path"]))
+        is_correct = is_point_answer_correct(points, mask_img)
+        return is_correct
+
     def evaluate_fill_blank_by_rule(
         self, gt: Dict, pred: Dict, simality_threshold: float = 0.7
     ) -> Tuple[bool, str]:
@@ -187,13 +223,19 @@ class BaseEvaluator:
     def cal_accuracy(
         self, annotations: Dict, predictions: List[Dict], *args, **kwargs
     ) -> Dict:
-        right = 0
+        right: float = 0.0
         detailed_results = defaultdict(list)
         for pred in predictions:
             question_id = str(pred["question_id"])
             gt = annotations[question_id]
             if gt["question_type"] == "multiple-choice":
                 is_correct = self.evaluate_multiple_choice(gt, pred)
+            elif gt["question_type"] == "numerical":
+                is_correct = self.evaluate_numerical(gt, pred)
+            elif gt["question_type"] == "yes-no":
+                is_correct = self.evaluate_yes_no(gt, pred)
+            elif gt["question_type"] == "point":
+                is_correct = self.evaluate_point(gt, pred)
             else:
                 if self.use_llm_evaluator:
                     is_correct, cleaned_answer = self.evaluate_by_llm(gt, pred)
@@ -203,12 +245,16 @@ class BaseEvaluator:
                     )
                 pred["raw_answer"] = pred["answer"]
                 pred["answer"] = cleaned_answer
-            pred["correct"] = is_correct
+            if isinstance(is_correct, bool):
+                is_correct_as_float = float(is_correct)
+            else:
+                is_correct_as_float = is_correct
+            pred["correct"] = is_correct_as_float
             pred["label"] = gt["answer"]
-            right += is_correct
+            right += is_correct_as_float
             if self.detailed_keys:
                 for key in self.detailed_keys:
-                    detailed_results[gt[key]].append(is_correct)
+                    detailed_results[gt[key]].append(is_correct_as_float)
         results = {
             "accuracy": round(right / len(predictions) * 100, 2),
         }
