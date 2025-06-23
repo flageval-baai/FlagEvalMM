@@ -58,7 +58,7 @@ class MultiInferenceEvaluator(BaseEvaluator):
         for pred in predictions:
             # Check if answer is a dictionary (multiple inferences) or string (single inference)
             answer = pred["answer"]
-            
+
             if isinstance(answer, dict):
                 # Multiple inferences case - answer is a dictionary like {"inference_0": "ans1", "inference_1": "ans2"}
                 print(answer)

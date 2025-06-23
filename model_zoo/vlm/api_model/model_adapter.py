@@ -119,19 +119,21 @@ class ModelAdapter(BaseModelAdapter):
                 task_info["important_packages"].append(f"{package} not installed")
         return model_server
 
-    def _process_single_result(self, single_result: Union[str, ApiResponse]) -> Dict[str, Any]:
+    def _process_single_result(
+        self, single_result: Union[str, ApiResponse]
+    ) -> Dict[str, Any]:
         """
         Process a single inference result and extract content, reason, and usage.
-        
+
         Args:
             single_result: Single inference result (string or ApiResponse)
-            
+
         Returns:
             Dictionary containing processed content, reason, and usage
         """
         usage_info = None
         reason = ""
-        
+
         # Extract content and usage from ApiResponse
         if isinstance(single_result, ApiResponse):
             content = single_result.content
@@ -146,12 +148,8 @@ class ModelAdapter(BaseModelAdapter):
             reason += "</think>"
         else:
             answer = content
-            
-        return {
-            "answer": answer,
-            "reason": reason,
-            "usage": usage_info
-        }
+
+        return {"answer": answer, "reason": reason, "usage": usage_info}
 
     def process_single_item(self, i, inter_results_dir):
         question_id, multi_modal_data, qs = self.dataset[i]
@@ -182,18 +180,18 @@ class ModelAdapter(BaseModelAdapter):
                 inference_answers = {}
                 reasons = []
                 usages = []
-                
+
                 for i, single_result in enumerate(result):
                     processed = self._process_single_result(single_result)
                     inference_answers[f"inference_{i}"] = processed["answer"]
                     reasons.append(processed["reason"])
                     if processed["usage"]:
                         usages.append(processed["usage"])
-                
+
                 final_result = inference_answers
                 final_reason = reasons  # Store all reasons as list
                 final_usage = usages if usages else None  # Store all usages as list
-                
+
                 logger.info(
                     f"Multiple inferences completed. Got {len(inference_answers)} results."
                 )
