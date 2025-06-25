@@ -144,17 +144,4 @@ if __name__ == "__main__":
         quiet=args.quiet,
     )
     model_adapter.run()
-    # video_path = "/home/dengzijun/dataset/UCF/UCF-101/ApplyEyeMakeup/v_ApplyEyeMakeup_g01_c01.avi"
-    # text = "1 ApplyEyeMakeup A close-up of a woman carefully applying eyeliner with a steady hand, her eyes focused in the mirror. \
-    #         2 ApplyLipstick A woman applying red lipstick, smoothing it over her lips with precise strokes. \
-    #         3 Archery An archer draws the bowstring, aims at the target, and releases the arrow with a sharp twang. \
-    #         4 BabyCrawling A baby crawling on a soft carpet, giggling as it reaches for a colorful toy. \
-    #         5 BalanceBeam A gymnast performs a flawless cartwheel on the balance beam, arms outstretched for balance. \
-    #         6 BandMarching A military band marches in perfect sync, brass instruments gleaming under stadium lights. \
-    #         7 BaseballPitch A pitcher winds up and throws a fastball, the batter tensing to swing. \
-    #         8 Basketball A player dribbles past defenders and makes a swift layup, the ball swishing through the net. \
-    #         9 BasketballDunk An athlete leaps high, slams the ball through the hoop, and hangs on the rim for a moment. \
-    #         10 BenchPress A weightlifter strains as he pushes a heavy barbell upward, muscles bulging."
-    # # f = open('/home/dengzijun/damo_video/ucf_prompt.txt')
-    # # text = f.read()
     # print(model_adapter.process_single(text,video_path))
