@@ -22,6 +22,7 @@ class RetrievalMSRVTTDataset(Dataset):
         cache_dir: str = FLAGEVALMM_DATASETS_CACHE_DIR,
         config: Optional[dict] = None,
         base_dir: Optional[str] = None,
+        debug: bool = False,
         **kwargs,
     ) -> None:
         self.data_root = get_data_root(
@@ -38,6 +39,9 @@ class RetrievalMSRVTTDataset(Dataset):
         # Load video and caption data
         self.videos = self.data["video_id"].values
         self.captions = self.data["sentence"].values
+        if debug:
+            self.videos = self.videos[:16]
+            self.captions = self.captions[:16]
 
     def __len__(self):
         return len(self.videos)
