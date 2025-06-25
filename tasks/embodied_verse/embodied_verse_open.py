@@ -12,4 +12,4 @@ dataset = dict(
     name="embodied_verse",
 )
 
-evaluator = dict(type="BaseEvaluator", detailed_keys=["level-1"])
+evaluator = dict(type="BaseEvaluator", eval_func="evaluate.py")
