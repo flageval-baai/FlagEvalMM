@@ -1,65 +1,15 @@
 import json
-from PIL import Image
 import time
 import os.path as osp
+import os
 from datasets import load_dataset
 from huggingface_hub import snapshot_download
-
-robo_post_prompt_point = """Your task is to identify specific points in the image based on the question. Respond with a brief explanation if needed, followed by a list of 2D point coordinates.
-
-Each point should be represented as a normalized (x, y) tuple, where both x and y values are floats between 0 and 1, corresponding to the position within the image (e.g., for a point at pixel (50, 75) in a 100*100 image, the normalized coordinate is (0.5, 0.75)).
-
-Format your final answer strictly as follows on the last line of your response:
-Answer: [(x1, y1), (x2, y2), ..., (xn, yn)]
-
-Do not include additional text after this line.
-"""
-
-robo_post_prompt_yes_no = """Your task is to answer the question above. Respond with a brief explanation if needed, followed by a yes or no answer in the last line of your response.
-
-Format your final answer strictly as follows on the last line of your response:
-Answer: yes or no
-
-Do not include additional text after this line.
-"""
-
-where2place_post_prompt = """Your task is to identify specific points in the image based on the question. Respond with a brief explanation if needed, followed by a list of 2D point coordinates.
-
-Each point should be represented as a normalized (x, y) tuple, where both x and y values are floats between 0 and 1, corresponding to the position within the image (e.g., for a point at pixel (50, 75) in a 100*100 image, the normalized coordinate is (0.5, 0.75)).
-
-Format your final answer strictly as follows on the last line of your response:
-Answer: [(x1, y1), (x2, y2), ..., (xn, yn)]
-
-Do not include additional text after this line.
-"""
-
-PROMPT_MAP = {
-    "SAT": "Carefully analyze the multiple-choice question above and reason through it step by step. Conclude your response with a line in the following format: Answer: $LETTER (without quotes), where $LETTER is the letter of the correct choice.",
-    "erqa": "Carefully analyze the multiple-choice question above and reason through it step by step. Conclude your response with a line in the following format: Answer: $LETTER (without quotes), where $LETTER is the letter of the correct choice.",
-    "Where2Place": where2place_post_prompt,
-    "all_angles_bench": "Answer with the option's letter from the given choices directly.",
-    "egoplan_bench2": "Answer with the option's letter from the given choices directly.",
-    "cv_bench_test": "Answer with the option's letter from the given choices directly.",
-    "embspatial_bench": "Answer with the option's letter from the given choices directly.",
-    "blink_val_ev": "The last line of your response should be of the following format: 'Answer: $LETTER' (without quotes) where LETTER is one of options.",
-    "vsi_bench_tiny": {
-        "pre_prompt": "These are frames of a video.",
-        "post_prompt": {
-            "multiple-choice": "Carefully analyze the question above and reason through it step by step. Conclude your response with a line in the following format:\nAnswer: $LETTER (without quotes), where $LETTER corresponds to the correct option.",
-            "numerical": "Carefully analyze the question above and reason through it step by step. Conclude your response with a line in the following format:\nAnswer: $NUMBER (without quotes), where $NUMBER is a number (integer or float) corresponds to the correct answer.",
-        },
-    },
-    "robo_spatial_home_all": {
-        "post_prompt": {
-            "yes-no": robo_post_prompt_yes_no,
-            "point": robo_post_prompt_point,
-        }
-    },
-}
 
 
 def add_prompt(ann_question, source, question_type):
     """Add prompt to the question based on the source"""
+    from tasks.embodied_verse.prompt import PROMPT_MAP
+
     prompt = PROMPT_MAP[source]
     if isinstance(prompt, str):
         question = f"{ann_question}\n{prompt}"
@@ -83,8 +33,8 @@ def format_options_optimized(question: str, choices: list) -> str:
     return f"{question}\n" + "\n".join(formatted_choices)
 
 
-def download_media_files(repo_id: str, output_dir: str) -> bool:
-    print(f"Download media files from {repo_id} dataset.")
+def download_video_files(repo_id: str, output_dir: str) -> bool:
+    print(f"Download video files from {repo_id} dataset.")
     max_retries = 10
     retry_delay = 5
     for attempt in range(max_retries):
@@ -92,8 +42,8 @@ def download_media_files(repo_id: str, output_dir: str) -> bool:
             snapshot_download(
                 repo_id=repo_id,
                 repo_type="dataset",
+                allow_patterns="video/**",
                 local_dir=output_dir,
-                max_workers=5,
             )
             return True
         except Exception as e:
@@ -103,12 +53,16 @@ def download_media_files(repo_id: str, output_dir: str) -> bool:
     return False
 
 
-def get_image_dimensions(image_path) -> tuple:
-    """Get the dimensions of an image file."""
-    with Image.open(image_path) as img:
-        # 获取并返回图片的尺寸 (宽度, 高度)
-        width, height = img.size
-        return width, height
+def save_mask_image(question_id, image, output_dir):
+    mask_path = osp.join("img/mask", f"{question_id}.jpg")
+    full_image_path = osp.join(output_dir, mask_path)
+    os.makedirs(osp.dirname(full_image_path), exist_ok=True)
+    try:
+        if not osp.exists(full_image_path):
+            image.save(full_image_path)
+    except Exception as e:
+        print(f"Error saving mask image {question_id}: {e}")
+    return mask_path
 
 
 def process(cfg):
@@ -120,11 +74,11 @@ def process(cfg):
     output_dir = osp.join(cfg.processed_dataset_path, name, split)
     output_file = osp.join(output_dir, "data.json")
     if not osp.exists(output_file):
-        is_download_complete = download_media_files(data_dir, output_dir)
+        is_download_complete = download_video_files(data_dir, output_dir)
     else:
         is_download_complete = True
         print(
-            f"Skipping download media files for {data_dir} dataset already complete exist."
+            f"Skipping download video files for {data_dir} dataset already complete exist."
         )
     if not is_download_complete:
         return
@@ -133,12 +87,13 @@ def process(cfg):
 
     # process each item
     for annotation in data:
-        question = annotation["question"]
+        question_id = annotation["question_id"]
         source = annotation["source"]
         question_type = annotation["question_type"]
         item = {
             "question_id": annotation["question_id"],
             "raw_question_id": annotation["raw_question_id"],
+            "question": annotation["question"],
             "level-1": annotation["level-1"],
             "level-2": annotation["level-2"],
             "question_type": question_type,
@@ -146,17 +101,27 @@ def process(cfg):
             "source": source,
         }
         if annotation.get("video_path"):
-            item["video_path"] = "".join(annotation["video_path"])
+            item["video_path"] = annotation["video_path"]
         else:
-            item["img_path"] = annotation.get("img_path")
+            # save img
+            item["img_path"] = []
+            for i, image in enumerate(annotation["images"]):
+                image_path = osp.join("img", f"{question_id}_{i + 1}.jpg")
+                full_image_path = osp.join(output_dir, image_path)
+                os.makedirs(osp.dirname(full_image_path), exist_ok=True)
+                try:
+                    if not osp.exists(full_image_path):
+                        image.save(full_image_path)
+                    item["img_path"].append(image_path)
+                except Exception as e:
+                    print(f"Error saving image {question_id}: {e}")
         if question_type == "point":
-            item["image_width"], item["image_height"] = get_image_dimensions(
-                osp.join(output_dir, item["img_path"][0])
+            item["image_width"], item["image_height"] = annotation["images"][0].size
+            mask_path = save_mask_image(
+                question_id, annotation["mask_image"], output_dir
             )
-            item["mask_path"] = annotation["mask_path"][0]
-        question = format_options_optimized(question, annotation.get("options", []))
-        question = add_prompt(question, source, question_type)
-        item["question"] = question
+            item["mask_path"] = mask_path
+            item["answer"] = mask_path
         content.append(item)
 
     # save data

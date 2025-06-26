@@ -170,9 +170,9 @@ def cal_correct(gt, pred):
 
 def get_result(annotations: Dict, predictions: List[Dict]) -> Dict:
     right: float = 0.0
+    detailed_keys = ["level-1", "level-2"]
     detailed_results = defaultdict(list)
 
-    detailed_keys = ["level-1", "level-2"]
     for pred in predictions:
         question_id = str(pred["question_id"])
         gt = annotations[question_id]

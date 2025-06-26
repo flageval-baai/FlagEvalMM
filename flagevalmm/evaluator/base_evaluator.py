@@ -187,7 +187,7 @@ class BaseEvaluator:
     def cal_accuracy(
         self, annotations: Dict, predictions: List[Dict], *args, **kwargs
     ) -> Dict:
-        right: float = 0.0
+        right = 0
         detailed_results = defaultdict(list)
         for pred in predictions:
             question_id = str(pred["question_id"])
@@ -203,16 +203,12 @@ class BaseEvaluator:
                     )
                 pred["raw_answer"] = pred["answer"]
                 pred["answer"] = cleaned_answer
-            if isinstance(is_correct, bool):
-                is_correct_as_float = float(is_correct)
-            else:
-                is_correct_as_float = is_correct
-            pred["correct"] = is_correct_as_float
+            pred["correct"] = is_correct
             pred["label"] = gt["answer"]
-            right += is_correct_as_float
+            right += is_correct
             if self.detailed_keys:
                 for key in self.detailed_keys:
-                    detailed_results[gt[key]].append(is_correct_as_float)
+                    detailed_results[gt[key]].append(is_correct)
         results = {
             "accuracy": round(right / len(predictions) * 100, 2),
         }
