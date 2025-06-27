@@ -11,6 +11,7 @@ from flagevalmm.models.claude import Claude
 from flagevalmm.models.gemini import Gemini
 from flagevalmm.models.http_client import HttpClient
 from flagevalmm.models.hunyuan import Hunyuan
+from flagevalmm.models.api_response import ApiResponse, ApiUsage
 
 __all__ = [
     "GPT",
@@ -26,4 +27,6 @@ __all__ = [
     "Gemini",
     "Hunyuan",
     "HttpClient",
+    "ApiResponse",
+    "ApiUsage",
 ]

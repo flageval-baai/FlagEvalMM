@@ -56,24 +56,17 @@ class MultiInferenceEvaluator(BaseEvaluator):
         question_mapping = {}
 
         for pred in predictions:
-            multiple_raw_answers = pred.get("multiple_raw_answers", [pred["answer"]])
+            # Check if answer is a dictionary (multiple inferences) or string (single inference)
+            answer = pred["answer"]
 
-            if len(multiple_raw_answers) == 1:
-                # Single inference - keep as is
-                expanded_predictions.append(pred)
-                question_mapping[len(expanded_predictions) - 1] = QuestionMapping(
-                    original_question_id=pred["question_id"],
-                    is_multi_inference=False,
-                    inference_index=0,
-                    total_inferences=1,
-                )
-            else:
-                print(multiple_raw_answers)
+            if isinstance(answer, dict):
+                # Multiple inferences case - answer is a dictionary like {"inference_0": "ans1", "inference_1": "ans2"}
+                print(answer)
                 # Multiple inferences - expand into separate predictions
-                for idx, answer in multiple_raw_answers.items():
-                    i = int(idx.split("_")[-1])
+                for key, single_answer in answer.items():
+                    i = int(key.split("_")[-1])
                     expanded_pred = pred.copy()
-                    expanded_pred["answer"] = answer
+                    expanded_pred["answer"] = single_answer
                     expanded_pred["question_id"] = (
                         f"{pred['question_id']}_inference_{i}"
                     )
@@ -83,8 +76,17 @@ class MultiInferenceEvaluator(BaseEvaluator):
                         original_question_id=pred["question_id"],
                         is_multi_inference=True,
                         inference_index=i,
-                        total_inferences=len(multiple_raw_answers),
+                        total_inferences=len(answer),
                     )
+            else:
+                # Single inference - answer is a string
+                expanded_predictions.append(pred)
+                question_mapping[len(expanded_predictions) - 1] = QuestionMapping(
+                    original_question_id=pred["question_id"],
+                    is_multi_inference=False,
+                    inference_index=0,
+                    total_inferences=1,
+                )
 
         return expanded_predictions, question_mapping
 
@@ -107,6 +109,7 @@ class MultiInferenceEvaluator(BaseEvaluator):
             mapping = question_mapping[i]
             original_qid = mapping.original_question_id
 
+            print(pred)
             question_results[original_qid].append(
                 {
                     "inference_index": mapping.inference_index,
@@ -212,27 +215,7 @@ class MultiInferenceEvaluator(BaseEvaluator):
 
         results.update(base_results)
 
-        total_score = sum(pred["correct"] for pred in aggregated_predictions)
-        total_questions = len(aggregated_predictions)
-        overall_accuracy = (
-            round(total_score / total_questions * 100, 2)
-            if total_questions > 0
-            else 0.0
-        )
-
-        results.update(
-            {
-                "overall_accuracy": overall_accuracy,
-                "total_questions": total_questions,
-                "total_score": total_score,
-                "single_inference_count": stats["single_inference_count"],
-                "multi_inference_count": stats["multi_inference_count"],
-            }
-        )
-
         all_predictions = aggregated_predictions + filtered_predictions
         self.save(results, all_predictions, dataset_name, output_dir)
-
-        logger.info(f"Overall Accuracy: {results.get('overall_accuracy', 0):.2f}%")
 
         return results

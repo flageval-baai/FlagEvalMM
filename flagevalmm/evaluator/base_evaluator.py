@@ -174,7 +174,12 @@ class BaseEvaluator:
             response = self.llm_evaluator.infer(
                 chat_messages=message, temperature=0, top_p=1, seed=42
             )
-            content = json.loads(response)
+            # Handle both ApiResponse and string returns
+            if hasattr(response, "content"):
+                response_content = response.content
+            else:
+                response_content = str(response)
+            content = json.loads(response_content)
         except Exception as e:
             logger.error(f"Error in evaluating by llm: {e}")
             return False, "[FAILED]"
@@ -236,7 +241,27 @@ class BaseEvaluator:
         predictions_keeped = []
         predictions_filtered = []
         for pred in predictions:
-            if any([pred["answer"].startswith(keyword) for keyword in reject_keyword]):
+            # Handle both string and dictionary formats for pred["answer"]
+            should_reject = False
+
+            if isinstance(pred["answer"], str):
+                # Single answer case (no num-infer)
+                should_reject = any(
+                    [pred["answer"].startswith(keyword) for keyword in reject_keyword]
+                )
+            elif isinstance(pred["answer"], dict):
+                # Multiple inference case (with num-infer)
+                # Check if any of the inference results starts with reject keywords
+                should_reject = all(
+                    [
+                        inference_result.startswith(keyword)
+                        for inference_result in pred["answer"].values()
+                        if isinstance(inference_result, str)
+                        for keyword in reject_keyword
+                    ]
+                )
+
+            if should_reject:
                 pred["raw_answer"] = pred["answer"]
                 predictions_filtered.append(pred)
             else:

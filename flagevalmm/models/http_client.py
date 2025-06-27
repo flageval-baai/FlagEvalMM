@@ -6,6 +6,7 @@ import re
 from typing import Optional, List, Any, Union, Dict
 from flagevalmm.common.logger import get_logger
 from flagevalmm.models.base_api_model import BaseApiModel
+from flagevalmm.models.api_response import ApiResponse, ApiUsage
 from flagevalmm.prompt.prompt_tools import encode_image
 from flagevalmm.common.video_utils import load_image_or_video
 from PIL import Image
@@ -20,7 +21,7 @@ class HttpClient(BaseApiModel):
         self,
         model_name: str,
         chat_name: Optional[str] = None,
-        max_tokens: int = 4096,
+        max_tokens: int = 16384,
         temperature: float = 0.0,
         max_image_size: Optional[int] = None,
         min_short_side: Optional[int] = None,
@@ -29,6 +30,7 @@ class HttpClient(BaseApiModel):
         use_cache: bool = False,
         api_key: Optional[str] = None,
         url: Optional[Union[str, httpx.URL]] = None,
+        reasoning: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
         super().__init__(
@@ -41,6 +43,7 @@ class HttpClient(BaseApiModel):
             max_long_side=max_long_side,
             max_num_frames=max_num_frames,
             use_cache=use_cache,
+            reasoning=reasoning,
             **kwargs,
         )
         self.url = url
@@ -66,12 +69,14 @@ class HttpClient(BaseApiModel):
         )
         try:
             response_json = response.json()
+            print(response_json)
         except Exception as e:
             raise Exception(f"Error: {response.text}, {e}")
-
         if response.status_code != 200:
             if "error" not in response_json:
-                yield f"Error code: {response_json['message']}"
+                yield ApiResponse.from_content(
+                    f"Error code: {response_json['message']}"
+                )
                 return
             err_msg = response_json["error"]
             if "code" in err_msg and "message" in err_msg:
@@ -80,11 +85,17 @@ class HttpClient(BaseApiModel):
                     or err_msg["code"] == "1301"
                     or "no candidates" in err_msg["message"].lower()
                 ):
-                    yield err_msg["message"]
+                    yield ApiResponse.from_content(err_msg["message"])
                     return
             raise Exception(
                 f"Request failed with status code {response.status_code}: {err_msg}"
             )
+
+        # Parse usage information if available
+        usage = None
+        if "usage" in response_json:
+            usage = ApiUsage.from_dict(response_json["usage"])
+
         if "choices" in response_json:
             message = response_json["choices"][0]["message"]
             if "content" in message:
@@ -92,11 +103,13 @@ class HttpClient(BaseApiModel):
                 if message.get("reasoning_content", None):
                     res = f"<think>{message['reasoning_content']}</think>\n"
                 res += message["content"]
-                yield res
+                yield ApiResponse(content=res, usage=usage)
             else:
-                yield ""
+                yield ApiResponse(content="", usage=usage)
         else:
-            yield response_json["completions"][0]["text"]
+            yield ApiResponse(
+                content=response_json["completions"][0]["text"], usage=usage
+            )
 
     def _streaming_chat(self, data):
         """Handle streaming API requests."""
@@ -137,13 +150,13 @@ class HttpClient(BaseApiModel):
                                 if think_start is False:
                                     think_start = True
                                     content = f"<think>{content}"
-                                yield content
+                                yield ApiResponse.from_content(content)
                             if "content" in delta and delta["content"]:
                                 content = delta["content"]
                                 if think_start:
                                     content = f"</think>\n{content}"
                                     think_start = False
-                                yield content
+                                yield ApiResponse.from_content(content)
                     except json.JSONDecodeError as e:
                         raise Exception(
                             f"Failed to parse chunk: {line_text}, error: {e}"
