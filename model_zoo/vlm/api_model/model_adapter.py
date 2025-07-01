@@ -216,11 +216,6 @@ class ModelAdapter(BaseModelAdapter):
             usage=final_usage,
         )
 
-        # Save intermediate results using ProcessResult data
-        item_data = process_result.to_dict()
-        with open(inter_results_file, "w") as f:
-            json.dump(item_data, f, indent=2, ensure_ascii=False)
-
         return process_result
 
     def cleanup(self):
@@ -250,13 +245,14 @@ class ModelAdapter(BaseModelAdapter):
 
             for future in as_completed(future_to_item):
                 result = future.result()
+                results.append(result)
                 if isinstance(result.answer, str) and result.answer.startswith(
                     "Error code"
                 ):
                     continue
                 else:
                     self.save_item(result, result.question_id, meta_info)
-                results.append(result)
+
         self.save_result(results, meta_info)
 
 
