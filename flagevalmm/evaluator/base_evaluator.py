@@ -7,6 +7,7 @@ from collections import defaultdict
 from typing import Optional, Dict, List, Tuple, Callable, Union, Any
 from torch.utils.data import Dataset
 import os.path as osp
+from flagevalmm.models.api_response import ApiResponse
 from flagevalmm.registry import EVALUATORS
 from flagevalmm.evaluator.pre_process import process_multiple_choice, normalize_string
 from flagevalmm.models import GPT
@@ -174,12 +175,10 @@ class BaseEvaluator:
             response = self.llm_evaluator.infer(
                 chat_messages=message, temperature=0, top_p=1, seed=42
             )
-            # Handle both ApiResponse and string returns
-            if hasattr(response, "content"):
-                response_content = response.content
-            else:
-                response_content = str(response)
-            content = json.loads(response_content)
+            assert isinstance(
+                response, ApiResponse
+            ), f"response is not an ApiResponse: {response}"
+            content = json.loads(response.content)
         except Exception as e:
             logger.error(f"Error in evaluating by llm: {e}")
             return False, "[FAILED]"

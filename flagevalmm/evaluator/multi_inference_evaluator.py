@@ -60,8 +60,6 @@ class MultiInferenceEvaluator(BaseEvaluator):
             answer = pred["answer"]
 
             if isinstance(answer, dict):
-                # Multiple inferences case - answer is a dictionary like {"inference_0": "ans1", "inference_1": "ans2"}
-                print(answer)
                 # Multiple inferences - expand into separate predictions
                 for key, single_answer in answer.items():
                     i = int(key.split("_")[-1])
@@ -109,7 +107,6 @@ class MultiInferenceEvaluator(BaseEvaluator):
             mapping = question_mapping[i]
             original_qid = mapping.original_question_id
 
-            print(pred)
             question_results[original_qid].append(
                 {
                     "inference_index": mapping.inference_index,
