@@ -65,12 +65,10 @@ class BaseApiModel:
         if self.cache is None:
             return
 
-        # Serialize ApiResponse to JSON string for database storage
-        if isinstance(response, ApiResponse):
-            cache_data = response.to_json()
-        else:
-            # Handle legacy case where response might be a string
-            cache_data = str(response)
+        assert isinstance(
+            response, ApiResponse
+        ), f"response is not an ApiResponse: {response}"
+        cache_data = response.to_json()
 
         self.cache.insert(chat_messages, cache_data)
 
@@ -105,16 +103,14 @@ class BaseApiModel:
         final_answer = ""
         final_usage = None
         for res in self._chat(chat_messages, **kwargs):
-            if isinstance(res, ApiResponse):
-                print(res.content, end="", flush=True)  # noqa T201
-                final_answer += res.content
-                # Keep the last usage information (most complete)
-                if res.usage is not None:
-                    final_usage = res.usage
-            else:
-                # Backward compatibility for non-ApiResponse returns
-                print(str(res), end="", flush=True)  # noqa T201
-                final_answer += str(res)
+            assert isinstance(
+                res, ApiResponse
+            ), f"response is not an ApiResponse: {res}"
+            print(res.content, end="", flush=True)  # noqa T201
+            final_answer += res.content
+            # Keep the last usage information (most complete)
+            if res.usage is not None:
+                final_usage = res.usage
 
         # Return ApiResponse for consistency
         return ApiResponse(content=final_answer, usage=final_usage)

@@ -119,9 +119,7 @@ class ModelAdapter(BaseModelAdapter):
                 task_info["important_packages"].append(f"{package} not installed")
         return model_server
 
-    def _process_single_result(
-        self, single_result: Union[str, ApiResponse]
-    ) -> Dict[str, Any]:
+    def _process_single_result(self, single_result: ApiResponse) -> Dict[str, Any]:
         """
         Process a single inference result and extract content, reason, and usage.
 
@@ -135,12 +133,9 @@ class ModelAdapter(BaseModelAdapter):
         reason = ""
 
         # Extract content and usage from ApiResponse
-        if isinstance(single_result, ApiResponse):
-            content = single_result.content
-            if single_result.usage:
-                usage_info = single_result.usage.to_dict()
-        else:
-            content = single_result
+        content = single_result.content
+        if single_result.usage:
+            usage_info = single_result.usage.to_dict()
 
         # Split reasoning and answer if present
         if "</think>" in content:

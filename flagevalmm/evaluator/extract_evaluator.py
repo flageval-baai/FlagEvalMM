@@ -1,4 +1,5 @@
 import re
+from flagevalmm.models.api_response import ApiResponse
 from flagevalmm.registry import EVALUATORS
 from flagevalmm.evaluator import BaseEvaluator
 import json
@@ -253,11 +254,10 @@ class ExtractEvaluator(BaseEvaluator):
             compare_result = self.llm_evaluator.infer(
                 chat_messages=message, temperature=0, top_p=1, seed=42
             )
-            # Handle both ApiResponse and string returns
-            if hasattr(compare_result, "content"):
-                content = compare_result.content
-            else:
-                content = str(compare_result)
+            assert isinstance(
+                compare_result, ApiResponse
+            ), f"response is not an ApiResponse: {compare_result}"
+            content = compare_result.content
             return content.replace("Judgement: ", "").strip()
 
         except Exception as e:
@@ -276,11 +276,10 @@ class ExtractEvaluator(BaseEvaluator):
             grade_letter_response = self.llm_evaluator.infer(
                 chat_messages=message, temperature=0, top_p=1, seed=42
             )
-            # Handle both ApiResponse and string returns
-            if hasattr(grade_letter_response, "content"):
-                grade_letter = grade_letter_response.content.strip()
-            else:
-                grade_letter = str(grade_letter_response).strip()
+            assert isinstance(
+                grade_letter_response, ApiResponse
+            ), f"response is not an ApiResponse: {grade_letter_response}"
+            grade_letter = grade_letter_response.content.strip()
 
             # Convert grade letter to score
             if grade_letter == "A":  # CORRECT

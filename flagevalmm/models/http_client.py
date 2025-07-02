@@ -69,7 +69,6 @@ class HttpClient(BaseApiModel):
         )
         try:
             response_json = response.json()
-            print(response_json)
         except Exception as e:
             raise Exception(f"Error: {response.text}, {e}")
         if response.status_code != 200:

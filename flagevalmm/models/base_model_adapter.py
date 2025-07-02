@@ -1,6 +1,6 @@
 import json
 import copy
-from typing import List, Dict, Any, Callable, Optional, Union
+from typing import List, Dict, Any, Callable, Optional
 import os.path as osp
 from accelerate import Accelerator
 from torch.utils.data import DataLoader
@@ -197,7 +197,7 @@ class BaseModelAdapter:
 
     def save_result(
         self,
-        result: List[Union[Dict[str, Any], ProcessResult]],
+        result: List[ProcessResult],
         meta_info: Dict[str, Any],
         rank: int | None = None,
     ) -> None:
@@ -211,10 +211,10 @@ class BaseModelAdapter:
         # Convert ProcessResult to dictionary format
         serializable_result = []
         for item in result:
-            if isinstance(item, ProcessResult):
-                serializable_result.append(item.to_dict())
-            else:
-                serializable_result.append(item)
+            assert isinstance(
+                item, ProcessResult
+            ), f"item is not a ProcessResult: {item}"
+            serializable_result.append(item.to_dict())
 
         try:
             with open(output_file, "w") as f:
@@ -226,17 +226,14 @@ class BaseModelAdapter:
 
     def save_item(
         self,
-        result: Union[Dict[str, Any], ProcessResult],
+        result: ProcessResult,
         question_id: str,
         meta_info: Dict[str, Any],
     ):
         output_dir = osp.join(meta_info["output_dir"], "items")
 
         # Convert ProcessResult to dictionary format
-        if isinstance(result, ProcessResult):
-            serializable_result = result.to_dict()
-        else:
-            serializable_result = result
+        serializable_result = result.to_dict()
 
         with open(osp.join(output_dir, f"{question_id}.json"), "w") as f:
             json.dump(serializable_result, f, indent=2, ensure_ascii=False)
