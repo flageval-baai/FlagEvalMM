@@ -73,7 +73,7 @@ def get_score(annotations: Dict, pred: str, model: GPT) -> Tuple[float, bool]:
                 if 0.0 <= score <= 1.0:
                     grade_sample_run_complete = True
                     val_success = True
-            except ValueError:
+            except Exception:
                 time.sleep(1)
                 temperature += 0.5
                 logger.info(
