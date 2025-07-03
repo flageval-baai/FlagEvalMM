@@ -1,6 +1,6 @@
 import json
 import copy
-from typing import List, Dict, Any, Callable, Optional
+from typing import List, Dict, Any, Callable, Optional, Union
 import os.path as osp
 from accelerate import Accelerator
 from torch.utils.data import DataLoader
@@ -226,7 +226,6 @@ class BaseModelAdapter:
 
     def save_item(
         self,
-        result: ProcessResult,
         result: ProcessResult,
         question_id: str,
         meta_info: Dict[str, Any],
