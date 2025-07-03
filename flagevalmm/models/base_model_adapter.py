@@ -1,6 +1,6 @@
 import json
 import copy
-from typing import List, Dict, Any, Callable, Optional
+from typing import List, Dict, Any, Callable, Optional, Union
 import os.path as osp
 from accelerate import Accelerator
 from torch.utils.data import DataLoader
@@ -197,7 +197,7 @@ class BaseModelAdapter:
 
     def save_result(
         self,
-        result: List[ProcessResult],
+        result: List[Union[ProcessResult, Dict[str, Any]]],
         meta_info: Dict[str, Any],
         rank: int | None = None,
     ) -> None:
@@ -211,10 +211,10 @@ class BaseModelAdapter:
         # Convert ProcessResult to dictionary format
         serializable_result = []
         for item in result:
-            assert isinstance(
-                item, ProcessResult
-            ), f"item is not a ProcessResult: {item}"
-            serializable_result.append(item.to_dict())
+            if isinstance(item, ProcessResult):
+                serializable_result.append(item.to_dict())
+            else:
+                serializable_result.append(item)
 
         try:
             with open(output_file, "w") as f:
