@@ -1,6 +1,6 @@
 import json
 import copy
-from typing import List, Dict, Any, Callable, Optional
+from typing import List, Dict, Any, Callable, Optional, Union
 import os.path as osp
 from accelerate import Accelerator
 from torch.utils.data import DataLoader
@@ -197,7 +197,7 @@ class BaseModelAdapter:
 
     def save_result(
         self,
-        result: List[ProcessResult],
+        result: List[Union[ProcessResult, Dict[str, Any]]],
         meta_info: Dict[str, Any],
         rank: int | None = None,
     ) -> None:
@@ -233,6 +233,7 @@ class BaseModelAdapter:
         output_dir = osp.join(meta_info["output_dir"], "items")
 
         # Convert ProcessResult to dictionary format
+        serializable_result = result.to_dict()
         serializable_result = result.to_dict()
 
         with open(osp.join(output_dir, f"{question_id}.json"), "w") as f:

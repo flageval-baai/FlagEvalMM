@@ -102,7 +102,7 @@ def get_score_by_gpt(data_collection: List, model: GPT) -> List[Dict]:
             response = model.infer(
                 chat_messages=message, temperature=temperture, seed=42
             )
-            content = json.loads(response)
+            content = json.loads(response.content)
             # check format
             assert isinstance(content, dict) and "results" in content, content
             assert len(content["results"]) == len(

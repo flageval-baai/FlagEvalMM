@@ -4,22 +4,91 @@ import json
 
 
 @dataclass
-class ApiUsage:
-    """API usage information containing token counts"""
+class PromptTokensDetails:
+    """
+    Prompt token details
+    """
 
-    prompt_tokens: int = 0
-    completion_tokens: int = 0
-    total_tokens: int = 0
-    prompt_tokens_details: Optional[Dict[str, Any]] = None
-    completion_tokens_details: Optional[Dict[str, Any]] = None
+    audio_tokens: Optional[int] = 0
+    cached_tokens: Optional[int] = 0
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization"""
         return asdict(self)
 
     @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "PromptTokensDetails":
+        """Create from dictionary for deserialization"""
+        return cls(**data)
+
+
+@dataclass
+class CompletionTokensDetails:
+    """
+    Completion token details
+    """
+
+    accepted_prediction_tokens: int = 0
+    audio_tokens: Optional[int] = 0
+    reasoning_tokens: int = 0
+    rejected_prediction_tokens: int = 0
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization"""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "CompletionTokensDetails":
+        """Create from dictionary for deserialization"""
+        return cls(**data)
+
+
+# Custom JSON encoder for dataclasses
+class DataclassJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder for dataclasses"""
+
+    def default(self, obj):
+        if hasattr(obj, "to_dict"):
+            return obj.to_dict()
+        return super().default(obj)
+
+
+@dataclass
+class ApiUsage:
+    """API usage information containing token counts"""
+
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    prompt_tokens_details: Union[PromptTokensDetails, Dict[str, Any]] = None
+    completion_tokens_details: Union[CompletionTokensDetails, Dict[str, Any]] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization"""
+        result = asdict(self)
+        # Ensure nested dataclasses are converted to dictionaries
+        if isinstance(self.prompt_tokens_details, PromptTokensDetails):
+            result["prompt_tokens_details"] = self.prompt_tokens_details.to_dict()
+        if isinstance(self.completion_tokens_details, CompletionTokensDetails):
+            result["completion_tokens_details"] = (
+                self.completion_tokens_details.to_dict()
+            )
+        return result
+
+    @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ApiUsage":
         """Create from dictionary for deserialization"""
+        # Handle nested dataclass objects
+        prompt_details = data.get("prompt_tokens_details")
+        completion_details = data.get("completion_tokens_details")
+
+        if isinstance(prompt_details, dict):
+            data["prompt_tokens_details"] = PromptTokensDetails(**prompt_details)
+        if isinstance(completion_details, dict):
+            data["completion_tokens_details"] = CompletionTokensDetails(
+                **completion_details
+            )
+
         return cls(**data)
 
 
@@ -39,9 +108,9 @@ class ApiResponse:
         """Serialize to JSON string for caching"""
         data = {
             "content": self.content,
-            "usage": self.usage.to_dict() if self.usage else None,
+            "usage": self.usage,  # No need to convert explicitly, the encoder will handle it
         }
-        return json.dumps(data, ensure_ascii=False)
+        return json.dumps(data, ensure_ascii=False, cls=DataclassJSONEncoder)
 
     @classmethod
     def from_json(cls, json_str: str) -> "ApiResponse":

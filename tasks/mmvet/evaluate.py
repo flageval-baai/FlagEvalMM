@@ -68,7 +68,7 @@ def get_score(annotations: Dict, pred: str, model: GPT) -> Tuple[float, bool]:
 
         if response:
             try:
-                data = json.loads(response)
+                data = json.loads(response.content)
                 score = data["score"]
                 if 0.0 <= score <= 1.0:
                     grade_sample_run_complete = True
