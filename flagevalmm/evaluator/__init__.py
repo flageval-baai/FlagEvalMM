@@ -10,7 +10,6 @@ from .one_align_evaluator import OneAlignEvaluator
 from .video_score_evaluator import VideoScoreEvaluator
 from .extract_evaluator import ExtractEvaluator
 from .fvd_evaluator import FVDEvaluator
-from .multi_inference_evaluator import MultiInferenceEvaluator
 
 __all__ = [
     "BaseEvaluator",
@@ -25,5 +24,4 @@ __all__ = [
     "VideoScoreEvaluator",
     "ExtractEvaluator",
     "FVDEvaluator",
-    "MultiInferenceEvaluator",
 ]
