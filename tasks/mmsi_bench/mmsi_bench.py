@@ -1,4 +1,3 @@
-from tasks.where2place.where2place import post_prompt
 
 config = dict(
     dataset_path="RunsenXu/MMSI-Bench",
@@ -11,7 +10,7 @@ dataset = dict(
     type="VqaBaseDataset",
     prompt_template=dict(
         type="PromptTemplate",
-        post_prompt="Answer with the option's letter from the given choices directly. Enclose the option's letter within ``."
+        post_prompt="Answer with the option's letter from the given choices directly. Enclose the option's letter within ``.",
     ),
     config=config,
     name="MMSI-Bench",
