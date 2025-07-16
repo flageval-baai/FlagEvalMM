@@ -1,4 +1,3 @@
-
 config = dict(
     dataset_path="RunsenXu/MMSI-Bench",
     split="test",
