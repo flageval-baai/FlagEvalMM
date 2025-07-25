@@ -76,6 +76,8 @@ class VqaBaseDataset(Dataset):
             question = self.prompt_template.build_prompt(
                 question=question,
                 question_type=annotation["question_type"],
+                evaluator=annotation.get("evaluator", None),
+                evaluator_kwargs=annotation.get("evaluator_kwargs", None),
                 subject=annotation.get("subject", None),
             )
         return question
