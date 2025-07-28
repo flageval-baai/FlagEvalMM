@@ -26,6 +26,7 @@ across various tasks and metrics.
 
    configuration
    tasks
+   tools
 
 .. toctree::
    :maxdepth: 2
