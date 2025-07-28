@@ -29,10 +29,10 @@ FlagEvalMM 支持多个推理后端引擎。根据需要安装：
 
 #### VLLM 后端
 
-目前（2024年11月30日），我们推荐使用 vllm==0.6.3.post1 和 torch==2.4.0 以获得最佳的推理性能和稳定性。
+目前（2025年7月28日），我们推荐使用 vllm==0.8.5.post1 和 torch==2.6.0 以获得最佳的推理性能和稳定性。
 
 ```bash
-pip install vllm==0.6.3.post1
+pip install vllm==0.8.5.post1
 ```
 
 #### SGLang 后端

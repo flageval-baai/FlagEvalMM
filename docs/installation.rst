@@ -29,11 +29,11 @@ FlagEvalMM supports multiple backend engines for inference. Choose and install t
 VLLM Backend
 ~~~~~~~~~~~~
 
-Currently (November 30, 2024), we recommend using vllm==0.6.3.post1 and torch==2.4.0 for optimal inference performance and stability.
+Currently (July 28, 2025), we recommend using vllm==0.8.5.post1 and torch==2.6.0 for optimal inference performance and stability.
 
 .. code-block:: bash
 
-   pip install vllm==0.6.3.post1
+   pip install vllm==0.8.5.post1
 
 .. warning::
    Make sure to use the recommended versions for the best compatibility and performance.
