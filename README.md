@@ -18,7 +18,9 @@ FlagEvalMM is an open-source evaluation framework designed to comprehensively as
 ## Getting Started
 
 [Basic Installation](https://flagevalmm.readthedocs.io/en/latest/installation.html)
+
 [Quick Start](https://flagevalmm.readthedocs.io/en/latest/quickstart.html)
+
 [Usage Guide](https://flagevalmm.readthedocs.io/en/latest/usage.html)
 
 ## Citation
