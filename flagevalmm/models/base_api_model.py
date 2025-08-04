@@ -20,7 +20,7 @@ class BaseApiModel:
         model_name: str,
         chat_name: Optional[str] = None,
         max_tokens: Optional[int] = None,
-        temperature: float = 0.0,
+        temperature: Optional[float] = None,
         max_image_size: Optional[int] = None,
         min_short_side: Optional[int] = None,
         max_long_side: Optional[int] = None,
@@ -30,6 +30,7 @@ class BaseApiModel:
         system_prompt: Optional[str] = None,
         num_infers: int = 1,
         reasoning: Optional[Dict[str, Any]] = None,
+        provider: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
         self.model_name = model_name
@@ -58,6 +59,8 @@ class BaseApiModel:
             self.chat_args["max_tokens"] = max_tokens
         if self.stream:
             self.chat_args["stream"] = True
+        if provider is not None:
+            self.chat_args["provider"] = provider
         self.cache = ModelCache(self.chat_name) if use_cache else None
 
     def add_to_cache(self, chat_messages, response) -> None:
@@ -117,7 +120,7 @@ class BaseApiModel:
 
     def infer(self, chat_messages, **kwargs):
         if self.use_cache and self.num_infers == 1:
-            cache_key = [chat_messages, kwargs]
+            cache_key = [chat_messages, kwargs, self.chat_args]
             result = self.get_from_cache(cache_key)
             if result is not None:
                 logger.info(f"Found in cache\n{result.content}")
@@ -127,7 +130,7 @@ class BaseApiModel:
             final_answer = self._single_infer(chat_messages, **kwargs)
             # Cache the complete ApiResponse object
             if self.use_cache:
-                self.add_to_cache([chat_messages, kwargs], final_answer)
+                self.add_to_cache([chat_messages, kwargs, self.chat_args], final_answer)
             return final_answer
         else:
             logger.info(
@@ -137,7 +140,13 @@ class BaseApiModel:
             for i in range(self.num_infers):
                 logger.info(f"Inference {i+1}/{self.num_infers}")
                 if self.use_cache:
-                    cache_key = [chat_messages, kwargs, i, self.temperature]
+                    cache_key = [
+                        chat_messages,
+                        kwargs,
+                        i,
+                        self.temperature,
+                        self.chat_args,
+                    ]
                     result = self.get_from_cache(cache_key)
                     if result is not None:
                         logger.info(f"Found in cache\n{result.content}")
@@ -149,7 +158,8 @@ class BaseApiModel:
                 # Cache the complete ApiResponse object
                 if self.use_cache:
                     self.add_to_cache(
-                        [chat_messages, kwargs, i, self.temperature], result
+                        [chat_messages, kwargs, i, self.temperature, self.chat_args],
+                        result,
                     )
 
             return results

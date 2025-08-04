@@ -1,6 +1,7 @@
 import os
 from typing import Optional, List, Any, Dict
 from flagevalmm.common.logger import get_logger
+from flagevalmm.models.api_response import ApiResponse, ApiUsage
 from flagevalmm.models.base_api_model import BaseApiModel
 from flagevalmm.prompt.prompt_tools import encode_image
 from flagevalmm.common.video_utils import load_image_or_video
@@ -29,7 +30,7 @@ class Claude(BaseApiModel):
         self,
         model_name: str,
         chat_name: Optional[str] = None,
-        max_tokens: int = 1024,
+        max_tokens: int = 64000,
         temperature: float = 0.0,
         max_image_size: int = 5 * 1024 * 1024,
         min_short_side: Optional[int] = None,
@@ -38,6 +39,7 @@ class Claude(BaseApiModel):
         api_key: Optional[str] = None,
         stream: bool = False,
         use_proxy: bool = False,
+        thinking: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
         _load_anthropic_packages()
@@ -61,6 +63,8 @@ class Claude(BaseApiModel):
             client = httpx.Client(proxies={"http://": proxy_url, "https://": proxy_url})
         else:
             client = None
+        if thinking is not None:
+            self.chat_args["thinking"] = thinking
         self.client = anthropic.Client(api_key=api_key, http_client=client)
 
     def _chat(self, chat_messages: Any, **kwargs):
@@ -82,31 +86,46 @@ class Claude(BaseApiModel):
                     "thinking" in chat_args
                     and chat_args["thinking"]["type"] == "enabled"
                 )
-                begin_thinking = False
-                finished_thinking = False
+                thinking_started = False
+                thinking_text = ""
+                answer_text = ""
+                input_tokens = output_tokens = 0
+
                 for event in stream:
                     if event.type == "content_block_start":
-                        if not thinking_mode:
-                            yield ""
-                        elif begin_thinking:
-                            yield "\n"
-                        else:
-                            yield "<think>"
-                        begin_thinking = True
+                        if thinking_mode and not thinking_started:
+                            thinking_text += "<think>"
+                        thinking_started = True
 
                     elif event.type == "content_block_delta":
                         if event.delta.type == "thinking_delta":
-                            yield event.delta.thinking
-                            # print(f"Thinking: {event.delta.thinking}", end="", flush=True)
+                            thinking_text += event.delta.thinking
                         elif event.delta.type == "text_delta":
-                            yield event.delta.text
-                            # print(f"Response: {event.delta.text}", end="", flush=True)
+                            answer_text += event.delta.text
+
                     elif event.type == "content_block_stop":
-                        if thinking_mode and begin_thinking and not finished_thinking:
-                            yield "</think>"
-                            finished_thinking = True
-                        else:
-                            yield ""
+                        if (
+                            thinking_mode
+                            and thinking_started
+                            and not thinking_text.endswith("</think>")
+                        ):
+                            thinking_text += "</think>"
+
+                    elif event.type == "message_delta":
+                        output_tokens = event.usage.output_tokens
+                    elif event.type == "message_start":
+                        input_tokens = event.message.usage.input_tokens
+
+                yield ApiResponse(
+                    content=thinking_text + answer_text,
+                    usage=ApiUsage(
+                        prompt_tokens=input_tokens,
+                        completion_tokens=output_tokens,
+                        total_tokens=input_tokens + output_tokens,
+                        prompt_tokens_details=None,
+                        completion_tokens_details=None,
+                    ),
+                )
         else:
             response = self.client.messages.create(
                 system=system_prompt,
@@ -114,7 +133,18 @@ class Claude(BaseApiModel):
                 model=self.model_name,
                 **chat_args,
             )
-            yield response.content[0].text
+            api_response = ApiResponse(
+                content=response.content[0].text,
+                usage=ApiUsage(
+                    prompt_tokens=response.usage.input_tokens,
+                    completion_tokens=response.usage.output_tokens,
+                    total_tokens=response.usage.output_tokens
+                    + response.usage.input_tokens,
+                    prompt_tokens_details=None,
+                    completion_tokens_details=None,
+                ),
+            )
+            yield api_response
 
     def build_message(
         self,

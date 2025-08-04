@@ -217,6 +217,9 @@ class BaseModelAdapter:
             serializable_result.append(item.to_dict())
 
         try:
+            serializable_result = sorted(
+                serializable_result, key=lambda x: x.get("question_id", "")
+            )
             with open(output_file, "w") as f:
                 json.dump(serializable_result, f, indent=2, ensure_ascii=False)
         except Exception as e:

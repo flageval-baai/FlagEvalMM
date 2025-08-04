@@ -36,7 +36,7 @@ class VqaBaseDataset(Dataset):
             self.prompt_template = PROMPTS.build(prompt_template)
         else:
             self.prompt_template = None
-        self.with_label = with_label or debug
+        self.with_label = with_label
         if debug:
             self.annotations = self.annotations[:32]
 
