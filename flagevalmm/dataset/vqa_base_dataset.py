@@ -36,7 +36,7 @@ class VqaBaseDataset(Dataset):
             self.prompt_template = PROMPTS.build(prompt_template)
         else:
             self.prompt_template = None
-        self.with_label = with_label
+        self.with_label = with_label or debug
         if debug:
             self.annotations = self.annotations[:32]
 
@@ -97,7 +97,7 @@ class VqaBaseDataset(Dataset):
             "question_id": str(annotation["question_id"]),
             "type": annotation["question_type"],
         }
-        if self.with_label:
+        if self.with_label and annotation.get("answer", None) is not None:
             ret["label"] = annotation["answer"]
         return ret
 
