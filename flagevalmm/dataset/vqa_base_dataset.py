@@ -97,7 +97,7 @@ class VqaBaseDataset(Dataset):
             "question_id": str(annotation["question_id"]),
             "type": annotation["question_type"],
         }
-        if self.with_label:
+        if self.with_label and annotation.get("answer", None) is not None:
             ret["label"] = annotation["answer"]
         return ret
 

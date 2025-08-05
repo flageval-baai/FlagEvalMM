@@ -93,6 +93,23 @@ class BaseEvaluator:
             return self._load_and_call_eval_func
         return eval_func
 
+    def statistics_tokens(self, predictions: List[Dict]) -> Dict:
+        average_tokens = 0.0
+        average_prompt_tokens = 0.0
+        average_completion_tokens = 0.0
+        for pred in predictions:
+            average_tokens += pred["usage"]["total_tokens"]
+            average_prompt_tokens += pred["usage"]["prompt_tokens"]
+            average_completion_tokens += pred["usage"]["completion_tokens"]
+        average_tokens = average_tokens / len(predictions)
+        average_prompt_tokens = average_prompt_tokens / len(predictions)
+        average_completion_tokens = average_completion_tokens / len(predictions)
+        return {
+            "average_tokens": average_tokens,
+            "average_prompt_tokens": average_prompt_tokens,
+            "average_completion_tokens": average_completion_tokens,
+        }
+
     def _load_and_call_eval_func(self, *args, **kwargs):
         # Load the module and call the function dynamically when needed
         spec = importlib.util.spec_from_file_location("evaluate", self.eval_func_path)
@@ -458,6 +475,8 @@ class BaseEvaluator:
             results.update(self.eval_func(annotations, predictions, self.llm_evaluator))
         else:
             results.update(self.eval_func(annotations, predictions))
+
+        results.update(self.statistics_tokens(predictions))
 
         self.save(results, predictions + filtered_predictions, dataset.name, output_dir)
         return results

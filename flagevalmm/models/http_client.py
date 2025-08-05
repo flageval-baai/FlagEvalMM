@@ -21,8 +21,8 @@ class HttpClient(BaseApiModel):
         self,
         model_name: str,
         chat_name: Optional[str] = None,
-        max_tokens: int = 16384,
-        temperature: float = 0.0,
+        max_tokens: int = 32768,
+        temperature: Optional[float] = None,
         max_image_size: Optional[int] = None,
         min_short_side: Optional[int] = None,
         max_long_side: Optional[int] = None,
@@ -31,6 +31,7 @@ class HttpClient(BaseApiModel):
         api_key: Optional[str] = None,
         url: Optional[Union[str, httpx.URL]] = None,
         reasoning: Optional[Dict[str, Any]] = None,
+        provider: Optional[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
         super().__init__(
@@ -44,6 +45,7 @@ class HttpClient(BaseApiModel):
             max_num_frames=max_num_frames,
             use_cache=use_cache,
             reasoning=reasoning,
+            provider=provider,
             **kwargs,
         )
         self.url = url
@@ -97,10 +99,13 @@ class HttpClient(BaseApiModel):
 
         if "choices" in response_json:
             message = response_json["choices"][0]["message"]
+            res = ""
+            reasoning_content = message.get(
+                "reasoning_content", message.get("reasoning", "")
+            )
+            if reasoning_content:
+                res = f"<think>{reasoning_content}</think>\n"
             if "content" in message:
-                res = ""
-                if message.get("reasoning_content", None):
-                    res = f"<think>{message['reasoning_content']}</think>\n"
                 res += message["content"]
                 yield ApiResponse(content=res, usage=usage)
             else:
@@ -129,6 +134,8 @@ class HttpClient(BaseApiModel):
                 if line:
                     # Remove "data: " prefix if it exists (common in SSE)
                     line_text = line.decode("utf-8")
+                    if '"usage":null' not in line_text:
+                        print(f"line_text: {line_text}")
                     if line_text.startswith("data: "):
                         line_text = line_text[6:]
 
@@ -155,7 +162,11 @@ class HttpClient(BaseApiModel):
                                 if think_start:
                                     content = f"</think>\n{content}"
                                     think_start = False
-                                yield ApiResponse.from_content(content)
+                                if chunk.get("usage") is not None:
+                                    usage = ApiUsage.from_dict(chunk["usage"])
+                                    yield ApiResponse(content=content, usage=usage)
+                                else:
+                                    yield ApiResponse.from_content(content)
                     except json.JSONDecodeError as e:
                         raise Exception(
                             f"Failed to parse chunk: {line_text}, error: {e}"
@@ -252,7 +263,7 @@ class HttpClient(BaseApiModel):
 
         parts = re.split(r"(<image \d+>)", query)
         for part in parts:
-            if not part:
+            if len(part.strip()) == 0:
                 continue
             if re.match(IMAGE_REGEX, part):
                 # It's an image reference
@@ -265,6 +276,7 @@ class HttpClient(BaseApiModel):
                     }
                 )
             else:
+                assert len(part.strip()) > 0, f"part: {part}"
                 # It's a text part
                 content.append({"type": "text", "text": part})
         # If there are no referenced images, add all images to the message, not interleaved
