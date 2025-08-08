@@ -258,6 +258,8 @@ class BaseEvaluator:
         return False
 
     def evaluate_multiple_choice(self, gt: Dict, pred: Dict) -> bool:
+        if not isinstance(pred["answer"], str):
+            return False
         pred["raw_answer"] = pred["answer"]
         pred["answer"] = self.maybe_clean_answer(pred["answer"])
         if len(pred["answer"]) > 1:

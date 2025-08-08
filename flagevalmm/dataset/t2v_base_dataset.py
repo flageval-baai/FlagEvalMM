@@ -55,5 +55,5 @@ class Text2VideoBaseDataset(Dataset):
         anno_dict = {}
         for i in range(num):
             data = self.get_data(i)
-            anno_dict[data["id"]] = data
+            anno_dict[str(data["id"])] = data
         return anno_dict
