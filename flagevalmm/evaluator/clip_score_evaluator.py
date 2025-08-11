@@ -39,7 +39,7 @@ class CLIPScoreEvaluator:
         elif "video" in output_info[0]:
             num = 0
             for info in tqdm(output_info):
-                video_path = osp.join(output_dir, info["video"])
+                video_path = osp.join(output_dir, info["video_path"])
                 images = read_video_pyav(
                     video_path=video_path,
                     max_num_frames=self.max_num_frames,

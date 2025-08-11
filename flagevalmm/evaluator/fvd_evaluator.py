@@ -130,7 +130,7 @@ class FVDEvaluator:
                     feats_real.append(self.get_feats(images))
 
         for info in tqdm(output_info):
-            video_path = osp.join(output_dir, info["video"])
+            video_path = osp.join(output_dir, info["video_path"])
             images = read_video_pyav(
                 video_path=video_path,
                 max_num_frames=16,
