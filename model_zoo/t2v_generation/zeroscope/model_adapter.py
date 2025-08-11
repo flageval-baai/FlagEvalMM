@@ -31,7 +31,7 @@ class ModelAdapter(BaseModelAdapter):
                 video_out_name = f"{output_dir}/{question_id}-{j}.mp4"
                 export_to_video(video_frames, video_out_name)
             output_info.append(
-                {"prompt": prompt, "id": question_id, "video": video_out_name}
+                {"prompt": prompt, "id": question_id, "video_path": video_out_name}
             )
 
         json.dump(
