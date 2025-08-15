@@ -21,7 +21,7 @@ class CLIPScoreEvaluator:
     def get_metric_results(self, output_info, output_dir, annotations, **kwargs):
         score_sum = 0
         assert (
-            "image" in output_info[0] or "video" in output_info[0]
+            "image" in output_info[0] or "video_path" in output_info[0]
         ), "must be image or video!"
         if "image" in output_info[0]:
             for info in output_info:
@@ -36,7 +36,7 @@ class CLIPScoreEvaluator:
                 score_sum += clip_score
                 info["clip_score"] = clip_score
             result = {"clip_score": score_sum / len(output_info)}
-        elif "video" in output_info[0]:
+        elif "video_path" in output_info[0]:
             num = 0
             for info in tqdm(output_info):
                 video_path = osp.join(output_dir, info["video_path"])
