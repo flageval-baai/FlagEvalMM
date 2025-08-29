@@ -31,6 +31,7 @@ class BaseApiModel:
         num_infers: int = 1,
         reasoning: Optional[Dict[str, Any]] = None,
         provider: Optional[Dict[str, Any]] = None,
+        retry_time: Optional[int] = None,
         **kwargs,
     ) -> None:
         self.model_name = model_name
@@ -61,6 +62,8 @@ class BaseApiModel:
             self.chat_args["stream"] = True
         if provider is not None:
             self.chat_args["provider"] = provider
+        if retry_time is not None:
+            self.retry_time = retry_time
         self.cache = ModelCache(self.chat_name) if use_cache else None
 
     def add_to_cache(self, chat_messages, response) -> None:

@@ -74,6 +74,8 @@ class ModelAdapter(BaseModelAdapter):
             "num_infers",
             "reasoning",
             "thinking",
+            "provider",
+            "retry_time",
         ]
         print(f"task_info: {task_info}")
         model_config = {k: task_info[k] for k in model_config_keys if k in task_info}
