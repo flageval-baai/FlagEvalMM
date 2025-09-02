@@ -8,6 +8,7 @@ class PromptTokensDetails:
     """
     Prompt token details
     """
+
     text_tokens: Optional[int] = 0
     audio_tokens: Optional[int] = 0
     cached_tokens: Optional[int] = 0
@@ -104,13 +105,17 @@ class ApiUsage:
         # Handle nested dataclass objects safely
         prompt_details = data.get("prompt_tokens_details")
         if isinstance(prompt_details, dict):
-            filtered["prompt_tokens_details"] = PromptTokensDetails.from_dict(prompt_details)
+            filtered["prompt_tokens_details"] = PromptTokensDetails.from_dict(
+                prompt_details
+            )
         elif isinstance(prompt_details, PromptTokensDetails):
             filtered["prompt_tokens_details"] = prompt_details
 
         completion_details = data.get("completion_tokens_details")
         if isinstance(completion_details, dict):
-            filtered["completion_tokens_details"] = CompletionTokensDetails.from_dict(completion_details)
+            filtered["completion_tokens_details"] = CompletionTokensDetails.from_dict(
+                completion_details
+            )
         elif isinstance(completion_details, CompletionTokensDetails):
             filtered["completion_tokens_details"] = completion_details
 
