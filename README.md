@@ -8,6 +8,10 @@
 
 FlagEvalMM is an open-source evaluation framework designed to comprehensively assess multimodal models. It provides a standardized way to evaluate models that work with multiple modalities (text, images, video) across various tasks and metrics.
 
+## News
+
+- [2025-09-02] Supported by FlagEvalMM, [LRM-Eval](https://github.com/flageval-baai/LRM-Eval) is released. We include the evaluation code of [ROME](https://huggingface.co/datasets/BAAI/ROME) in the tasks/rome directory.
+
 ## Key Features
 
 - **Flexible Architecture**: Support for multiple multimodal models and evaluation tasks, including: VQA, image retrieval, text-to-image, etc.
