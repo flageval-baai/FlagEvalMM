@@ -9,8 +9,10 @@ class PromptTokensDetails:
     Prompt token details
     """
 
+    text_tokens: Optional[int] = 0
     audio_tokens: Optional[int] = 0
     cached_tokens: Optional[int] = 0
+    image_tokens: Optional[int] = 0
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization"""
@@ -19,7 +21,9 @@ class PromptTokensDetails:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "PromptTokensDetails":
         """Create from dictionary for deserialization"""
-        return cls(**data)
+        allowed_keys = {"text_tokens", "audio_tokens", "cached_tokens", "image_tokens"}
+        filtered = {k: data[k] for k in allowed_keys if k in data}
+        return cls(**filtered)
 
 
 @dataclass
@@ -30,6 +34,7 @@ class CompletionTokensDetails:
 
     accepted_prediction_tokens: int = 0
     audio_tokens: Optional[int] = 0
+    text_tokens: Optional[int] = 0
     reasoning_tokens: int = 0
     rejected_prediction_tokens: int = 0
 
@@ -40,7 +45,15 @@ class CompletionTokensDetails:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "CompletionTokensDetails":
         """Create from dictionary for deserialization"""
-        return cls(**data)
+        allowed_keys = {
+            "accepted_prediction_tokens",
+            "audio_tokens",
+            "text_tokens",
+            "reasoning_tokens",
+            "rejected_prediction_tokens",
+        }
+        filtered = {k: data[k] for k in allowed_keys if k in data}
+        return cls(**filtered)
 
 
 # Custom JSON encoder for dataclasses
@@ -78,18 +91,35 @@ class ApiUsage:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ApiUsage":
         """Create from dictionary for deserialization"""
-        # Handle nested dataclass objects
+        # Only keep allowed keys to avoid initialization errors
+        allowed_keys = {
+            "prompt_tokens",
+            "completion_tokens",
+            "total_tokens",
+            "prompt_tokens_details",
+            "completion_tokens_details",
+        }
+
+        filtered: Dict[str, Any] = {k: data[k] for k in allowed_keys if k in data}
+
+        # Handle nested dataclass objects safely
         prompt_details = data.get("prompt_tokens_details")
-        completion_details = data.get("completion_tokens_details")
-
         if isinstance(prompt_details, dict):
-            data["prompt_tokens_details"] = PromptTokensDetails(**prompt_details)
-        if isinstance(completion_details, dict):
-            data["completion_tokens_details"] = CompletionTokensDetails(
-                **completion_details
+            filtered["prompt_tokens_details"] = PromptTokensDetails.from_dict(
+                prompt_details
             )
+        elif isinstance(prompt_details, PromptTokensDetails):
+            filtered["prompt_tokens_details"] = prompt_details
 
-        return cls(**data)
+        completion_details = data.get("completion_tokens_details")
+        if isinstance(completion_details, dict):
+            filtered["completion_tokens_details"] = CompletionTokensDetails.from_dict(
+                completion_details
+            )
+        elif isinstance(completion_details, CompletionTokensDetails):
+            filtered["completion_tokens_details"] = completion_details
+
+        return cls(**filtered)
 
 
 @dataclass
