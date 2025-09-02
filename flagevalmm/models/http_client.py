@@ -32,6 +32,7 @@ class HttpClient(BaseApiModel):
         url: Optional[Union[str, httpx.URL]] = None,
         reasoning: Optional[Dict[str, Any]] = None,
         provider: Optional[Dict[str, Any]] = None,
+        retry_time: Optional[int] = None,
         **kwargs,
     ) -> None:
         super().__init__(
@@ -46,6 +47,7 @@ class HttpClient(BaseApiModel):
             use_cache=use_cache,
             reasoning=reasoning,
             provider=provider,
+            retry_time=retry_time,
             **kwargs,
         )
         self.url = url
@@ -66,8 +68,16 @@ class HttpClient(BaseApiModel):
 
     def _non_streaming_chat(self, data):
         """Handle non-streaming API requests."""
+        if not hasattr(self, "retry_time"):
+            retry_time = 300
+        else:
+            retry_time = self.retry_time
+        print(f"retry_time: {retry_time}")
         response = requests.post(
-            self.url, headers=self.headers, data=json.dumps(data), timeout=300
+            self.url,
+            headers=self.headers,
+            data=json.dumps(data),
+            timeout=retry_time,
         )
         try:
             response_json = response.json()
