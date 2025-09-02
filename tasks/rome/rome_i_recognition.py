@@ -9,4 +9,6 @@ dataset = dict(
     name="rome_i_recognition",
 )
 
-evaluator = dict(type="ROMEEvaluator", tracker_type="image_type", tracker_subtype="image_subtype")
+evaluator = dict(
+    type="ROMEEvaluator", tracker_type="image_type", tracker_subtype="image_subtype"
+)

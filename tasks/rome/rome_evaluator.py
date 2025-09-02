@@ -3,7 +3,6 @@ from collections import defaultdict
 from flagevalmm.evaluator import BaseEvaluator
 from flagevalmm.registry import EVALUATORS
 from flagevalmm.evaluator.pre_process import process_multiple_choice
-from flagevalmm.models import HttpClient
 import re
 
 demo_prompt_score = """# Task Overview
@@ -86,20 +85,14 @@ Your response must consist of two parts in the following order:
 def is_chinese(text):
     """Check if the text contains Chinese characters"""
     for char in text:
-        if '\u4e00' <= char <= '\u9fff':
+        if "\u4e00" <= char <= "\u9fff":
             return True
     return False
 
+
 def normalize_string(text: str):
     # replace spacial characters
-    replace_dict = {
-        '′': "'",
-        ' ': ' ',
-        '‐': '-',
-        '−': '-',
-        '–': '-',
-        '⋅': '·'
-    }
+    replace_dict = {"′": "'", " ": " ", "‐": "-", "−": "-", "–": "-", "⋅": "·"}
     for k, v in replace_dict.items():
         text = text.replace(k, v)
     return text
@@ -110,17 +103,21 @@ def extract_answer(pred: Dict) -> str:
     for indicator in indicators:
         if indicator in pred["answer"]:
             return pred["answer"].split(indicator)[-1].strip()
-    boxed_pattern = r'\\boxed\{([^}]+)\}'
+    boxed_pattern = r"\\boxed\{([^}]+)\}"
     boxed_match = re.search(boxed_pattern, pred["answer"])
     if boxed_match:
         return boxed_match.group(1).strip()
     return pred["answer"]
 
-def key_items_matching(pred: Dict, key_items: List[List[str]], remove_space=False) -> int:
+
+def key_items_matching(
+    pred: Dict, key_items: List[List[str]], remove_space=False
+) -> int:
     def process(x):
         if remove_space:
-            x = x.replace(' ', '')
+            x = x.replace(" ", "")
         return x.lower()
+
     # Check if any answer variant matches the prediction as a substring
     def match_any(pred_str, answer_variants):
         assert isinstance(answer_variants, list)
@@ -129,17 +126,17 @@ def key_items_matching(pred: Dict, key_items: List[List[str]], remove_space=Fals
     processed_pred = process(pred["answer"])
     if isinstance(key_items[0], list):
         return int(
-            all(
-                match_any(processed_pred, item_variants)
-                for item_variants in key_items
-            )
+            all(match_any(processed_pred, item_variants) for item_variants in key_items)
         )
     elif isinstance(key_items[0], str):
         return int(match_any(processed_pred, key_items))
     else:
         raise ValueError(f"Unsupported key_items type: {type(key_items[0])}")
 
-def _interval_matching(pred: Dict, interval: List[Union[float, str]], units: List[str]) -> int:
+
+def _interval_matching(
+    pred: Dict, interval: List[Union[float, str]], units: List[str]
+) -> int:
     def time_to_seconds(match):
         scale = [3600, 60, 1]
         seconds = 0
@@ -147,17 +144,17 @@ def _interval_matching(pred: Dict, interval: List[Union[float, str]], units: Lis
             if match[i] != "":
                 seconds += scale[i] * int(match[i])
         return seconds
-    
+
     pred_str = pred["answer"]
     # Time interval
     if isinstance(interval[0], str):
         left_interval = time_to_seconds(interval[0].split(":"))
         right_interval = time_to_seconds(interval[1].split(":"))
-        time_pattern = r'\b(\d{1,2}):(\d{2})(?::(\d{2}))?\b'
-    
+        time_pattern = r"\b(\d{1,2}):(\d{2})(?::(\d{2}))?\b"
+
         # Find all time matches in the prediction string
         matches = re.findall(time_pattern, pred_str)
-    
+
         if not matches:
             return 0
         match = matches[0]
@@ -168,7 +165,7 @@ def _interval_matching(pred: Dict, interval: List[Union[float, str]], units: Lis
         # Number interval
         left_interval = interval[0]
         right_interval = interval[1]
-        result = re.search(r'-?\d+(?:\.\d+)?', pred_str)
+        result = re.search(r"-?\d+(?:\.\d+)?", pred_str)
         if result is None:
             return 0
         pred_ans = float(result.group())
@@ -185,65 +182,92 @@ def _interval_matching(pred: Dict, interval: List[Union[float, str]], units: Lis
             return 1
     return 0
 
-def interval_matching(pred: Dict, interval: List[Union[float, str]], units: List[str]) -> int:
+
+def interval_matching(
+    pred: Dict, interval: List[Union[float, str]], units: List[str]
+) -> int:
     return _interval_matching(pred, interval, units)
 
-def multi_interval_matching(pred: Dict, 
-    intervals: List[List[Union[float, str]]], units: List[str]) -> int:
+
+def multi_interval_matching(
+    pred: Dict, intervals: List[List[Union[float, str]]], units: List[str]
+) -> int:
     for interval, unit in zip(intervals, units):
         if _interval_matching(pred, interval, unit) == 1:
             return 1
     return 0
 
+
 def choices_matching(pred: Dict, label: str) -> int:
     pred["answer"] = process_multiple_choice(pred["answer"])
     label = label.upper()
     if len(label) > 1:
-        label = ''.join(sorted(label))
+        label = "".join(sorted(label))
         pred["answer"] = "".join(sorted(set(pred["answer"])))
     elif len(pred["answer"]) > 1:
         pred["answer"] = pred["answer"][0]
     return int(label == pred["answer"])
 
-def ordered_list_matching(pred: Dict, order:Union[str, List[str]]) -> int:    # Is label a subsequence of pred_ans
+
+def ordered_list_matching(
+    pred: Dict, order: Union[str, List[str]]
+) -> int:  # Is label a subsequence of pred_ans
     if isinstance(order, list):
         order = ",".join(order)
     pred_ans = pred["answer"].lower()
     order = order.lower().replace(" ", "")
-    
+
     # Use two pointers approach to check if label is a subsequence of pred_ans
     i, j = 0, 0
     while i < len(pred_ans) and j < len(order):
         if pred_ans[i] == order[j]:
             j += 1
         i += 1
-    
+
     return int(j == len(order))
-    
+
 
 def number_matching(pred: Dict, value_to_match: Union[int, float]) -> int:
     # extract number from pred_ans
-    matches = re.findall(r'-?\d+(?:\.\d+)?', pred["answer"])
+    matches = re.findall(r"-?\d+(?:\.\d+)?", pred["answer"])
     result = matches[-1] if matches else None
     if result is None:
         return 0
-    pred_ans = float(result)  
+    pred_ans = float(result)
     if isinstance(value_to_match, float):
         relative_error = abs(value_to_match) * 0.1
     else:
         relative_error = 1e-3
     return int(abs(pred_ans - value_to_match) < relative_error)
 
-def location_matching(pred: Dict, location_fine_grained: List[str], location_coarse_grained: List[str]=[],
-        fine_grained_score: float = 1.0, coarse_grained_score: float = 0.5) -> int:
+
+def location_matching(
+    pred: Dict,
+    location_fine_grained: List[str],
+    location_coarse_grained: List[str] = [],
+    fine_grained_score: float = 1.0,
+    coarse_grained_score: float = 0.5,
+) -> int:
     pred_ans = pred["answer"].lower()
-    location_fine_grained = [location_fine_grained.lower() for location_fine_grained in location_fine_grained]
-    location_coarse_grained = [location_coarse_grained.lower() for location_coarse_grained in location_coarse_grained]
-    if any(location_fine_grained in pred_ans for location_fine_grained in location_fine_grained):
+    location_fine_grained = [
+        location_fine_grained.lower() for location_fine_grained in location_fine_grained
+    ]
+    location_coarse_grained = [
+        location_coarse_grained.lower()
+        for location_coarse_grained in location_coarse_grained
+    ]
+    if any(
+        location_fine_grained in pred_ans
+        for location_fine_grained in location_fine_grained
+    ):
         return fine_grained_score
-    elif any(location_coarse_grained in pred_ans for location_coarse_grained in location_coarse_grained):
+    elif any(
+        location_coarse_grained in pred_ans
+        for location_coarse_grained in location_coarse_grained
+    ):
         return coarse_grained_score
     return 0
+
 
 @EVALUATORS.register_module()
 class ROMEEvaluator(BaseEvaluator):
@@ -261,30 +285,47 @@ class ROMEEvaluator(BaseEvaluator):
         evaluator = gt["evaluator"]
         pred["raw_answer"] = pred["answer"]
         pred["answer"] = normalize_string(extract_answer(pred))
-        registed_evaluator = set(["key_items_matching", "choices_matching", "ordered_list_matching", "number_matching", "location_matching", "interval_matching", "multi_interval_matching"])
+        registed_evaluator = set(
+            [
+                "key_items_matching",
+                "choices_matching",
+                "ordered_list_matching",
+                "number_matching",
+                "location_matching",
+                "interval_matching",
+                "multi_interval_matching",
+            ]
+        )
         if evaluator not in registed_evaluator:
             raise ValueError(f"Unsupported evaluator: {evaluator}")
         return eval(evaluator)(pred, **gt["evaluator_kwargs"])
 
     def get_score_by_llm(self, gt: Dict, pred: Dict) -> Tuple[str, int]:
         """Custom grading method"""
-        prompt = demo_prompt_score.replace("{{question}}", gt["question"]).replace("{{answer}}", gt["reference"]).replace("{{extracted_answer}}", pred["answer"])
+        prompt = (
+            demo_prompt_score.replace("{{question}}", gt["question"])
+            .replace("{{answer}}", gt["reference"])
+            .replace("{{extracted_answer}}", pred["answer"])
+        )
 
         message = self.llm_evaluator.build_message(query=prompt)
         compare_result_response = self.llm_evaluator.infer(
             chat_messages=message, temperature=0, top_p=1, seed=42
         )
-        compare_result = compare_result_response.content.replace("Judgement:", "").strip()
+        compare_result = compare_result_response.content.replace(
+            "Judgement:", ""
+        ).strip()
         # Extract the score from the custom evaluation result
         # The score should be after the last double newline (\n\n)
-        if '\n\n' in compare_result:
+        if "\n\n" in compare_result:
             # Split by double newlines and get the last part
-            parts = compare_result.split('\n\n')
+            parts = compare_result.split("\n\n")
             score_part = parts[-1].strip()
-            
+
             # Extract numeric value from the score part
             import re
-            score_match = re.search(r'(\d+(?:\.\d+)?)', score_part)
+
+            score_match = re.search(r"(\d+(?:\.\d+)?)", score_part)
             if score_match:
                 compare_result = score_match.group(1)
             else:
@@ -303,6 +344,7 @@ class ROMEEvaluator(BaseEvaluator):
                 self.subtypes = defaultdict(
                     lambda: [0, 0, 0]
                 )  # [score_sum, count, accuracy]
+
             def update(self, score, sub_type):
                 self.total_score += score
                 self.count += 1
@@ -320,7 +362,9 @@ class ROMEEvaluator(BaseEvaluator):
                 score = self.get_score(gt, pred)
             pred.update(gt)
             pred["correct"] = score
-            pred["judgement_response"] = judgement_response if self.use_llm_evaluator else None
+            pred["judgement_response"] = (
+                judgement_response if self.use_llm_evaluator else None
+            )
             # Update scores
             tracker = scores_by_type[pred[self.tracker_type]]
             if self.tracker_subtype is not None:
