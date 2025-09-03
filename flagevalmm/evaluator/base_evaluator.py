@@ -75,6 +75,7 @@ class BaseEvaluator:
                 model_name=kwargs.pop("eval_model_name"),
                 api_key=kwargs.pop("api_key"),
                 base_url=kwargs.pop("base_url"),
+                use_cache=True,
                 **kwargs,
             )
         self.detailed_keys = detailed_keys
@@ -543,6 +544,7 @@ class BaseEvaluator:
             ensure_ascii=False,
             indent=2,
         )
+        answers = sorted(answers, key=lambda x: x.get("question_id", ""))
         json.dump(
             answers,
             open(osp.join(output_dir, f"{dataset_name}_evaluated.json"), "w"),
