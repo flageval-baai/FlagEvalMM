@@ -10,5 +10,8 @@ dataset = dict(
 )
 
 evaluator = dict(
-    type="ROMEEvaluator", tracker_type="image_type", tracker_subtype="image_subtype", aggregation_fields=["raw_answer"]
+    type="ROMEEvaluator",
+    tracker_type="image_type",
+    tracker_subtype="image_subtype",
+    aggregation_fields=["raw_answer"],
 )
