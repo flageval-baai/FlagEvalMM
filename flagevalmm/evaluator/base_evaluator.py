@@ -63,7 +63,7 @@ class BaseEvaluator:
         eval_func: Optional[Union[Callable, str]] = None,
         base_dir: str = "",
         detailed_keys: Optional[List[str]] = None,
-        aggregation_fields: Optional[List[str]] = None,
+        aggregation_fields: Optional[List[str]] = ["raw_answer"],
         **kwargs,
     ) -> None:
         self.is_clean = is_clean
