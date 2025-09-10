@@ -72,7 +72,7 @@ class HttpClient(BaseApiModel):
             retry_time = 300
         else:
             retry_time = self.retry_time
-        print(f"retry_time: {retry_time}")
+
         response = requests.post(
             self.url,
             headers=self.headers,

@@ -27,7 +27,7 @@ class ServerDataset(Dataset):
         data = self.get_data(index)
         question_id = data["question_id"]
         qs = data["question"]
-        if self.task_type == "video_qa":
+        if data.get("video_path", None):
             data_path = data["video_path"]
             multi_modal_data = {"video": data_path}
         else:
