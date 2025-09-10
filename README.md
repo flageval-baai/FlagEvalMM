@@ -10,7 +10,7 @@ FlagEvalMM is an open-source evaluation framework designed to comprehensively as
 
 ## News
 
-- [2025-09-02] Supported by FlagEvalMM, [LRM-Eval](https://github.com/flageval-baai/LRM-Eval) is released. We include the evaluation code of [ROME](https://huggingface.co/datasets/BAAI/ROME) in the tasks/rome directory.
+- [2025-09-02] Supported by FlagEvalMM, [LRM-Eval](https://github.com/flageval-baai/LRM-Eval) is released. We include the evaluation code of [ROME](https://huggingface.co/datasets/BAAI/ROME) in the tasks/rome directory. We recommend using llm-judge for diagrams evaluation and rule-based evaluation for other tasks with prepared configs in the tasks/rome directory.
 
 ## Key Features
 

@@ -7,12 +7,12 @@ _base_ = "post_prompt.py"
 
 dataset = dict(
     type="VqaBaseDataset",
-    data_root="/share/project/hezheqi/data/ROME-V/ROME-I",
-    anno_file="ROME-I-diagrams.json",
-    name="rome_i_diagrams",
+    data_root="BAAI/ROME/data",
+    anno_file="test-diagrams.json",
+    name="rome_diagrams",
 )
 
-base_url = "https://api.pandalla.ai/v1"
+base_url = os.getenv("FLAGEVAL_BASE_URL")
 api_key = os.getenv("FLAGEVAL_API_KEY")
 
 evaluator = dict(
