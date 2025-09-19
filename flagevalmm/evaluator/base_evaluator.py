@@ -99,6 +99,8 @@ class BaseEvaluator:
         average_prompt_tokens = 0.0
         average_completion_tokens = 0.0
         for pred in predictions:
+            if not pred.get("usage"):
+                continue
             average_tokens += pred["usage"]["total_tokens"]
             average_prompt_tokens += pred["usage"]["prompt_tokens"]
             average_completion_tokens += pred["usage"]["completion_tokens"]

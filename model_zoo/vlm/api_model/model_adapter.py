@@ -168,9 +168,9 @@ class ModelAdapter(BaseModelAdapter):
                 )
         logger.info(f"Processing {question_id}")
         logger.info(qs)
-        messages = self.model.build_message(qs, multi_modal_data=multi_modal_data)
 
         try:
+            messages = self.model.build_message(qs, multi_modal_data=multi_modal_data)
             result = self.model.infer(messages)
 
             if isinstance(result, list):
@@ -201,6 +201,11 @@ class ModelAdapter(BaseModelAdapter):
                 final_usage = processed["usage"]
 
         except Exception as e:
+            import traceback
+
+            logger.error(f"An error occurred while processing item {i}: {e}")
+            traceback.print_exc()
+
             final_result = "Error code " + str(e)
             final_reason = ""
             final_usage = None
