@@ -5,6 +5,13 @@ import os.path as osp
 from datasets import load_dataset
 
 
+def get_question_type(question: str) -> str:
+    if "A." in question:
+        return "multiple-choice"
+    else:
+        return "fill-blank"
+
+
 def process(cfg):
     """Process the dataset and save it in a standard format"""
     data_dir, split = cfg.dataset_path, cfg.split
@@ -20,10 +27,11 @@ def process(cfg):
     content = []
     for index, annotation in enumerate(data):
         img_path = osp.join("img", annotation["image_path"])
+        question_type = get_question_type(annotation["question"])
         info = {
             "question": annotation["question"],
             "question_id": index,
-            "question_type": "open",
+            "question_type": question_type,
             "img_path": img_path,
             "answer": annotation["answer"],
         }
