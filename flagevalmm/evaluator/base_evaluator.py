@@ -71,11 +71,12 @@ class BaseEvaluator:
         self.eval_func = self.get_eval_func(eval_func)
         self.use_llm_evaluator = use_llm_evaluator
         if use_llm_evaluator:
+
             self.llm_evaluator = GPT(
                 model_name=kwargs.pop("eval_model_name"),
                 api_key=kwargs.pop("api_key"),
                 base_url=kwargs.pop("base_url"),
-                use_cache=True,
+                use_cache=kwargs.pop("use_cache", True),
                 **kwargs,
             )
         self.detailed_keys = detailed_keys
