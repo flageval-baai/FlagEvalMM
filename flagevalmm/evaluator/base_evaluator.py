@@ -71,11 +71,12 @@ class BaseEvaluator:
         self.eval_func = self.get_eval_func(eval_func)
         self.use_llm_evaluator = use_llm_evaluator
         if use_llm_evaluator:
+
             self.llm_evaluator = GPT(
                 model_name=kwargs.pop("eval_model_name"),
                 api_key=kwargs.pop("api_key"),
                 base_url=kwargs.pop("base_url"),
-                use_cache=True,
+                use_cache=kwargs.pop("use_cache", True),
                 **kwargs,
             )
         self.detailed_keys = detailed_keys
@@ -99,6 +100,8 @@ class BaseEvaluator:
         average_prompt_tokens = 0.0
         average_completion_tokens = 0.0
         for pred in predictions:
+            if not pred.get("usage"):
+                continue
             average_tokens += pred["usage"]["total_tokens"]
             average_prompt_tokens += pred["usage"]["prompt_tokens"]
             average_completion_tokens += pred["usage"]["completion_tokens"]

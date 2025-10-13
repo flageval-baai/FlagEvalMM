@@ -211,10 +211,12 @@ class BaseModelAdapter:
         # Convert ProcessResult to dictionary format
         serializable_result = []
         for item in result:
-            assert isinstance(
-                item, ProcessResult
-            ), f"item is not a ProcessResult: {item}"
-            serializable_result.append(item.to_dict())
+            if isinstance(item, dict):
+                serializable_result.append(item)
+            elif isinstance(item, ProcessResult):
+                serializable_result.append(item.to_dict())
+            else:
+                raise NotImplementedError
 
         try:
             serializable_result = sorted(
