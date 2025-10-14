@@ -23,7 +23,7 @@ def parse_think_answer_string(text_string):
 
     answer_match = re.search(r"<answer>(.*?)</answer>", text_string, re.DOTALL)
     if answer_match:
-        answer_content = answer_match.group(1).strip() # .strip()
+        answer_content = answer_match.group(1).strip()  # .strip()
 
     return think_content, answer_content
 
@@ -150,9 +150,7 @@ class ModelAdapter(BaseModelAdapter):
             else:
                 answer = content
             self.accelerator.print(f"{qs}\n{response}\n\n")
-            results.append(
-                {"question_id": question_id, "answer": answer, "prompt": qs}
-            )
+            results.append({"question_id": question_id, "answer": answer, "prompt": qs})
         rank = self.accelerator.state.local_process_index
 
         self.save_result(results, meta_info, rank)

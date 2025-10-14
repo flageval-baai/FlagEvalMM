@@ -19,6 +19,7 @@ from flagevalmm.server.utils import parse_args
 
 logger = get_logger(__name__)
 
+
 def parse_think_answer_string(text_string):
     think_content = None
     answer_content = None
@@ -29,9 +30,10 @@ def parse_think_answer_string(text_string):
 
     answer_match = re.search(r"<answer>(.*?)</answer>", text_string, re.DOTALL)
     if answer_match:
-        answer_content = answer_match.group(1).strip() # .strip()
+        answer_content = answer_match.group(1).strip()  # .strip()
 
     return think_content, answer_content
+
 
 class ModelAdapter(BaseModelAdapter):
     def __init__(
