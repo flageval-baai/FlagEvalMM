@@ -69,7 +69,8 @@ class ModelAdapter(BaseModelAdapter):
             _s, _e = i, min(i + itd, N)
 
             videos = [self.get_video(video_id, task_name) for video_id in range(_s, _e)]
-            videos = torch.stack(videos, 0).squeeze()
+            # Keep the batch dimension even when batch size is 1
+            videos = torch.stack(videos, 0)
 
             captions = [
                 self.get_caption(caption_id, task_name) for caption_id in range(_s, _e)
