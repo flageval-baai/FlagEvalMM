@@ -449,8 +449,3 @@ def process(cfg):
         if osp.exists(zip_path):
             with zipfile.ZipFile(zip_path, "r") as zip_ref:
                 zip_ref.extractall(output_dir)
-    print(
-        "\033[91m"
-        + f"Please unzip arkitscenes.zip, scannetpp.zip, and scannet.zip in {output_dir} manually."
-        + "\033[0m"
-    )
