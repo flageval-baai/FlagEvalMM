@@ -1,6 +1,5 @@
 from PIL import Image
 import numpy as np
-import decord
 import av
 import torch
 from typing import Union
@@ -47,16 +46,12 @@ def load_image_or_video(
         frame_list = [frame]
         frames = np.array(frame_list)
     elif image_or_video_path.endswith(".mp4"):
-        video_reader = decord.VideoReader(image_or_video_path, num_threads=1)
-        total_frame_num = len(video_reader)
-        if total_frame_num <= max_num_frames:
-            sampled_frame_indices = np.arange(total_frame_num)
-        else:
-            sampled_frame_indices = np.linspace(
-                start=0, stop=total_frame_num - 1, num=max_num_frames, dtype=int
-            )
-        frames = video_reader.get_batch(sampled_frame_indices)
-        frames = frames.asnumpy().astype(np.uint8)
+        # Use PyAV-based reader to avoid decord dependency
+        frames = read_video_pyav(
+            video_path=image_or_video_path,
+            max_num_frames=max_num_frames,
+            return_tensors=False,
+        )
     else:
         frames = None
 
