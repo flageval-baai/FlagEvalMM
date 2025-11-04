@@ -1,6 +1,5 @@
 import re
 
-
 def strip_answer(answer):
     answer = re.sub("The", "", answer)
     answer = re.sub("If", "", answer)
@@ -111,6 +110,11 @@ def convert_circled_numbers(text):
 
 
 def normalize_string(raw_answer):
+    answer_tag_pattern = r"<answer>(.*?)</answer>"
+    match = re.search(answer_tag_pattern, raw_answer, flags=re.DOTALL)
+    if match:
+        raw_answer = match.group(1)
+
     if "$" not in raw_answer:
         wrong_answer_words = ["\\times", "不对", "不正确", "×"]
         for word in wrong_answer_words:
