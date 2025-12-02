@@ -2,8 +2,6 @@ from typing import Dict, List, Tuple, Union
 from collections import defaultdict
 from flagevalmm.evaluator import BaseEvaluator
 from flagevalmm.registry import EVALUATORS
-from flagevalmm.evaluator.pre_process import process_multiple_choice
-from flagevalmm.models import HttpClient
 import re
 
 demo_prompt_score = """# Task Overview
@@ -86,28 +84,29 @@ Your response must consist of two parts in the following order:
 def is_chinese(text):
     """Check if the text contains Chinese characters"""
     for char in text:
-        if '\u4e00' <= char <= '\u9fff':
+        if "\u4e00" <= char <= "\u9fff":
             return True
     return False
+
 
 def normalize_string(text: str):
     # replace spacial characters
     replace_dict = {
-        '′': "'",
-        ' ': ' ',
-        '‐': '-',
-        '−': '-',
-        '–': '-',
-        '⋅': '·',
-        '\\sim': '~',
-        '\\circ': '°',
-        '\\theta': 'θ',
+        "′": "'",
+        " ": " ",
+        "‐": "-",
+        "−": "-",
+        "–": "-",
+        "⋅": "·",
+        "\\sim": "~",
+        "\\circ": "°",
+        "\\theta": "θ",
         # LaTeX function macros to plain text
-        '\\sin': 'sin',
-        '\\cos': 'cos',
-        '\\tan': 'tan',
-        '\\log': 'log',
-        '\\ln': 'ln'
+        "\\sin": "sin",
+        "\\cos": "cos",
+        "\\tan": "tan",
+        "\\log": "log",
+        "\\ln": "ln",
     }
     for k, v in replace_dict.items():
         text = text.replace(k, v)
@@ -117,36 +116,56 @@ def normalize_string(text: str):
 def extract_answer(pred: Dict) -> str:
     # Extract content within the LAST LaTeX \\boxed{...}: slice from last opening to the last '}'
     text = pred["answer"]
-    matches = list(re.finditer(r'\\boxed\{', text))
+    matches = list(re.finditer(r"\\boxed\{", text))
     if matches:
         start_idx = matches[-1].end()
         # If a closing brace is immediately followed by a newline, stop there
-        close_newline_idx = text.find('}\n', start_idx)
+        close_newline_idx = text.find("}\n", start_idx)
         if close_newline_idx != -1:
             end_idx = close_newline_idx
         else:
             # Decide closing brace: simple -> first '}', complex (scientific/LaTeX/nested) -> last '}'
-            first_close = text.find('}', start_idx)
-            lookahead_end = len(text) if first_close == -1 else min(len(text), first_close + 200)
+            first_close = text.find("}", start_idx)
+            lookahead_end = (
+                len(text) if first_close == -1 else min(len(text), first_close + 200)
+            )
             ahead = text[start_idx:lookahead_end]
-            has_sci_e = re.search(r'[+-]?\d+(?:\.\d+)?[eE][+-]?\d+', ahead) is not None
-            has_times10 = re.search(r'(?:\\times|x|×)\s*10\s*\^', ahead) is not None
-            has_text_macro = '\\text' in ahead
-            has_open_before_first_close = (first_close != -1 and text.find('{', start_idx, first_close) != -1)
-            end_idx = text.rfind('}') if (has_sci_e or has_times10 or has_text_macro or has_open_before_first_close) else first_close
+            has_sci_e = re.search(r"[+-]?\d+(?:\.\d+)?[eE][+-]?\d+", ahead) is not None
+            has_times10 = re.search(r"(?:\\times|x|×)\s*10\s*\^", ahead) is not None
+            has_text_macro = "\\text" in ahead
+            has_open_before_first_close = (
+                first_close != -1 and text.find("{", start_idx, first_close) != -1
+            )
+            end_idx = (
+                text.rfind("}")
+                if (
+                    has_sci_e
+                    or has_times10
+                    or has_text_macro
+                    or has_open_before_first_close
+                )
+                else first_close
+            )
         if end_idx != -1 and end_idx > start_idx:
             content = text[start_idx:end_idx]
             # Remove \\text{...} while preserving inner content
-            content = re.sub(r'\\text\s*\{([^}]*)\}', r'\1', content)
+            content = re.sub(r"\\text\s*\{([^}]*)\}", r"\1", content)
             # Collapse multiple whitespaces
-            content = re.sub(r'\s+', ' ', content).strip()
+            content = re.sub(r"\s+", " ", content).strip()
             # If content is a pure LaTeX fraction like \\frac{a}{b}, convert it to decimal
-            frac_match = re.fullmatch(r"([+-]?)\\frac\s*\{\s*([+-]?\d+(?:\.\d+)?)\s*\}\s*\{\s*([+-]?\d+(?:\.\d+)?)\s*\}", content)
+            frac_match = re.fullmatch(
+                r"([+-]?)\\frac\s*\{\s*([+-]?\d+(?:\.\d+)?)\s*\}\s*\{\s*([+-]?\d+(?:\.\d+)?)\s*\}",
+                content,
+            )
             if frac_match:
-                sign_str, num_str, den_str = frac_match.group(1), frac_match.group(2), frac_match.group(3)
+                sign_str, num_str, den_str = (
+                    frac_match.group(1),
+                    frac_match.group(2),
+                    frac_match.group(3),
+                )
                 try:
                     value = float(num_str) / float(den_str)
-                    if sign_str == '-':
+                    if sign_str == "-":
                         value = -value
                     content = str(value)
                 except Exception:
@@ -167,14 +186,19 @@ def _extract_numbers(text: str) -> List[float]:
     - 1.23e-4, 5E+8
     - 1.23 \\times 10^{-4}, 7 x 10^{3}, 9 × 10^-2
     """
+
     # Pre-normalize thousands separators (e.g., "8, 000" -> "8000", "14 000" -> "14000")
     def _merge_thousands_separators(s: str) -> str:
         sep_class = r"[,\s\u00A0\u2009\u202F]"
-        pattern = re.compile(rf"(?<!\d)([+-]?\d{{1,3}}(?:{sep_class}\d{{3}})+(?:\.\d+)?)(?!\d)")
+        pattern = re.compile(
+            rf"(?<!\d)([+-]?\d{{1,3}}(?:{sep_class}\d{{3}})+(?:\.\d+)?)(?!\d)"
+        )
+
         def repl(m: re.Match) -> str:
             token = m.group(1)
             token = re.sub(sep_class, "", token)
             return token
+
         return pattern.sub(repl, s)
 
     text = _merge_thousands_separators(text)
@@ -205,7 +229,7 @@ def _extract_numbers(text: str) -> List[float]:
             try:
                 coef_val = float(coef_str)
                 exp_val = int(exp_str)
-                numbers.append(coef_val * (10 ** exp_val))
+                numbers.append(coef_val * (10**exp_val))
             except (TypeError, ValueError):
                 continue
             continue
@@ -276,7 +300,7 @@ def tf_list_matching(pred: Dict, values_to_match: List[Union[str, bool]]) -> int
 
     # Inline parse_bool_tokens: extract only 'true'/'false' tokens in order
     lowered = pred["answer"].lower()
-    tokens = re.findall(r'\b(true|false)\b', lowered)
+    tokens = re.findall(r"\b(true|false)\b", lowered)
     pred_bools: List[bool] = []
     for tok in tokens:
         if tok == "true":
@@ -292,6 +316,7 @@ def text_match(pred: Dict, candidates: List[str]) -> int:
     """Case-insensitive OR match over a list of candidate answers."""
     pred_text = pred["answer"].lower()
     return int(any(str(candidate).lower() in pred_text for candidate in candidates))
+
 
 @EVALUATORS.register_module()
 class OpenEvaluator(BaseEvaluator):
@@ -324,7 +349,7 @@ class OpenEvaluator(BaseEvaluator):
             return tf_list_matching(pred, gt["answer"])  # list of booleans/strings
         if answer_type == "text match":
             if not isinstance(gt["answer"], list):
-                return text_match(pred, [gt["answer"]]) 
+                return text_match(pred, [gt["answer"]])
             else:
                 return text_match(pred, gt["answer"])  # string or list of alternatives
         if answer_type == "open_ended":
@@ -333,11 +358,17 @@ class OpenEvaluator(BaseEvaluator):
             return score
 
         # No legacy evaluator fallback; raise if unrecognized
-        raise ValueError(f"Unsupported or missing answer_type with provided gt: keys={list(gt.keys())}")
+        raise ValueError(
+            f"Unsupported or missing answer_type with provided gt: keys={list(gt.keys())}"
+        )
 
     def get_score_by_llm(self, gt: Dict, pred: Dict) -> Tuple[str, int]:
         """Custom grading method"""
-        prompt = demo_prompt_score.replace("{{question}}", gt["question"]).replace("{{answer}}", gt["answer"]).replace("{{extracted_answer}}", pred["answer"])
+        prompt = (
+            demo_prompt_score.replace("{{question}}", gt["question"])
+            .replace("{{answer}}", gt["answer"])
+            .replace("{{extracted_answer}}", pred["answer"])
+        )
 
         message = self.llm_evaluator.build_message(query=prompt)
         print(f"message: {message}")
@@ -347,14 +378,15 @@ class OpenEvaluator(BaseEvaluator):
         compare_result = compare_result_response.replace("Judgement:", "").strip()
         # Extract the score from the custom evaluation result
         # The score should be after the last double newline (\n\n)
-        if '\n\n' in compare_result:
+        if "\n\n" in compare_result:
             # Split by double newlines and get the last part
-            parts = compare_result.split('\n\n')
+            parts = compare_result.split("\n\n")
             score_part = parts[-1].strip()
-            
+
             # Extract numeric value from the score part
             import re
-            score_match = re.search(r'(\d+(?:\.\d+)?)', score_part)
+
+            score_match = re.search(r"(\d+(?:\.\d+)?)", score_part)
             if score_match:
                 compare_result = score_match.group(1)
             else:
@@ -373,6 +405,7 @@ class OpenEvaluator(BaseEvaluator):
                 self.subtypes = defaultdict(
                     lambda: [0, 0, 0]
                 )  # [score_sum, count, accuracy]
+
             def update(self, score, sub_type):
                 self.total_score += score
                 self.count += 1
