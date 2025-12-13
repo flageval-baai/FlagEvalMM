@@ -29,6 +29,7 @@ dependencies = [
     "openai",
     "av",
     "accelerate",
+    "omegaconf",
     "word2number"]  
 requires-python = ">=3.10"
 

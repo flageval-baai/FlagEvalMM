@@ -1,0 +1,25 @@
+tasks:
+  files:
+    - tasks/blink/blink_val.py
+  data_root: /data/BLINK/val/
+  debug: false
+  try_run: true
+  num_workers: 8
+  output_dir: outputs/demo_run_2
+  skip: false
+
+server:
+  local_mode: true
+  quiet: false
+
+model:
+  model_type: http
+  model_name: Qwen2.5-VL-7B-Instruct
+  url: http://localhost:8000/v1/chat/completions
+  api_key: EMPTY
+
+infer:
+  use_cache: true
+  temperature: 0.2
+  max_tokens: 4096
+  num_infers: 1

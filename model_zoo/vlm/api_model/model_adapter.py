@@ -15,7 +15,7 @@ from flagevalmm.models.api_response import ApiResponse, ProcessResult
 from flagevalmm.server.model_server import ModelServer
 from flagevalmm.server.utils import get_random_port
 from flagevalmm.common.logger import get_logger
-from flagevalmm.server.utils import parse_args
+from flagevalmm.server.utils import parse_args, RunCfg
 
 logger = get_logger(__name__)
 
@@ -52,16 +52,14 @@ class ModelAdapter(BaseModelAdapter):
         self.cleanup()
         os._exit(0)
 
-    def model_init(self, task_info: Dict):
-        if task_info.get("backend", None):
-            self.model_server = self.launch_model(task_info)
-
-        model_config_keys = [
+    def build_task_info(
+        self, task_info: Dict, model_cfg: Dict, infer_cfg: Dict, tasks_cfg: Dict
+    ) -> Dict:
+        openai_infer_configs = [
             "model_name",
             "url",
             "base_url",
             "api_key",
-            "use_cache",
             "max_image_size",
             "min_short_side",
             "max_long_side",
@@ -69,6 +67,7 @@ class ModelAdapter(BaseModelAdapter):
             "temperature",
             "chat_name",
             "max_num_frames",
+            "use_cache",
             "stream",
             "system_prompt",
             "num_infers",
@@ -76,9 +75,25 @@ class ModelAdapter(BaseModelAdapter):
             "thinking",
             "provider",
             "retry_time",
+            "num_workers",
+            "backend"
         ]
+        for config in openai_infer_configs:
+
+            if config in infer_cfg and infer_cfg[config] is not None:
+                task_info[config] = infer_cfg[config]
+            elif config in model_cfg and model_cfg[config] is not None:
+                task_info[config] = model_cfg[config]
+            elif config in tasks_cfg and tasks_cfg[config] is not None:
+                task_info[config] = tasks_cfg[config]
+
+        return task_info
+
+    def model_init(self, task_info: Dict):
+        if task_info.get("backend", None):
+            self.model_server = self.launch_model(task_info)
+
         print(f"task_info: {task_info}")
-        model_config = {k: task_info[k] for k in model_config_keys if k in task_info}
 
         model_type_map = {
             "http": HttpClient,
@@ -88,7 +103,7 @@ class ModelAdapter(BaseModelAdapter):
             "hunyuan": Hunyuan,
         }
         model_type = self.model_type or task_info.get("model_type", "http")
-        self.model = model_type_map[model_type](**model_config)
+        self.model = model_type_map[model_type](**task_info)
 
     def launch_model(self, task_info: Dict):
         if task_info.get("server_port"):
@@ -261,17 +276,14 @@ class ModelAdapter(BaseModelAdapter):
 
 if __name__ == "__main__":
     args = parse_args()
+    defaults_obj = RunCfg()
     model_adapter = ModelAdapter(
-        server_ip=args.server_ip,
-        server_port=args.server_port,
-        timeout=args.timeout,
-        model_type=args.model_type,
+        server_ip=defaults_obj.server.ip,
+        server_port=defaults_obj.server.port,
+        timeout=defaults_obj.server.timeout,
+        model_type=None,
         extra_cfg=args.cfg,
-        local_mode=args.local_mode,
-        task_names=args.tasks,
-        output_dir=args.output_dir,
-        model_path=args.model,
-        debug=args.debug,
-        quiet=args.quiet,
+        local_mode=defaults_obj.server.local_mode,
+        task_names=None,
     )
     model_adapter.run()

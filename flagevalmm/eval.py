@@ -2,53 +2,78 @@ import subprocess
 import requests
 import time
 import atexit
-import json
 import os.path as osp
+import argparse
 from mmengine.config import Config
 from flagevalmm.common.logger import get_logger
-from flagevalmm.server.utils import get_random_port
+from flagevalmm.server.utils import get_random_port, RunCfg, load_run_cfg_with_defaults
 from flagevalmm.registry import EVALUATORS, DATASETS
 from flagevalmm.server.utils import maybe_register_class, merge_args, parse_args
 import os
 import signal
+from omegaconf import OmegaConf
+from typing import Any
 
 logger = get_logger(__name__)
 
 
-def update_cfg_from_args(args):
-    cfg = json.load(open(args.cfg)) if args.cfg else {}
-    keys = [
-        "num_workers",
-        "backend",
-        "url",
-        "api_key",
-        "use_cache",
-        "extra_args",
-        "num_infers",
-        "temperature",
-    ]
-    for key in keys:
-        if getattr(args, key):
-            cfg[key] = getattr(args, key)
-    if args.model:
-        cfg["model_path"] = args.model
-        cfg["model_name"] = args.model
-    if args.model_type:
-        cfg["model_type"] = args.model_type
-    if args.output_dir:
-        cfg["output_dir"] = args.output_dir
-    else:
-        if args.cfg and "model_name" in cfg:
-            model_name = cfg["model_name"].split("/")[-1]
-            cfg["output_dir"] = cfg.get(
-                "output_dir", f"{model_name}_{time.strftime('%Y%m%d_%H%M%S')}"
-            )
-        else:
-            model_name = (
-                args.model.split("/")[-1] if args.model else args.exec.split("/")[-1]
-            )
-            cfg["model_path"] = args.model
-            cfg["output_dir"] = f"{model_name}_{time.strftime('%Y%m%d_%H%M%S')}"
+def _resolve_output_dir(cfg_from_file: dict) -> str:
+    if isinstance(cfg_from_file, dict):
+        tasks_cfg = (
+            cfg_from_file.get("tasks", {})
+            if isinstance(cfg_from_file.get("tasks", {}), dict)
+            else {}
+        )
+        if tasks_cfg.get("output_dir"):
+            return str(tasks_cfg["output_dir"])
+
+    # fallback timestamped dir
+    model_name = None
+    if isinstance(cfg_from_file, dict):
+        model_cfg = (
+            cfg_from_file.get("model", {})
+            if isinstance(cfg_from_file.get("model", {}), dict)
+            else {}
+        )
+        model_name = (
+            model_cfg.get("model_name")
+            or model_cfg.get("model_path")
+            or cfg_from_file.get("model_name")
+        )
+        if model_name is None:
+            model_name = model_cfg.get("exec")
+    if not model_name:
+        model_name = "run"
+    model_name = str(model_name).split("/")[-1]
+    return f"{model_name}_{time.strftime('%Y%m%d_%H%M%S')}"
+
+
+def build_run_cfg(
+    cfg_path: str, chosen_server_port: int, exec_override: str | None = None
+) -> Any:
+    """
+    Build a structured run config (YAML-friendly) using dataclass defaults + user config file.
+
+    Note: This is runtime config only; task dataset configs in tasks/ are not modified.
+    """
+    cfg = load_run_cfg_with_defaults(cfg_path)
+
+    # Force runtime-chosen port into config to match launched eval server.
+    cfg.setdefault("server", {})
+    if isinstance(cfg["server"], dict):
+        cfg["server"]["port"] = chosen_server_port
+
+    # Optional exec override without touching YAML
+    if exec_override:
+        cfg.setdefault("model", {})
+        if isinstance(cfg["model"], dict):
+            cfg["model"]["exec"] = exec_override
+
+    # fill output_dir if still missing
+    cfg.setdefault("tasks", {})
+    if isinstance(cfg["tasks"], dict) and not cfg["tasks"].get("output_dir"):
+        cfg["tasks"]["output_dir"] = _resolve_output_dir(cfg)
+
     return cfg
 
 
@@ -67,36 +92,98 @@ class ServerWrapper:
     def __init__(self, args):
         self.args = args
         self.exec = args.exec
-        self.cfg = update_cfg_from_args(args)
         self.port = None
-        self.evaluation_server_ip = args.server_ip
-        self.local_mode = args.local_mode
+        self.evaluation_server_ip = None
+        self.local_mode = None
         self.evaluation_server = None
         self.evaluation_server_pid = None
         self.infer_process = None
         # Register cleanup at exit
         atexit.register(self.cleanup)
+        self.run_cfg_path = None
+        self.run_cfg = None
+        self.output_dir = None
 
     def start(self):
         """Main method to start the server and run the model"""
-        # Validate inputs
+        # Decide evaluation server port first (remote uses random port; local/disabled uses cfg).
+        cfg_preview = load_run_cfg_with_defaults(self.args.cfg)
+        server_preview = (
+            cfg_preview.get("server", {})
+            if isinstance(cfg_preview.get("server", {}), dict)
+            else {}
+        )
+        defaults_obj = RunCfg()
+
+        disable_eval = bool(
+            server_preview.get(
+                "disable_evaluation_server",
+                defaults_obj.server.disable_evaluation_server,
+            )
+        )
+        local_mode = bool(
+            server_preview.get("local_mode", defaults_obj.server.local_mode)
+        )
+
+        # Base port/ip for local/disabled mode.
+        base_port = server_preview.get("port", defaults_obj.server.port)
+
+        if disable_eval or local_mode:
+            self.port = int(base_port)
+        else:
+            self.port = get_random_port()
+            logger.info(f"Using port {self.port}")
+
+        # Build config after knowing port
+        self.run_cfg = build_run_cfg(
+            cfg_path=self.args.cfg,
+            chosen_server_port=self.port,
+            exec_override=self.exec,
+        )
+        server_cfg = self.run_cfg.get("server", {})
+        if isinstance(server_cfg, dict):
+            self.evaluation_server_ip = server_cfg.get("ip", defaults_obj.server.ip)
+            self.local_mode = server_cfg.get(
+                "local_mode", defaults_obj.server.local_mode
+            )
+        else:
+            self.evaluation_server_ip = defaults_obj.server.ip
+            self.local_mode = defaults_obj.server.local_mode
+
+        # Adapter entrypoint: prefer config, then CLI override, then default.
+        model_cfg = (
+            self.run_cfg.get("model", {})
+            if isinstance(self.run_cfg.get("model", {}), dict)
+            else {}
+        )
+        if model_cfg.get("exec"):
+            self.exec = model_cfg.get("exec")
         if self.exec is None:
             logger.warning(
                 "`--exec` is not provided, using default value: model_zoo/vlm/api_model/model_adapter.py"
             )
             self.exec = "model_zoo/vlm/api_model/model_adapter.py"
 
-        # Handle finished tasks
-        if self.args.skip:
-            self.args.tasks = self.filter_finished_tasks(
-                self.args.tasks, self.cfg["output_dir"]
-            )
-        if len(self.args.tasks) == 0:
+        self.output_dir = self.run_cfg["tasks"]["output_dir"]
+
+        if not self.run_cfg.get("tasks", {}).get("files", []):
             logger.info("No tasks to run, exit")
             return
 
-        # Launch services
-        self.maybe_launch_evaluation_server(self.args, self.cfg["output_dir"])
+        tasks = self.run_cfg.get("tasks", {}).get("files", [])
+        if self.run_cfg.get("tasks", {}).get("skip", True):
+            tasks = self.filter_finished_tasks(tasks, self.output_dir)
+            if len(tasks) == 0:
+                logger.info("No tasks to run after filtering finished tasks, exit")
+                return
+
+        # Persist run cfg as YAML (so adapters can read it via --cfg PATH)
+        os.makedirs(self.output_dir, exist_ok=True)
+        self.run_cfg_path = osp.join(self.output_dir, "run_config.yaml")
+        OmegaConf.save(config=OmegaConf.create(self.run_cfg), f=self.run_cfg_path)
+
+        # Launch server (needs output_dir), then run adapter
+        self.maybe_launch_evaluation_server(server_cfg, self.output_dir)
         self.run_model_adapter()
 
     def run_model_adapter(self):
@@ -126,10 +213,6 @@ class ServerWrapper:
             command += [
                 "python",
                 self.exec,
-                "--server_ip",
-                self.evaluation_server_ip,
-                "--server_port",
-                str(self.port),
             ]
 
         else:
@@ -137,52 +220,27 @@ class ServerWrapper:
             command += [
                 "bash",
                 f"{self.exec}/run.sh",
-                self.evaluation_server_ip,
-                str(self.port),
             ]
-        if self.local_mode:
-            command.extend(
-                [
-                    "--tasks",
-                    *self.args.tasks,
-                    "--output-dir",
-                    self.cfg["output_dir"],
-                ]
-            )
-            if self.args.debug or self.args.try_run:
-                command.append("--debug")
-            if self.args.data_root:
-                command.append("--data-root")
-                command.append(self.args.data_root)
-        command.extend(["--cfg", f"{json.dumps(self.cfg)}"])
+
+        command.extend(["--cfg", self.run_cfg_path])
         return command
 
-    def maybe_launch_evaluation_server(self, args, output_dir):
-        if args.disable_evaluation_server or self.local_mode:
+    def maybe_launch_evaluation_server(self, server_cfg, output_dir):
+        if server_cfg.get("local_mode", True) or server_cfg.get(
+            "disable_evaluation_server", True
+        ):
             self.evaluation_server = None
-            self.port = args.server_port if args.server_port else 5000
             return
-        # choose a random port and make sure it's not occupied
-        self.port = get_random_port()
-        logger.info(f"Using port {self.port}")
+        assert output_dir, "output_dir is required when launching evaluation server"
+        # Prefer nested runtime config (run_config.yaml) instead of passing flat flags.
+        # run_server.py reads tasks/model/server from --cfg.
         command = [
             "python",
             "flagevalmm/server/run_server.py",
-            "--tasks",
-            *args.tasks,
-            "--output-dir",
-            output_dir,
-            "--port",
-            str(self.port),
+            "--cfg",
+            self.run_cfg_path,
         ]
-
-        if args.debug:
-            command.append("--debug")
-        if args.try_run:
-            command.append("--try-run")
-        if args.model:
-            command.extend(["--checkpoint", args.model])
-        if args.quiet:
+        if server_cfg.get("quiet", False):
             command.append("--quiet")
 
         self.evaluation_server = subprocess.Popen(command, start_new_session=True)
@@ -252,22 +310,51 @@ class ServerWrapper:
 
 
 def evaluate_only(args):
-    cfg = update_cfg_from_args(args)
+    # Keep evaluate_only behavior: output_dir resolution uses same logic as run_cfg
+    cfg_preview = load_run_cfg_with_defaults(args.cfg)
+    server_cfg = (
+        cfg_preview.get("server", {})
+        if isinstance(cfg_preview.get("server", {}), dict)
+        else {}
+    )
+    defaults_obj = RunCfg()
+    chosen_port = server_cfg.get("port", defaults_obj.server.port)
+    run_cfg = build_run_cfg(
+        args.cfg, chosen_server_port=int(chosen_port), exec_override=args.exec
+    )
+    output_root = run_cfg["tasks"]["output_dir"]
 
-    for task_file in args.tasks:
+    tasks = run_cfg.get("tasks", {}).get("files", [])
+    if not tasks:
+        logger.info("No tasks to run, exit")
+        return
+
+    # Derive runtime flags for task config patching from merged run_cfg.
+    tasks_cfg = (
+        run_cfg.get("tasks", {}) if isinstance(run_cfg.get("tasks", {}), dict) else {}
+    )
+    try_run = bool(tasks_cfg.get("try_run", False))
+    debug = bool(tasks_cfg.get("debug", False) or try_run)
+    data_root = tasks_cfg.get("data_root", None)
+    runtime_args = argparse.Namespace(debug=debug, try_run=try_run, data_root=data_root)
+
+    for task_file in tasks:
         task_cfg = Config.fromfile(task_file)
-        task_cfg = merge_args(task_cfg, task_file, args)
+        task_cfg = merge_args(task_cfg, task_file, runtime_args)
         maybe_register_class(task_cfg, task_file)
 
-        if args.try_run:
-            task_cfg.dataset.debug = True
         if "evaluator" in task_cfg:
             dataset = DATASETS.build(task_cfg.dataset)
             evaluator = EVALUATORS.build(task_cfg.evaluator)
 
             task_name = task_cfg.dataset.name
-            output_dir = osp.join(cfg["output_dir"], task_name)
-            evaluator.process(dataset, output_dir, model_name=cfg.get("model_name", ""))
+            output_dir = osp.join(output_root, task_name)
+            model_name = (
+                run_cfg.get("model", {}).get("model_name", "")
+                if isinstance(run_cfg.get("model", {}), dict)
+                else ""
+            )
+            evaluator.process(dataset, output_dir, model_name=model_name)
         else:
             logger.error(f"No evaluator found in config {task_file}")
 
