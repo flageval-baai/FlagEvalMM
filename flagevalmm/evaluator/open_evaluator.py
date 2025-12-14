@@ -1,4 +1,6 @@
-from typing import Dict, List, Tuple, Union
+from __future__ import annotations
+
+from typing import Any, DefaultDict, Dict, List, Mapping, Tuple, Union
 from collections import defaultdict
 from flagevalmm.evaluator import BaseEvaluator
 from flagevalmm.registry import EVALUATORS
@@ -81,7 +83,7 @@ Your response must consist of two parts in the following order:
 """
 
 
-def is_chinese(text):
+def is_chinese(text: str) -> bool:
     """Check if the text contains Chinese characters"""
     for char in text:
         if "\u4e00" <= char <= "\u9fff":
@@ -89,7 +91,7 @@ def is_chinese(text):
     return False
 
 
-def normalize_string(text: str):
+def normalize_string(text: str) -> str:
     # replace spacial characters
     replace_dict = {
         "′": "'",
@@ -113,9 +115,9 @@ def normalize_string(text: str):
     return text
 
 
-def extract_answer(pred: Dict) -> str:
+def extract_answer(pred: Mapping[str, Any]) -> str:
     # Extract content within the LAST LaTeX \\boxed{...}: slice from last opening to the last '}'
-    text = pred["answer"]
+    text = str(pred.get("answer", ""))
     matches = list(re.finditer(r"\\boxed\{", text))
     if matches:
         start_idx = matches[-1].end()
@@ -173,9 +175,9 @@ def extract_answer(pred: Dict) -> str:
             return content
     indicators = ["Answer:", "Answer", "答案：", "答案:", "答案"]
     for indicator in indicators:
-        if indicator in pred["answer"]:
-            return pred["answer"].split(indicator)[-1].strip()
-    return pred["answer"]
+        if indicator in text:
+            return text.split(indicator)[-1].strip()
+    return text
 
 
 def _extract_numbers(text: str) -> List[float]:
@@ -194,7 +196,7 @@ def _extract_numbers(text: str) -> List[float]:
             rf"(?<!\d)([+-]?\d{{1,3}}(?:{sep_class}\d{{3}})+(?:\.\d+)?)(?!\d)"
         )
 
-        def repl(m: re.Match) -> str:
+        def repl(m: re.Match[str]) -> str:
             token = m.group(1)
             token = re.sub(sep_class, "", token)
             return token
@@ -242,9 +244,9 @@ def _extract_numbers(text: str) -> List[float]:
     return numbers
 
 
-def number_matching(pred: Dict, value_to_match: Union[int, float]) -> int:
+def number_matching(pred: Mapping[str, Any], value_to_match: Union[int, float]) -> int:
     # extract last numeric value, supporting scientific notation
-    extracted_numbers = _extract_numbers(pred["answer"])
+    extracted_numbers = _extract_numbers(str(pred.get("answer", "")))
     result = extracted_numbers[-1] if extracted_numbers else None
     if result is None:
         return 0
@@ -256,13 +258,15 @@ def number_matching(pred: Dict, value_to_match: Union[int, float]) -> int:
     return int(abs(pred_ans - value_to_match) < relative_error)
 
 
-def numbers_matching(pred: Dict, values_to_match: List[Union[int, float]]) -> int:
+def numbers_matching(
+    pred: Mapping[str, Any], values_to_match: List[Union[int, float]]
+) -> int:
     """Ordered numeric list matching with per-number tolerance.
 
     Returns 1 if prediction contains exactly the same count of numbers
     and each number matches the reference at the same position within tolerance.
     """
-    extracted_numbers = _extract_numbers(pred["answer"])
+    extracted_numbers = _extract_numbers(str(pred.get("answer", "")))
     if not extracted_numbers:
         return 0
     pred_numbers = [float(x) for x in extracted_numbers]
@@ -283,7 +287,9 @@ def numbers_matching(pred: Dict, values_to_match: List[Union[int, float]]) -> in
     return 1
 
 
-def tf_list_matching(pred: Dict, values_to_match: List[Union[str, bool]]) -> int:
+def tf_list_matching(
+    pred: Mapping[str, Any], values_to_match: List[Union[str, bool]]
+) -> int:
     """Match a list of booleans extracted from text against reference booleans."""
     ref_bools: List[bool] = []
     for v in values_to_match:
@@ -299,7 +305,7 @@ def tf_list_matching(pred: Dict, values_to_match: List[Union[str, bool]]) -> int
                 return 0
 
     # Inline parse_bool_tokens: extract only 'true'/'false' tokens in order
-    lowered = pred["answer"].lower()
+    lowered = str(pred.get("answer", "")).lower()
     tokens = re.findall(r"\b(true|false)\b", lowered)
     pred_bools: List[bool] = []
     for tok in tokens:
@@ -312,9 +318,9 @@ def tf_list_matching(pred: Dict, values_to_match: List[Union[str, bool]]) -> int
     return int(all(a == b for a, b in zip(pred_bools, ref_bools)))
 
 
-def text_match(pred: Dict, candidates: List[str]) -> int:
+def text_match(pred: Mapping[str, Any], candidates: List[str]) -> int:
     """Case-insensitive OR match over a list of candidate answers."""
-    pred_text = pred["answer"].lower()
+    pred_text = str(pred.get("answer", "")).lower()
     return int(any(str(candidate).lower() in pred_text for candidate in candidates))
 
 
@@ -330,8 +336,8 @@ class OpenEvaluator(BaseEvaluator):
         self.tracker_subtype = tracker_subtype
         super().__init__(**kwargs)
 
-    def get_score(self, gt: Dict, pred: Dict) -> Union[float, List[float]]:
-        pred["raw_answer"] = pred["answer"]
+    def get_score(self, gt: Dict[str, Any], pred: Dict[str, Any]) -> int:
+        pred["raw_answer"] = str(pred.get("answer", ""))
         pred["answer"] = normalize_string(extract_answer(pred))
 
         # Preferred path: dispatch by answer_type if present
@@ -362,7 +368,9 @@ class OpenEvaluator(BaseEvaluator):
             f"Unsupported or missing answer_type with provided gt: keys={list(gt.keys())}"
         )
 
-    def get_score_by_llm(self, gt: Dict, pred: Dict) -> Tuple[str, int]:
+    def get_score_by_llm(
+        self, gt: Dict[str, Any], pred: Dict[str, Any]
+    ) -> Tuple[str, int]:
         """Custom grading method"""
         prompt = (
             demo_prompt_score.replace("{{question}}", gt["question"])
@@ -395,25 +403,35 @@ class OpenEvaluator(BaseEvaluator):
         return compare_result_response, int(compare_result)
 
     def cal_accuracy(
-        self, annotations: Dict, predictions: List[Dict], *args, **kwargs
-    ) -> Dict:
+        self,
+        annotations: Dict[str, Dict[str, Any]],
+        predictions: List[Dict[str, Any]],
+        *args,
+        **kwargs,
+    ) -> Dict[str, Any]:
         class ScoreTracker:
             def __init__(self):
-                self.total_score = 0
-                self.count = 0
-                self.accuracy = 0
-                self.subtypes = defaultdict(
-                    lambda: [0, 0, 0]
+                self.total_score: int = 0
+                self.count: int = 0
+                self.accuracy: float = 0.0
+                # [score_sum, count, accuracy] - keep as floats for simplicity
+                self.subtypes: DefaultDict[str, List[float]] = defaultdict(
+                    lambda: [0.0, 0.0, 0.0]
                 )  # [score_sum, count, accuracy]
 
-            def update(self, score, sub_type):
+            def update(self, score: int, sub_type: Any) -> None:
+                sub_key = str(sub_type)
                 self.total_score += score
                 self.count += 1
-                self.subtypes[sub_type][0] += score
-                self.subtypes[sub_type][1] += 1
+                self.subtypes[sub_key][0] += float(score)
+                self.subtypes[sub_key][1] += 1.0
 
-        results = {}
-        scores_by_type = defaultdict(ScoreTracker)
+        results: Dict[str, Any] = {}
+        scores_by_type: DefaultDict[str, ScoreTracker] = defaultdict(ScoreTracker)
+
+        assert (
+            self.tracker_type is not None
+        ), "tracker_type must be set for cal_accuracy()"
         for pred in predictions:
             question_id = str(pred["question_id"])
             gt = annotations[question_id]
@@ -429,7 +447,7 @@ class OpenEvaluator(BaseEvaluator):
             pred["correct"] = score
             pred["judgement_response"] = judgement_response
             # Update scores
-            tracker = scores_by_type[pred[self.tracker_type]]
+            tracker = scores_by_type[str(pred[self.tracker_type])]
             if self.tracker_subtype is not None:
                 tracker.update(score, pred[self.tracker_subtype])
             else:
@@ -443,7 +461,7 @@ class OpenEvaluator(BaseEvaluator):
                 )
         final_score = sum(tracker.total_score for tracker in scores_by_type.values())
         results["final_score"] = [final_score, len(predictions)]
-        results["accuracy"] = round(final_score / len(predictions) * 100, 3)
+        results["accuracy"] = round((final_score / len(predictions)) * 100, 3)
 
         # Convert ScoreTracker objects to the expected format
         for qtype, tracker in scores_by_type.items():
