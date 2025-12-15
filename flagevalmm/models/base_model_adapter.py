@@ -11,7 +11,7 @@ from flagevalmm.server.utils import get_meta, get_task_info, submit, get_data
 from flagevalmm.common.logger import get_logger
 from flagevalmm.server.evaluation_server import EvaluationServer
 from mmengine.config import Config
-from flagevalmm.server.utils import maybe_register_class
+from flagevalmm.server.utils import maybe_register_class, load_run_cfg
 from flagevalmm.models.api_response import ProcessResult
 
 os.environ["no_proxy"] = "127.0.0.1,localhost"
@@ -57,6 +57,8 @@ class TaskManager:
         timeout: int = 1000,
         local_mode: bool = False,
         task_names: List[str] = None,
+        model_path: str = None,
+        task_config: Dict = None,
         **kwargs,
     ):
         self.server_ip = server_ip
@@ -66,19 +68,21 @@ class TaskManager:
         if local_mode:
             assert task_names is not None, "task_names must be provided in local mode"
         self.task_names = task_names
+        debug = task_config.get("debug", False) or task_config.get("try_run", False)
+
         if local_mode:
             config_dict = load_tasks(
                 task_names,
-                debug=kwargs.get("debug", False),
-                data_root=kwargs.get("data_root", None),
+                debug=debug,
+                data_root=task_config.get("data_root", None),
             )
 
             self.evaluation_server = EvaluationServer(
                 config_dict,
-                output_dir=kwargs.get("output_dir", None),
-                model_path=kwargs.get("model_path", None),
-                debug=kwargs.get("debug", False),
-                quiet=kwargs.get("quiet", False),
+                output_dir=task_config.get("output_dir", None),
+                model_path=model_path,
+                debug=debug,
+                quiet=task_config.get("quiet", False),
                 local_mode=True,
             )
 
@@ -128,34 +132,54 @@ class BaseModelAdapter:
         task_names: List[str] = None,
         **kwargs,
     ) -> None:
-        self.server_ip: str = server_ip
-        self.server_port: int = server_port
-        self.timeout: int = timeout
+
+        extra_cfg_nested = load_run_cfg(extra_cfg)
+
+        server_cfg = (
+            extra_cfg_nested.get("server", {})
+            if isinstance(extra_cfg_nested.get("server", {}), dict)
+            else {}
+        )
+        tasks_cfg = (
+            extra_cfg_nested.get("tasks", {})
+            if isinstance(extra_cfg_nested.get("tasks", {}), dict)
+            else {}
+        )
+        model_cfg = (
+            extra_cfg_nested.get("model", {})
+            if isinstance(extra_cfg_nested.get("model", {}), dict)
+            else {}
+        )
+        infer_cfg = (
+            extra_cfg_nested.get("infer", {})
+            if isinstance(extra_cfg_nested.get("infer", {}), dict)
+            else {}
+        )
+
+        server_ip = server_cfg.get("ip", server_ip)
+        server_port = server_cfg.get("port", server_port)
+        timeout = server_cfg.get("timeout", timeout)
+        local_mode = server_cfg.get("local_mode", local_mode)
+        task_names = tasks_cfg.get("files", task_names)
+        model_path = model_cfg.get("model_path") or model_cfg.get("model_name")
+
+        self.server_ip = server_ip
+        self.server_port = server_port
+        self.timeout = timeout
+
         self.task_manager = TaskManager(
             server_ip,
             server_port,
             local_mode=local_mode,
             task_names=task_names,
+            model_path=model_path,
+            task_config=tasks_cfg,
             **kwargs,
         )
         task_info = self.task_manager.get_task_info()
         self.tasks = task_info["task_names"]
+        task_info = self.build_task_info(task_info, model_cfg, infer_cfg, tasks_cfg)
 
-        if isinstance(extra_cfg, str):
-            if osp.exists(extra_cfg):
-                try:
-                    with open(extra_cfg, "r") as f:
-                        extra_cfg = json.load(f)
-                except Exception as e:
-                    logger.info(f"Error loading extra config file: {e}")
-            else:
-                try:
-                    extra_cfg = json.loads(extra_cfg)
-                except Exception as e:
-                    logger.info(f"Error loading extra config: {e}")
-
-        if extra_cfg is not None:
-            task_info.update(extra_cfg)
         self.task_info = task_info
         self.model_name: str = task_info.get("model_name", None)
         if self.model_name is None and "model_path" in task_info:
@@ -167,6 +191,26 @@ class BaseModelAdapter:
         else:
             self.accelerator = None
         self.model_init(task_info)
+
+    def build_task_info(
+        self, task_info: Dict, model_cfg: Dict, infer_cfg: Dict, tasks_cfg: Dict
+    ) -> Dict:
+        """
+        Build basic task info from model_cfg and infer_cfg
+        """
+        base_configs = ["output_dir", "model_path", "num_workers"]
+        for config in base_configs:
+            if config in model_cfg:
+                task_info[config] = model_cfg[config]
+            elif config in infer_cfg:
+                task_info[config] = infer_cfg[config]
+            elif config in tasks_cfg:
+                task_info[config] = tasks_cfg[config]
+            else:
+                raise ValueError(
+                    f"Config {config} not found in task_info, model_cfg, or infer_cfg"
+                )
+        return task_info
 
     def model_init(self, task_info: Dict) -> None:
         raise NotImplementedError

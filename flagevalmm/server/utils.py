@@ -17,6 +17,63 @@ from tenacity import (
     wait_random_exponential,
 )
 
+from dataclasses import dataclass, field
+from typing import Dict, Union
+
+from omegaconf import DictConfig, OmegaConf
+
+
+@dataclass
+class ServerCfg:
+    ip: str = "http://localhost"
+    port: int = 5000
+    timeout: int = 1000
+    local_mode: bool = True
+    quiet: bool = False
+    disable_evaluation_server: bool = False
+
+
+@dataclass
+class TasksCfg:
+    files: list[str] = field(default_factory=list)
+    data_root: Optional[str] = None
+    debug: bool = False
+    try_run: bool = False
+    output_dir: Optional[str] = None
+    num_workers: Optional[int] = None
+    skip: bool = True
+
+
+@dataclass
+class InferCfg:
+    use_cache: bool = False
+    num_infers: int = 1
+    temperature: float = 0.0
+    stream: bool = False
+    max_tokens: Optional[int] = None
+    reasoning: Optional[Dict[str, Any]] = None
+    provider: Optional[Dict[str, Any]] = None
+    retry_time: Optional[int] = None
+    system_prompt: Optional[str] = None
+    thinking: Optional[bool] = False
+
+
+@dataclass
+class RunCfg:
+    """
+    Structured runtime config (YAML-friendly).
+
+    Notes:
+    - We intentionally keep `model`/`infer` as free-form dicts to avoid breaking
+      existing model configs that may include arbitrary keys.
+    - Use `load_run_cfg()` to load user-provided config without injecting defaults.
+    """
+
+    server: ServerCfg = field(default_factory=ServerCfg)
+    tasks: TasksCfg = field(default_factory=TasksCfg)
+    model: Dict[str, Any] = field(default_factory=dict)
+    infer: InferCfg = field(default_factory=InferCfg)
+
 
 @retry(wait=wait_random_exponential(min=2, max=10), stop=stop_after_attempt(3))
 def get_meta(task_name: str, server_ip: str, server_port: int, timeout: int = 1000):
@@ -75,77 +132,71 @@ def get_retrieval_data(
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Infer a model")
-    parser.add_argument("--tasks", nargs="+", help="tasks to run")
-    parser.add_argument("--exec", type=str, help="model path in examples")
-    parser.add_argument("--debug", action="store_true", help="debug mode")
+    parser = argparse.ArgumentParser(description="Infer a model with runtime config")
     parser.add_argument(
-        "--try-run",
-        action="store_true",
-        help="try run mode, only run the first 32 samples",
+        "--cfg",
+        "-c",
+        type=str,
+        required=True,
+        help="runtime config file (yaml/json)",
     )
-    parser.add_argument("--output-dir", type=str, help="output dir")
-    parser.add_argument("--data-root", type=str, help="data root")
-    parser.add_argument("--model", type=str, help="model name or path")
+    # Optional: override adapter entrypoint without editing YAML.
     parser.add_argument(
-        "--model-type",
+        "--exec",
         type=str,
         default=None,
-        choices=["http", "claude", "gemini", "gpt", "hunyuan"],
-        help="type of the model",
-    )
-    parser.add_argument("--cfg", "-c", type=str, help="config file")
-    parser.add_argument("--num-workers", "--num_workers", type=int)
-    parser.add_argument("--backend", type=str)
-    parser.add_argument(
-        "--no-local-mode",
-        action="store_false",
-        dest="local_mode",
-        help="disable local mode (use evaluation server)",
-    )
-    parser.add_argument("--disable-evaluation-server", "-ds", action="store_true")
-    parser.add_argument("--skip", action="store_true", help="skip finished tasks")
-    parser.add_argument(
-        "--server-port",
-        "--server_port",
-        type=int,
-        help="port of evaluation server",
-        default=5000,
+        help="model adapter entrypoint; overrides cfg.model.exec if provided",
     )
     parser.add_argument(
-        "--server-ip",
-        "--server_ip",
-        type=str,
-        default="http://localhost",
-        help="ip of evaluation server",
+        "--without-infer",
+        "-wi",
+        dest="without_infer",
+        action="store_const",
+        const=True,
+        default=False,
+        help="only evaluate (skip model inference)",
     )
-    parser.add_argument("--timeout", type=int, default=1000)
-    parser.add_argument("--quiet", "-q", action="store_true", help="quiet mode")
-    parser.add_argument(
-        "--without-infer", "-wi", action="store_true", help="without inference"
-    )
-    parser.add_argument("--url", type=str, help="url of api model")
-    parser.add_argument("--api-key", type=str, help="api key of api model")
-    parser.add_argument(
-        "--use-cache", action="store_true", help="use cache of api model"
-    )
-    parser.add_argument(
-        "--extra-args", type=str, help="extra args of local server model"
-    )
-    parser.add_argument(
-        "--num-infers",
-        type=int,
-        default=1,
-        help="number of inferences to perform for each question (when temperature >= 0)",
-    )
-    parser.add_argument(
-        "--temperature",
-        type=float,
-        default=0,
-        help="temperature of the model",
-    )
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
+
+
+def load_run_cfg(path_or_str_or_dict: Optional[str | DictConfig]) -> Any:
+    """
+    Load config from:
+    - None -> {}
+    - DictConfig -> resolved dict
+    - str:
+      - existing file: yaml/yml/json
+      - otherwise: json string
+    """
+    if path_or_str_or_dict is None:
+        return {}
+    if isinstance(path_or_str_or_dict, DictConfig):
+        return OmegaConf.to_container(path_or_str_or_dict, resolve=True)  # type: ignore[return-value]
+
+    s = str(path_or_str_or_dict)
+    if osp.exists(s):
+        ext = osp.splitext(s)[1].lower()
+        if ext in {".yaml", ".yml"}:
+            cfg = OmegaConf.load(s)
+            return OmegaConf.to_container(cfg, resolve=True)  # type: ignore[return-value]
+        else:
+            raise ValueError(f"Invalid config file: {path_or_str_or_dict}")
+    else:
+        raise ValueError(f"Config file not found: {path_or_str_or_dict}")
+
+
+def load_run_cfg_with_defaults(
+    path_or_str_or_dict: Optional[Union[str, Dict[str, Any], DictConfig]]
+) -> Any:
+    """
+    Load runtime config, normalize to nested schema, and inject structured defaults.
+
+    Returns a plain dict containing all defaults from RunCfg unless overridden by user config.
+    """
+    user_cfg = load_run_cfg(path_or_str_or_dict)
+    defaults = OmegaConf.structured(RunCfg())
+    merged = OmegaConf.merge(defaults, OmegaConf.create(user_cfg or {}))
+    return OmegaConf.to_container(merged, resolve=True)  # type: ignore[return-value]
 
 
 def process_images_symbol(
@@ -207,11 +258,11 @@ def get_random_port() -> int:
 
 
 def merge_args(cfg: Config, task_config_file: str, args: argparse.Namespace) -> Config:
-    if args.debug:
+    if getattr(args, "debug", None) is True:
         cfg.server.debug = True
-    if args.data_root:
+    if getattr(args, "data_root", None):
         cfg.dataset.data_root = args.data_root
-    if args.try_run:
+    if getattr(args, "try_run", None) is True:
         cfg.dataset.debug = True
     base_dir = osp.abspath(osp.dirname(task_config_file))
     cfg.dataset.base_dir = base_dir
