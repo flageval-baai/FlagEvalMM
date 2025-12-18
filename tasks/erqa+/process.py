@@ -20,10 +20,17 @@ def process(cfg):
     # process each item
     for index, annotation in enumerate(data):
         question_id = annotation["question_id"]
+        question = annotation["question"]
+        images = annotation["images"]
         # build information dictionary
+        contents = []
+        for i in range(len(images)):
+            contents.append(f"<image {i + 1}>")
+        contents.append(question)
+
         info = {
             "question_id": question_id,
-            "question": annotation["question"],
+            "question": "".join(contents).strip(),
             "img_path": [],
             "reference": annotation["reference"],
             "question_type": annotation["question_type"],
@@ -32,7 +39,6 @@ def process(cfg):
             "evaluator": annotation["evaluator"],
             "evaluator_kwargs": json.loads(annotation["evaluator_kwargs"])
         }
-        images = annotation["images"]
         for i, image in enumerate(images):
             image_path = osp.join("img", f"{question_id}_{i + 1}.png")
             info["img_path"].append(image_path)

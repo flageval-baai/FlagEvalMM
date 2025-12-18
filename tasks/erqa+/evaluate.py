@@ -177,7 +177,6 @@ class Evaluator():
         self,
         tracker_type,
         tracker_subtype=None,
-        use_llm_evaluator=False,
         **kwargs,
     ):
         self.tracker_type = tracker_type
@@ -195,7 +194,7 @@ class Evaluator():
 
 
     def cal_accuracy(
-        self, annotations: Dict, predictions: List[Dict], *args, llm_model: Optional[str] = None, **kwargs
+        self, annotations: Dict, predictions: List[Dict], *args, **kwargs
     ) -> Dict:
         class ScoreTracker:
             def __init__(self):
@@ -219,7 +218,6 @@ class Evaluator():
             score = self.get_score(gt, pred)
             pred.update(gt)
             pred["correct"] = score
-            pred["judgement_response"] = judgement_response if self.use_llm_evaluator else None
             # Update scores
             bucket_key = pred.get(self.tracker_type) or gt.get(self.tracker_type) or "all"
             tracker = scores_by_type[bucket_key]
@@ -258,5 +256,5 @@ def generate_result(gt):
 def get_result(annotations, predictions):
     evaluator = Evaluator(tracker_type="task_category", tracker_subtype="task_sub_category")
     # evaluator = Evaluator(tracker_type="question_type", tracker_subtype="question_subtype")
-    results = evaluator.cal_accuracy(annotations, predictions, llm_model=None)
+    results = evaluator.cal_accuracy(annotations, predictions)
     return results
