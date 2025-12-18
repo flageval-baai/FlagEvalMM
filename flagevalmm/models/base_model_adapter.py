@@ -155,6 +155,11 @@ class BaseModelAdapter:
             if isinstance(extra_cfg_nested.get("infer", {}), dict)
             else {}
         )
+        extra_config = (
+            extra_cfg_nested.get("extra_config", {})
+            if isinstance(extra_cfg_nested.get("extra_config", {}), dict)
+            else {}
+        )
 
         server_ip = server_cfg.get("ip", server_ip)
         server_port = server_cfg.get("port", server_port)
@@ -179,6 +184,21 @@ class BaseModelAdapter:
         task_info = self.task_manager.get_task_info()
         self.tasks = task_info["task_names"]
         task_info = self.build_task_info(task_info, model_cfg, infer_cfg, tasks_cfg)
+
+        # We keep both:
+        # - `task_info["extra_config"]` for traceability
+        # - top-level keys (non-overriding) for adapter convenience
+        if local_mode and extra_config:
+            task_info["extra_config"] = extra_config
+            conflicts = set(task_info.keys()) & set(extra_config.keys())
+            if conflicts:
+                logger.warning(
+                    "extra_config keys already exist in task_info; keeping existing values: "
+                    f"{sorted(conflicts)}"
+                )
+            for k, v in extra_config.items():
+                if k not in task_info:
+                    task_info[k] = v
 
         self.task_info = task_info
         self.model_name: str = task_info.get("model_name", None)
@@ -210,6 +230,12 @@ class BaseModelAdapter:
                 raise ValueError(
                     f"Config {config} not found in task_info, model_cfg, or infer_cfg"
                 )
+
+        # Preserve full user configs for adapters that need extra knobs.
+        # This is backward-compatible since it only adds new keys.
+        task_info["model_cfg"] = model_cfg or {}
+        task_info["infer_cfg"] = infer_cfg or {}
+        task_info["tasks_cfg"] = tasks_cfg or {}
         return task_info
 
     def model_init(self, task_info: Dict) -> None:
@@ -275,15 +301,18 @@ class BaseModelAdapter:
 
     def save_item(
         self,
-        result: ProcessResult,
+        result: Union[ProcessResult, Dict[str, Any]],
         question_id: str,
         meta_info: Dict[str, Any],
     ):
         output_dir = osp.join(meta_info["output_dir"], "items")
+        os.makedirs(output_dir, exist_ok=True)
 
         # Convert ProcessResult to dictionary format
-        serializable_result = result.to_dict()
-        serializable_result = result.to_dict()
+        if isinstance(result, dict):
+            serializable_result = result
+        else:
+            serializable_result = result.to_dict()
 
         with open(osp.join(output_dir, f"{question_id}.json"), "w") as f:
             json.dump(serializable_result, f, indent=2, ensure_ascii=False)

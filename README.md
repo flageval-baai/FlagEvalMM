@@ -1,4 +1,4 @@
-# FlagEvalMM: A Flexible Framework for Comprehensive Multimodal Model Evaluation
+# Flagen: A Flexible Multimodal Evaluation Framework For MLLMs and Unified models
 
 ![FlagEvalMM Logo](assets/logo.png)
 
@@ -6,15 +6,11 @@
 
 ## Overview
 
-FlagEvalMM is an open-source evaluation framework designed to comprehensively assess multimodal models. It provides a standardized way to evaluate models that work with multiple modalities (text, images, video) across various tasks and metrics.
-
-## News
-
-- [2025-09-02] Supported by FlagEvalMM, [LRM-Eval](https://github.com/flageval-baai/LRM-Eval) is released. We include the evaluation code of [ROME](https://huggingface.co/datasets/BAAI/ROME) in the tasks/rome directory. We recommend using llm-judge for diagrams evaluation and rule-based evaluation for other tasks with prepared configs in the tasks/rome directory.
+Flagen is an open-source evaluation framework designed to comprehensively assess MLLMs and Unified models. It provides a standardized way to evaluate models that work with multiple modalities (text, images, video) across various tasks and metrics.
 
 ## Key Features
 
-- **Flexible Architecture**: Support for multiple multimodal models and evaluation tasks, including: VQA, image retrieval, text-to-image, etc.
+- **Flexible Architecture**: Support for multiple multimodal models and evaluation tasks, including: VQA, text-to-image, etc.
 - **Comprehensive Benchmarks and Metrics**: Support new and commonly used benchmarks and metrics.
 - **Extensive Model Support**: The model_zoo provides inference support for a wide range of popular multimodal models including QWenVL and LLaVA. Additionally, it offers seamless integration with API-based models such as GPT, Claude, and HuanYuan.
 - **Extensible Design**: Easily extendable to incorporate new models, benchmarks, and evaluation metrics.

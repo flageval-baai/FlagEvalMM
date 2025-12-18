@@ -73,6 +73,8 @@ class RunCfg:
     tasks: TasksCfg = field(default_factory=TasksCfg)
     model: Dict[str, Any] = field(default_factory=dict)
     infer: InferCfg = field(default_factory=InferCfg)
+    # Free-form extra config for adapters.
+    extra_config: Dict[str, Any] = field(default_factory=dict)
 
 
 @retry(wait=wait_random_exponential(min=2, max=10), stop=stop_after_attempt(3))
@@ -168,7 +170,7 @@ def load_run_cfg(path_or_str_or_dict: Optional[str | DictConfig]) -> Any:
       - existing file: yaml/yml/json
       - otherwise: json string
     """
-    if path_or_str_or_dict is None:
+    if path_or_str_or_dict is None or path_or_str_or_dict == {}:
         return {}
     if isinstance(path_or_str_or_dict, DictConfig):
         return OmegaConf.to_container(path_or_str_or_dict, resolve=True)  # type: ignore[return-value]

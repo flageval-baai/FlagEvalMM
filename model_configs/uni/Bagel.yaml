@@ -1,0 +1,19 @@
+tasks:
+  files:
+    - tasks/mmmu/mmmu_val.py
+  data_root: /share/project/mmdataset/t2i/wise/data.json
+  debug: false
+  try_run: false
+  output_dir: outputs/Bagel_CoT/
+  num_workers: 8
+  skip: false
+
+server:
+  local_mode: true
+  quiet: false
+
+model:
+  model_name: Bagel
+  model_path: /share/project/models/vlm/BAGEL-7B-MoT
+  exec: model_zoo/uni/bagel/model_adapter.py
+
