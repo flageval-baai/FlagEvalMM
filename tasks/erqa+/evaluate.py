@@ -1,8 +1,6 @@
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Union
 from collections import defaultdict
 import re
-import json
-from typing import Optional
 
 
 def strip_answer(answer):
@@ -47,7 +45,7 @@ def process_multiple_choice(answer):
         "答案是",
         "因此",
         "答案",
-        "答案："
+        "答案：",
     ]
 
     for key_word in key_words:
@@ -61,23 +59,18 @@ def process_multiple_choice(answer):
     matches = re.findall(pattern, answer)
     return ",".join(matches)
 
+
 def is_chinese(text):
     """Check if the text contains Chinese characters"""
     for char in text:
-        if '\u4e00' <= char <= '\u9fff':
+        if "\u4e00" <= char <= "\u9fff":
             return True
     return False
 
+
 def normalize_string(text: str):
     # replace spacial characters
-    replace_dict = {
-        '′': "'",
-        ' ': ' ',
-        '‐': '-',
-        '−': '-',
-        '–': '-',
-        '⋅': '·'
-    }
+    replace_dict = {"′": "'", " ": " ", "‐": "-", "−": "-", "–": "-", "⋅": "·"}
     for k, v in replace_dict.items():
         text = text.replace(k, v)
     return text
@@ -88,18 +81,21 @@ def extract_answer(pred: Dict) -> str:
     for indicator in indicators:
         if indicator in pred["answer"]:
             return pred["answer"].split(indicator)[-1].strip()
-    boxed_pattern = r'\\boxed\{([^}]+)\}'
+    boxed_pattern = r"\\boxed\{([^}]+)\}"
     boxed_match = re.search(boxed_pattern, pred["answer"])
     if boxed_match:
         return boxed_match.group(1).strip()
     return pred["answer"]
 
 
-def key_items_matching(pred: Dict, key_items: List[List[str]], remove_space=False) -> int:
+def key_items_matching(
+    pred: Dict, key_items: List[List[str]], remove_space=False
+) -> int:
     def process(x):
         if remove_space:
-            x = x.replace(' ', '')
+            x = x.replace(" ", "")
         return x.lower()
+
     # Check if any answer variant matches the prediction as a substring
     def match_any(pred_str, answer_variants):
         assert isinstance(answer_variants, list)
@@ -108,10 +104,7 @@ def key_items_matching(pred: Dict, key_items: List[List[str]], remove_space=Fals
     processed_pred = process(pred["answer"])
     if isinstance(key_items[0], list):
         return int(
-            all(
-                match_any(processed_pred, item_variants)
-                for item_variants in key_items
-            )
+            all(match_any(processed_pred, item_variants) for item_variants in key_items)
         )
     elif isinstance(key_items[0], str):
         return int(match_any(processed_pred, key_items))
@@ -122,64 +115,99 @@ def key_items_matching(pred: Dict, key_items: List[List[str]], remove_space=Fals
 def choices_matching(pred: Dict, label: str) -> int:
     pred["answer"] = process_multiple_choice(pred["answer"])
     pred_ans = pred["answer"]
-    label = label.upper().replace(' ', '')
+    label = label.upper().replace(" ", "")
     if len(label) > 1:
-        label = ''.join(sorted(set(label)))
+        label = "".join(sorted(set(label)))
         pred_ans = "".join(sorted(set(pred["answer"])))
     # elif len(pred["answer"]) > 1:
     #     pred["answer"] = pred["answer"][0]
     #     pred_ans = pred["answer"]
     return int(label == pred_ans)
     # return 0
-    
-def ordered_list_matching(pred: dict, order) -> int:    # Strict order list mating
 
-    pred_ans = pred["answer"].lower().replace(" ", "").replace('*', '').replace('\'', '').strip(" `,")
+
+def ordered_list_matching(pred: dict, order) -> int:  # Strict order list mating
+
+    pred_ans = (
+        pred["answer"]
+        .lower()
+        .replace(" ", "")
+        .replace("*", "")
+        .replace("'", "")
+        .strip(" `,")
+    )
 
     if isinstance(order[0], list):
-        return int(any([pred_ans == ",".join(o).lower().replace(" ", "").strip(" `,") for o in order]))
+        return int(
+            any(
+                [
+                    pred_ans == ",".join(o).lower().replace(" ", "").strip(" `,")
+                    for o in order
+                ]
+            )
+        )
     elif isinstance(order, list):
         order = ",".join(order)
 
     if "a-" in pred_ans:
-        pred_ans = ','.join(re.findall("(?<=.-).",pred_ans))
+        pred_ans = ",".join(re.findall("(?<=.-).", pred_ans))
     order = order.lower().replace(" ", "").strip(" `,*'")
-    
+
     return int(pred_ans == order)
 
 
-def bool_list_matching(pred:Dict, bool_str:list) -> int:
-    pred_ans = pred['answer'].lower().replace(" ", "").replace('*', '').replace('\'', '').strip(" `,")
-    if '[' in pred_ans:
-        bool_str = '[' + ','.join(bool_str) + ']'
+def bool_list_matching(pred: Dict, bool_str: list) -> int:
+    pred_ans = (
+        pred["answer"]
+        .lower()
+        .replace(" ", "")
+        .replace("*", "")
+        .replace("'", "")
+        .strip(" `,")
+    )
+    if "[" in pred_ans:
+        bool_str = "[" + ",".join(bool_str) + "]"
     else:
-        bool_str = ','.join(bool_str)
+        bool_str = ",".join(bool_str)
     # print(bool_l, pred_ans)  # test
     return int(pred_ans == bool_str)
 
 
-def number_matching(pred: Dict, value_to_match: Union[int, float]) -> int:  #multi-question form has been added
+def number_matching(
+    pred: Dict, value_to_match: Union[int, float]
+) -> int:  # multi-question form has been added
     # extract number from pred_ans
-    matches = re.findall(r'-?\d+(?:\.\d+)?', pred["answer"])
+    matches = re.findall(r"-?\d+(?:\.\d+)?", pred["answer"])
     result = matches[-1] if matches else None
     if result is None:
         return 0
-    pred_ans = float(result)  
+    pred_ans = float(result)
     if isinstance(value_to_match, float):
         relative_error = abs(value_to_match) * 0.1
     else:
         relative_error = 1e-3
     return int(abs(pred_ans - value_to_match) < relative_error)
 
+
 def get_score(gt: Dict, pred: Dict) -> Union[float, List[float]]:
     evaluator = gt["evaluator"]
     pred["raw_answer"] = pred["answer"]
     pred["answer"] = normalize_string(extract_answer(pred))
-    registed_evaluator = set(["key_items_matching", "choices_matching", "ordered_list_matching", "bool_list_matching", "number_matching", "location_matching", "interval_matching", "multi_interval_matching"])
+    registed_evaluator = set(
+        [
+            "key_items_matching",
+            "choices_matching",
+            "ordered_list_matching",
+            "bool_list_matching",
+            "number_matching",
+            "location_matching",
+            "interval_matching",
+            "multi_interval_matching",
+        ]
+    )
     if evaluator not in registed_evaluator:
         raise ValueError(f"Unsupported evaluator: {evaluator}")
     return eval(evaluator)(pred, **gt["evaluator_kwargs"])
-
 
 
 def get_result(annotations: Dict, predictions: List[Dict]) -> Dict:
@@ -208,4 +236,3 @@ def get_result(annotations: Dict, predictions: List[Dict]) -> Dict:
         for key, values in detailed_results.items():
             results[key] = round(sum(values) / len(values) * 100, 2)
     return results
-

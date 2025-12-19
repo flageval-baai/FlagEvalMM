@@ -3,6 +3,7 @@ import os
 import os.path as osp
 from datasets import load_dataset
 
+
 def process(cfg):
     """Process the dataset and save it in a standard format"""
     data_dir, split = cfg.dataset_path, cfg.split
@@ -37,7 +38,7 @@ def process(cfg):
             "task_category": annotation["task_category"],
             "task_sub_category": annotation["task_sub_category"],
             "evaluator": annotation["evaluator"],
-            "evaluator_kwargs": json.loads(annotation["evaluator_kwargs"])
+            "evaluator_kwargs": json.loads(annotation["evaluator_kwargs"]),
         }
         for i, image in enumerate(images):
             image_path = osp.join("img", f"{question_id}_{i + 1}.png")
