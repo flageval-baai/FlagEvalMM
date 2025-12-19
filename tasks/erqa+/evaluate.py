@@ -184,7 +184,7 @@ def get_score(gt: Dict, pred: Dict) -> Union[float, List[float]]:
 
 def get_result(annotations: Dict, predictions: List[Dict]) -> Dict:
     right: float = 0.0
-    detailed_keys = ["task_category", "task_sub_category"]
+    detailed_keys = ["task_category"]
     detailed_results = defaultdict(list)
 
     for pred in predictions:
