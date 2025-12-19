@@ -171,90 +171,41 @@ def number_matching(pred: Dict, value_to_match: Union[int, float]) -> int:  #mul
         relative_error = 1e-3
     return int(abs(pred_ans - value_to_match) < relative_error)
 
-
-class Evaluator():
-    def __init__(
-        self,
-        tracker_type,
-        tracker_subtype=None,
-        **kwargs,
-    ):
-        self.tracker_type = tracker_type
-        self.tracker_subtype = tracker_subtype
-
-
-    def get_score(self, gt: Dict, pred: Dict) -> Union[float, List[float]]:
-        evaluator = gt["evaluator"]
-        pred["raw_answer"] = pred["answer"]
-        pred["answer"] = normalize_string(extract_answer(pred))
-        registed_evaluator = set(["key_items_matching", "choices_matching", "ordered_list_matching", "bool_list_matching", "number_matching", "location_matching", "interval_matching", "multi_interval_matching"])
-        if evaluator not in registed_evaluator:
-            raise ValueError(f"Unsupported evaluator: {evaluator}")
-        return eval(evaluator)(pred, **gt["evaluator_kwargs"])
-
-
-    def cal_accuracy(
-        self, annotations: Dict, predictions: List[Dict], *args, **kwargs
-    ) -> Dict:
-        class ScoreTracker:
-            def __init__(self):
-                self.total_score = 0
-                self.count = 0
-                self.accuracy = 0
-                self.subtypes = defaultdict(
-                    lambda: [0, 0, 0]
-                )  # [score_sum, count, accuracy]
-            def update(self, score, sub_type):
-                self.total_score += score
-                self.count += 1
-                self.subtypes[sub_type][0] += score
-                self.subtypes[sub_type][1] += 1
-
-        results = {}
-        scores_by_type = defaultdict(ScoreTracker)
-        for pred in predictions:
-            question_id = str(pred["question_id"])
-            gt = annotations[question_id]
-            score = self.get_score(gt, pred)
-            pred.update(gt)
-            pred["correct"] = score
-            # Update scores
-            bucket_key = pred.get(self.tracker_type) or gt.get(self.tracker_type) or "all"
-            tracker = scores_by_type[bucket_key]
-            if self.tracker_subtype is not None:
-                sub_bucket_key = pred.get(self.tracker_subtype) or gt.get(self.tracker_subtype) or "all"
-                tracker.update(score, sub_bucket_key)
-            else:
-                tracker.update(score, bucket_key)
-        # Calculate accuracy
-        for tracker in scores_by_type.values():
-            tracker.accuracy = round(tracker.total_score / tracker.count, 3)
-            for sub_type in tracker.subtypes:
-                tracker.subtypes[sub_type][2] = round(
-                    tracker.subtypes[sub_type][0] / tracker.subtypes[sub_type][1], 3
-                )
-        final_score = sum(tracker.total_score for tracker in scores_by_type.values())
-        results["final_score"] = [final_score, len(predictions)]
-        results["accuracy"] = round(final_score / len(predictions) * 100, 3)
-
-        # Convert ScoreTracker objects to the expected format
-        for qtype, tracker in scores_by_type.items():
-            results[qtype] = [
-                tracker.total_score,
-                tracker.count,
-                tracker.accuracy,
-                dict(tracker.subtypes),
-            ]
-
-        return results
+def get_score(gt: Dict, pred: Dict) -> Union[float, List[float]]:
+    evaluator = gt["evaluator"]
+    pred["raw_answer"] = pred["answer"]
+    pred["answer"] = normalize_string(extract_answer(pred))
+    registed_evaluator = set(["key_items_matching", "choices_matching", "ordered_list_matching", "bool_list_matching", "number_matching", "location_matching", "interval_matching", "multi_interval_matching"])
+    if evaluator not in registed_evaluator:
+        raise ValueError(f"Unsupported evaluator: {evaluator}")
+    return eval(evaluator)(pred, **gt["evaluator_kwargs"])
 
 
 
-def generate_result(gt):
-    return 0
+def get_result(annotations: Dict, predictions: List[Dict]) -> Dict:
+    right: float = 0.0
+    detailed_keys = ["task_category", "task_sub_category"]
+    detailed_results = defaultdict(list)
 
-def get_result(annotations, predictions):
-    evaluator = Evaluator(tracker_type="task_category", tracker_subtype="task_sub_category")
-    # evaluator = Evaluator(tracker_type="question_type", tracker_subtype="question_subtype")
-    results = evaluator.cal_accuracy(annotations, predictions)
+    for pred in predictions:
+        question_id = str(pred["question_id"])
+        gt = annotations[question_id]
+        is_correct = get_score(gt, pred)
+        if isinstance(is_correct, bool):
+            is_correct_as_float = float(is_correct)
+        else:
+            is_correct_as_float = is_correct
+        pred.update(gt)
+        pred["correct"] = is_correct_as_float
+        right += is_correct_as_float
+        if detailed_keys:
+            for key in detailed_keys:
+                detailed_results[gt[key]].append(is_correct_as_float)
+    results = {
+        "accuracy": round(right / len(predictions) * 100, 2),
+    }
+    if detailed_keys:
+        for key, values in detailed_results.items():
+            results[key] = round(sum(values) / len(values) * 100, 2)
     return results
+

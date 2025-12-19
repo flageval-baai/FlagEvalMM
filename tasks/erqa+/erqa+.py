@@ -6,7 +6,7 @@ config = dict(
 )
 
 
-def post_prompt_func(question: str, question_type: str, evaluator: str, evaluator_kwargs: dict, **kwargs):
+def post_prompt_func(evaluator: str, **kwargs):
     
     # English version (original)
     base_prompt = "**Finalize your output with:** `Final Answer:`, "
