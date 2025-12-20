@@ -76,7 +76,7 @@ class ModelAdapter(BaseModelAdapter):
             "provider",
             "retry_time",
             "num_workers",
-            "backend"
+            "backend",
         ]
         for config in openai_infer_configs:
 

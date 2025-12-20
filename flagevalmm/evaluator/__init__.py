@@ -10,6 +10,8 @@ from .one_align_evaluator import OneAlignEvaluator
 from .video_score_evaluator import VideoScoreEvaluator
 from .extract_evaluator import ExtractEvaluator
 from .fvd_evaluator import FVDEvaluator
+from .wise_evaluator import WiseEvaluator
+from .longtext_bench_evaluator import LongTextBenchEvaluator
 
 __all__ = [
     "BaseEvaluator",
@@ -24,4 +26,6 @@ __all__ = [
     "VideoScoreEvaluator",
     "ExtractEvaluator",
     "FVDEvaluator",
+    "WiseEvaluator",
+    "LongTextBenchEvaluator",
 ]

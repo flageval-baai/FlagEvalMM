@@ -43,6 +43,7 @@ class AggregationEvaluator:
                     output_info=output_info,
                     output_dir=output_dir,
                     annotations=annotations,
+                    dataset_name=dataset_name,
                 )
             )
         self.save_results(dataset_name, output_info, results, output_dir)

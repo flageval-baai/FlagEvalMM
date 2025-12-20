@@ -1,7 +1,0 @@
-{
-    "model_name": "llava-v1.6-mistral-7b-hf",
-    "api_key": "EMPTY",
-    "url": "http://localhost:8000/v1/chat/completions",
-    "extra_args": "--limit-mm-per-prompt image=18 --max-model-len 8192",
-    "num_workers": 8
-}

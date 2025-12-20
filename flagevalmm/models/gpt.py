@@ -9,7 +9,7 @@ from typing import Optional, List, Any, Union, Dict
 from flagevalmm.common.logger import get_logger
 from flagevalmm.models.base_api_model import BaseApiModel
 from flagevalmm.models.api_response import ApiResponse, ApiUsage
-from flagevalmm.prompt.prompt_tools import encode_image
+from flagevalmm.prompt.prompt_tools import encode_image_old
 from flagevalmm.common.video_utils import load_image_or_video
 
 logger = get_logger(__name__)
@@ -118,7 +118,7 @@ class GPT(BaseApiModel):
         content = [{"type": "text", "text": query}]
 
         def add_image_to_message(data_path):
-            base64_image = encode_image(
+            base64_image = encode_image_old(
                 data_path,
                 max_size=self.max_image_size,
                 min_short_side=self.min_short_side,

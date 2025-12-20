@@ -36,13 +36,27 @@ def merge_args(
 
 
 def load_tasks(
-    task_config_files: List[str], data_root: Optional[str] = None, debug: bool = False
+    task_entries: List[Dict[str, Any]],
+    data_root: Optional[str] = None,
+    debug: bool = False,
 ) -> Dict[str, Config]:
     config_dict = {}
-    for task_config_file in task_config_files:
+    if not isinstance(task_entries, list) or not task_entries:
+        raise ValueError("tasks.files must be a non-empty list")
+
+    for idx, task in enumerate(task_entries):
+        if not isinstance(task, dict):
+            raise ValueError(
+                f"tasks.files[{idx}] must be a dict like {{file, data_root}}, got: {type(task)}"
+            )
+        task_config_file = task.get("file")
+        if not task_config_file:
+            raise ValueError(f"tasks.files[{idx}] missing required key 'file'")
+        # Per-task data_root overrides global fallback.
+        task_data_root = task.get("data_root", data_root)
         cfg = Config.fromfile(task_config_file, lazy_import=False)
         task_name = cfg.dataset.name
-        cfg = merge_args(cfg, task_config_file, data_root, debug)
+        cfg = merge_args(cfg, task_config_file, task_data_root, debug)
         maybe_register_class(cfg, task_config_file)
         config_dict[task_name] = cfg
     logger.info(f"Loaded {len(config_dict)} tasks: {config_dict.keys()}")
@@ -56,7 +70,7 @@ class TaskManager:
         server_port: int,
         timeout: int = 1000,
         local_mode: bool = False,
-        task_names: List[str] = None,
+        task_names: List[Dict[str, Any]] = None,
         model_path: str = None,
         task_config: Dict = None,
         **kwargs,
@@ -66,7 +80,7 @@ class TaskManager:
         self.timeout = timeout
         self.local_mode = local_mode
         if local_mode:
-            assert task_names is not None, "task_names must be provided in local mode"
+            assert task_names is not None, "tasks.files must be provided in local mode"
         self.task_names = task_names
         debug = task_config.get("debug", False) or task_config.get("try_run", False)
 
@@ -129,7 +143,7 @@ class BaseModelAdapter:
         enable_accelerate: bool = True,
         extra_cfg: str | Dict | None = None,
         local_mode: bool = False,
-        task_names: List[str] = None,
+        task_names: List[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
 
@@ -153,6 +167,11 @@ class BaseModelAdapter:
         infer_cfg = (
             extra_cfg_nested.get("infer", {})
             if isinstance(extra_cfg_nested.get("infer", {}), dict)
+            else {}
+        )
+        extra_args = (
+            extra_cfg_nested.get("extra_args", {})
+            if isinstance(extra_cfg_nested.get("extra_args", {}), dict)
             else {}
         )
 
@@ -179,6 +198,21 @@ class BaseModelAdapter:
         task_info = self.task_manager.get_task_info()
         self.tasks = task_info["task_names"]
         task_info = self.build_task_info(task_info, model_cfg, infer_cfg, tasks_cfg)
+
+        # We keep both:
+        # - `task_info["extra_args"]` for traceability
+        # - top-level keys (non-overriding) for adapter convenience
+        if local_mode and extra_args:
+            task_info["extra_args"] = extra_args
+            conflicts = set(task_info.keys()) & set(extra_args.keys())
+            if conflicts:
+                logger.warning(
+                    "extra_args keys already exist in task_info; keeping existing values: "
+                    f"{sorted(conflicts)}"
+                )
+            for k, v in extra_args.items():
+                if k not in task_info:
+                    task_info[k] = v
 
         self.task_info = task_info
         self.model_name: str = task_info.get("model_name", None)
@@ -210,6 +244,12 @@ class BaseModelAdapter:
                 raise ValueError(
                     f"Config {config} not found in task_info, model_cfg, or infer_cfg"
                 )
+
+        # Preserve full user configs for adapters that need extra knobs.
+        # This is backward-compatible since it only adds new keys.
+        task_info["model_cfg"] = model_cfg or {}
+        task_info["infer_cfg"] = infer_cfg or {}
+        task_info["tasks_cfg"] = tasks_cfg or {}
         return task_info
 
     def model_init(self, task_info: Dict) -> None:
@@ -223,6 +263,8 @@ class BaseModelAdapter:
                     self.task_info["output_dir"], task_name
                 )
                 os.makedirs(meta_info["output_dir"], exist_ok=True)
+            if self.accelerator is not None:
+                self.accelerator.wait_for_everyone()
             # Save task_info
             task_info = copy.deepcopy(self.task_info)
             task_info.pop("task_names")
@@ -230,11 +272,13 @@ class BaseModelAdapter:
             with open(osp.join(meta_info["output_dir"], "task_info.json"), "w") as f:
                 json.dump(task_info, f, indent=2, ensure_ascii=True)
             self.run_one_task(task_name, meta_info)
-            self.task_manager.submit(
-                task_name,
-                self.model_name,
-                meta_info["output_dir"],
-            )
+            should_submit = self.accelerator is None or self.accelerator.is_main_process
+            if should_submit:
+                self.task_manager.submit(
+                    task_name,
+                    self.model_name,
+                    meta_info["output_dir"],
+                )
 
     def run_one_task(self, task_name: str, meta_info: Dict[str, Any]) -> None:
         raise NotImplementedError
@@ -275,18 +319,58 @@ class BaseModelAdapter:
 
     def save_item(
         self,
-        result: ProcessResult,
+        result: Union[ProcessResult, Dict[str, Any]],
         question_id: str,
         meta_info: Dict[str, Any],
     ):
-        output_dir = osp.join(meta_info["output_dir"], "items")
+        output_dir = self.get_items_dir(meta_info)
+        os.makedirs(output_dir, exist_ok=True)
 
         # Convert ProcessResult to dictionary format
-        serializable_result = result.to_dict()
-        serializable_result = result.to_dict()
+        if isinstance(result, dict):
+            serializable_result = result
+        else:
+            serializable_result = result.to_dict()
 
-        with open(osp.join(output_dir, f"{question_id}.json"), "w") as f:
+        serializable_result = self.preprocess_item_for_save(
+            serializable_result, question_id=question_id, meta_info=meta_info
+        )
+
+        with open(self.get_item_path(question_id, meta_info), "w") as f:
             json.dump(serializable_result, f, indent=2, ensure_ascii=False)
+
+    def get_items_dir(self, meta_info: Dict[str, Any]) -> str:
+        return osp.join(meta_info["output_dir"], "items")
+
+    def get_item_path(self, question_id: str, meta_info: Dict[str, Any]) -> str:
+        return osp.join(self.get_items_dir(meta_info), f"{question_id}.json")
+
+    def load_item_if_exists(self, question_id: str, meta_info: Dict[str, Any]) -> Any:
+        """
+        Try to load cached per-item json from items/{question_id}.json.
+
+        Returns:
+            dict if exists and readable, otherwise None.
+        """
+        path = self.get_item_path(question_id, meta_info)
+        if not osp.exists(path):
+            return None
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.warning(f"Failed to read existing item {path}, regenerating: {e}")
+            return None
+
+    def preprocess_item_for_save(
+        self, item: Dict[str, Any], question_id: str, meta_info: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Hook for subclasses to augment item JSON before writing to disk.
+
+        Default: return item unchanged.
+        """
+        return item
 
     def collect_results_and_save(
         self,

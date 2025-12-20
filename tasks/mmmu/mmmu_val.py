@@ -7,7 +7,10 @@ config = dict(
 
 dataset = dict(
     type="VqaBaseDataset",
-    prompt_template=dict(type="PromptTemplate"),
+    prompt_template=dict(
+        type="PromptTemplate",
+        post_prompt="Let's think step by step and put the letter of your final choice after 'Answer: '",
+    ),
     config=config,
     name="mmmu_val",
 )
