@@ -4,6 +4,51 @@
 
 [Documentation](https://flagevalmm.readthedocs.io/en/latest/) | [中文文档](https://github.com/flageval-baai/FlagEvalMM/blob/main/README_ZH.md)
 
+# How to use
+We provide a example config file for Bagel model. You can use it to evaluate the Bagel model.
+
+```bash
+flagevalmm --cfg model_configs/uni/Bagel.yaml
+```
+
+Config file example:
+```yaml
+tasks: # task configuration
+  files: # support multiple tasks
+    - file: tasks/t2i/wise/wise.py # task file
+      data_root: /share/project/mmdataset/t2i/wise/ # data root
+    # - file: tasks/t2i/longtext_bench/longtext_bench.py
+    #   data_root: /share/project/mmdataset/t2i/LongText-Bench/
+  debug: false # debug mode, only run 32 samples for testing
+  try_run: false # try run mode, only run 32 samples for testing
+  output_dir: outputs/Bagel_Gen/ # output directory
+  num_workers: 8 # number of workers for inference
+  skip: false # skip mode, skip the task if it has been run
+
+server: # server configuration
+  local_mode: true
+  quiet: false
+
+model: # model configuration
+  model_name: Bagel
+  model_path: /share/project/models/vlm/BAGEL-7B-MoT
+  exec: model_zoo/uni/bagel/model_adapter.py
+
+extra_args: # optional arguments for the model
+  save_items: true
+  num_images: 1
+  batch_size: 1
+  cfg_scale: 4.0
+  resolution: 1024
+  num_timesteps: 50
+  cfg_interval: [0.4, 1.0]
+  cfg_renorm_min: 0.0
+  timestep_shift: 3.0
+  think: false
+  think_simple: false
+```
+
+
 ## Overview
 
 Flagen is an open-source evaluation framework designed to comprehensively assess MLLMs and Unified models. It provides a standardized way to evaluate models that work with multiple modalities (text, images, video) across various tasks and metrics.
