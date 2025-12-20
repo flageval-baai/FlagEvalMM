@@ -143,7 +143,7 @@ class BaseModelAdapter:
         enable_accelerate: bool = True,
         extra_cfg: str | Dict | None = None,
         local_mode: bool = False,
-        task_names: List[str] = None,
+        task_names: List[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
 
@@ -272,9 +272,7 @@ class BaseModelAdapter:
             with open(osp.join(meta_info["output_dir"], "task_info.json"), "w") as f:
                 json.dump(task_info, f, indent=2, ensure_ascii=True)
             self.run_one_task(task_name, meta_info)
-            should_submit = (
-                self.accelerator is None or self.accelerator.is_main_process
-            )
+            should_submit = self.accelerator is None or self.accelerator.is_main_process
             if should_submit:
                 self.task_manager.submit(
                     task_name,
@@ -347,9 +345,7 @@ class BaseModelAdapter:
     def get_item_path(self, question_id: str, meta_info: Dict[str, Any]) -> str:
         return osp.join(self.get_items_dir(meta_info), f"{question_id}.json")
 
-    def load_item_if_exists(
-        self, question_id: str, meta_info: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
+    def load_item_if_exists(self, question_id: str, meta_info: Dict[str, Any]) -> Any:
         """
         Try to load cached per-item json from items/{question_id}.json.
 

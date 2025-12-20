@@ -18,8 +18,10 @@ def _clean_text(text: str) -> str:
     cleaned = text or ""
     keywords = ["addCriterion", "No text recognized."]
     for keyword in keywords:
-        cleaned = cleaned.replace(keyword, "").replace(f"\n{keyword}", "").replace(
-            f"{keyword}\n", ""
+        cleaned = (
+            cleaned.replace(keyword, "")
+            .replace(f"\n{keyword}", "")
+            .replace(f"{keyword}\n", "")
         )
     return cleaned.strip()
 
@@ -42,9 +44,7 @@ def _preprocess_string(s: str, mode: str = "en") -> str:
     if mode == "en":
         normalized = re.sub(r"\s+", " ", cleaned)
         return normalized.strip().lower()
-    pattern = re.compile(
-        r"[\u4e00-\u9fa5a-zA-Z0-9àâäéèêëîïôöùûüçÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ]"
-    )
+    pattern = re.compile(r"[\u4e00-\u9fa5a-zA-Z0-9àâäéèêëîïôöùûüçÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ]")
     return "".join(pattern.findall(s)).strip()
 
 
@@ -99,11 +99,13 @@ class LongTextBenchEvaluator:
         **kwargs,
     ) -> None:
         self.model = model
-        self.api_key = api_key or os.getenv("BAAI_OPENAI_API_KEY") or os.getenv(
-            "OPENAI_API_KEY"
+        self.api_key = (
+            api_key or os.getenv("BAAI_OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
         )
-        self.base_url = base_url or os.getenv("BAAI_OPENAI_BASE_URL") or os.getenv(
-            "OPENAI_BASE_URL"
+        self.base_url = (
+            base_url
+            or os.getenv("BAAI_OPENAI_BASE_URL")
+            or os.getenv("OPENAI_BASE_URL")
         )
         self.prompt = prompt
         self.max_workers = max_workers
@@ -126,7 +128,7 @@ class LongTextBenchEvaluator:
             logger.warning(
                 "LongTextBenchEvaluator: base_url not provided; set OPENAI_BASE_URL/BAAI_OPENAI_BASE_URL or pass base_url."
             )
-        self._client_kwargs = dict(
+        self.client = HttpClient(
             model_name=self.model,
             api_key=self.api_key,
             url=self.base_url,
@@ -140,7 +142,6 @@ class LongTextBenchEvaluator:
             max_long_side=self.max_long_side,
             retry_time=self.retry_time,
         )
-        self.client = HttpClient(**self._client_kwargs)
 
     def _build_messages(self, image_path: str) -> List[Dict[str, Any]]:
         image_b64 = encode_image(
@@ -213,7 +214,11 @@ class LongTextBenchEvaluator:
         return "en" if 0 <= int(prompt_id) <= self.en_id_max else "zh"
 
     def _resolve_image_path(self, output_dir: str, image_rel: str) -> str:
-        return image_rel if osp.isabs(image_rel) else osp.join(output_dir, "samples", image_rel)
+        return (
+            image_rel
+            if osp.isabs(image_rel)
+            else osp.join(output_dir, "samples", image_rel)
+        )
 
     def get_metric_results(
         self,

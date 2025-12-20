@@ -22,7 +22,6 @@ from flagevalmm.server.utils import (
 from modeling.bagel.qwen2_navit import NaiveCache
 from PIL import Image
 import os
-import json
 import time
 
 logger = get_logger(__name__)
@@ -105,9 +104,11 @@ class ModelAdapter(BaseModelAdapter):
                         ckpt_path, max_latent_size=max_latent_size
                     )
                 )
-                print('Successfully loaded generation model')
+                print("Successfully loaded generation model")
                 # Keep generation components available for T2I.
-                self.vae_model = vae_model.to(device=device, dtype=torch.bfloat16).eval()
+                self.vae_model = vae_model.to(
+                    device=device, dtype=torch.bfloat16
+                ).eval()
                 self.gen_model = model
                 self._t2i_initialized = True
             else:
@@ -121,7 +122,6 @@ class ModelAdapter(BaseModelAdapter):
                 model = model.module
         self.model = model
         self.image_transform = build_transform()
-
 
     def run_one_task(self, task_name: str, meta_info: Dict[str, Any]):
         # Determine task type from task name
@@ -350,7 +350,9 @@ class ModelAdapter(BaseModelAdapter):
 
         print("rank", rank, "finished")
 
-    def _move_generation_input_to_device(self, generation_input: Dict[str, Any], device):
+    def _move_generation_input_to_device(
+        self, generation_input: Dict[str, Any], device
+    ):
         for k, v in generation_input.items():
             if isinstance(v, torch.Tensor):
                 generation_input[k] = v.to(device)
@@ -405,7 +407,9 @@ class ModelAdapter(BaseModelAdapter):
             if think and curr_batch != 1:
                 raise AssertionError("think mode currently requires batch_size=1")
 
-            past_key_values = NaiveCache(self.gen_model.config.llm_config.num_hidden_layers)
+            past_key_values = NaiveCache(
+                self.gen_model.config.llm_config.num_hidden_layers
+            )
             newlens = [0] * curr_batch
             new_rope = [0] * curr_batch
 
@@ -509,9 +513,13 @@ class ModelAdapter(BaseModelAdapter):
                 image_sizes=[(resolution, resolution)] * curr_batch,
                 new_token_ids=self.new_token_ids,
             )
-            generation_input = self._move_generation_input_to_device(generation_input, device)
+            generation_input = self._move_generation_input_to_device(
+                generation_input, device
+            )
 
-            cfg_past_key_values = NaiveCache(self.gen_model.config.llm_config.num_hidden_layers)
+            cfg_past_key_values = NaiveCache(
+                self.gen_model.config.llm_config.num_hidden_layers
+            )
             cfg_newlens = [0] * curr_batch
             cfg_new_rope = [0] * curr_batch
 
@@ -520,7 +528,9 @@ class ModelAdapter(BaseModelAdapter):
                 curr_rope=cfg_new_rope,
                 image_sizes=[(resolution, resolution)] * curr_batch,
             )
-            generation_input_cfg = self._move_generation_input_to_device(generation_input_cfg, device)
+            generation_input_cfg = self._move_generation_input_to_device(
+                generation_input_cfg, device
+            )
 
             with torch.no_grad():
                 with torch.amp.autocast("cuda", enabled=True, dtype=torch.bfloat16):
@@ -532,10 +542,18 @@ class ModelAdapter(BaseModelAdapter):
                         cfg_renorm_min=cfg_renorm_min,
                         timestep_shift=timestep_shift,
                         cfg_text_past_key_values=cfg_past_key_values,
-                        cfg_text_packed_position_ids=generation_input_cfg["cfg_packed_position_ids"],
-                        cfg_text_key_values_lens=generation_input_cfg["cfg_key_values_lens"],
-                        cfg_text_packed_query_indexes=generation_input_cfg["cfg_packed_query_indexes"],
-                        cfg_text_packed_key_value_indexes=generation_input_cfg["cfg_packed_key_value_indexes"],
+                        cfg_text_packed_position_ids=generation_input_cfg[
+                            "cfg_packed_position_ids"
+                        ],
+                        cfg_text_key_values_lens=generation_input_cfg[
+                            "cfg_key_values_lens"
+                        ],
+                        cfg_text_packed_query_indexes=generation_input_cfg[
+                            "cfg_packed_query_indexes"
+                        ],
+                        cfg_text_packed_key_value_indexes=generation_input_cfg[
+                            "cfg_packed_key_value_indexes"
+                        ],
                         **generation_input,
                     )
 
@@ -560,6 +578,7 @@ class ModelAdapter(BaseModelAdapter):
                 image_list.append(tmpimage)
 
         return image_list, think_list
+
 
 if __name__ == "__main__":
     args = parse_args()

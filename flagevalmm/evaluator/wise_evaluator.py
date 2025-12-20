@@ -1,5 +1,3 @@
-import contextlib
-import io
 import os
 import os.path as osp
 import re
@@ -94,7 +92,9 @@ def _extract_scores(txt: str) -> Dict[str, float]:
     return out
 
 
-def _calculate_wiscore(consistency: float, realism: float, aesthetic_quality: float) -> float:
+def _calculate_wiscore(
+    consistency: float, realism: float, aesthetic_quality: float
+) -> float:
     # Same as tasks/t2i/wise/calculate.py
     return (0.7 * consistency + 0.2 * realism + 0.1 * aesthetic_quality) / 2.0
 
@@ -152,11 +152,13 @@ class WiseEvaluator:
         **kwargs,
     ) -> None:
         self.model = model
-        self.api_key = api_key or os.getenv("BAAI_OPENAI_API_KEY") or os.getenv(
-            "OPENAI_API_KEY"
+        self.api_key = (
+            api_key or os.getenv("BAAI_OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
         )
-        self.base_url = base_url or os.getenv("BAAI_OPENAI_BASE_URL") or os.getenv(
-            "OPENAI_BASE_URL"
+        self.base_url = (
+            base_url
+            or os.getenv("BAAI_OPENAI_BASE_URL")
+            or os.getenv("OPENAI_BASE_URL")
         )
         self.max_workers = max_workers
         self.max_image_size = max_image_size
@@ -192,7 +194,9 @@ class WiseEvaluator:
         )
         self.client = HttpClient(**self._client_kwargs)
 
-    def _build_messages(self, prompt: str, explanation: str, image_b64: str) -> List[Dict]:
+    def _build_messages(
+        self, prompt: str, explanation: str, image_b64: str
+    ) -> List[Dict]:
         user_text = _build_user_prompt(prompt=prompt, explanation=explanation)
         return [
             {
@@ -290,7 +294,7 @@ class WiseEvaluator:
             if not image_rel:
                 continue
             image_path = osp.join(output_dir, "samples", image_rel)
-            
+
             if not osp.exists(image_path):
                 logger.warning(f"Missing image: {image_path}")
                 continue
@@ -308,7 +312,8 @@ class WiseEvaluator:
         exist_scores: Dict[int, Dict[str, Any]] = {}
         with ThreadPoolExecutor(max_workers=self.max_workers) as ex:
             future_to_pid = {
-                ex.submit(self._evaluate_one, pid, p, e, ip): pid for pid, p, e, ip in tasks
+                ex.submit(self._evaluate_one, pid, p, e, ip): pid
+                for pid, p, e, ip in tasks
             }
             for fut in as_completed(future_to_pid):
                 pid = future_to_pid[fut]
@@ -337,7 +342,11 @@ class WiseEvaluator:
         }
 
         # Attach per-sample results back to output_info
-        scores_by_id = {int(r["prompt_id"]): r for r in score_sorted if _safe_int(r.get("prompt_id")) is not None}
+        scores_by_id = {
+            int(r["prompt_id"]): r
+            for r in score_sorted
+            if _safe_int(r.get("prompt_id")) is not None
+        }
         for info in output_info:
             pid = _safe_int(info.get("id"))
             if pid is None or pid not in scores_by_id:
@@ -366,10 +375,18 @@ class WiseEvaluator:
         results: Dict[str, Any] = {}
         if metric_scores["wiscore_mean"]:
             results["wiscore_mean"] = round(
-                sum(metric_scores["wiscore_mean"]) / len(metric_scores["wiscore_mean"]), 4
+                sum(metric_scores["wiscore_mean"]) / len(metric_scores["wiscore_mean"]),
+                4,
             )
 
-        ordered_categories = ["CULTURE", "TIME", "SPACE", "BIOLOGY", "PHYSICS", "CHEMISTRY"]
+        ordered_categories = [
+            "CULTURE",
+            "TIME",
+            "SPACE",
+            "BIOLOGY",
+            "PHYSICS",
+            "CHEMISTRY",
+        ]
         for cat in ordered_categories:
             key = f"wiscore_{cat}"
             vals = metric_scores.get(key, [])
@@ -390,4 +407,3 @@ class WiseEvaluator:
             )
 
         return results
-

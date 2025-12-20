@@ -203,9 +203,7 @@ class ServerWrapper:
             if isinstance(self.run_cfg.get("tasks", {}), dict)
             else {}
         )
-        tasks = _normalize_tasks(
-            tasks_cfg.get("files", []), tasks_cfg.get("data_root")
-        )
+        tasks = _normalize_tasks(tasks_cfg.get("files", []), tasks_cfg.get("data_root"))
         if not tasks:
             logger.info("No tasks to run, exit")
             return
@@ -231,11 +229,13 @@ class ServerWrapper:
     def run_model_adapter(self):
         try:
             use_torchrun, num_procs = self._should_use_torchrun()
-            command = self._build_command(use_torchrun=use_torchrun, num_procs=num_procs)
+            command = self._build_command(
+                use_torchrun=use_torchrun, num_procs=num_procs
+            )
             if use_torchrun:
                 logger.info(f"Launching adapter with torchrun ({num_procs} processes)")
             # Create a new process group
-            print(f'command: {command}')
+            print(f"command: {command}")
             self.infer_process = subprocess.Popen(
                 command,
                 preexec_fn=os.setsid if os.name != "nt" else None,

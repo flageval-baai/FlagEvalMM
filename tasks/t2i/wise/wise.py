@@ -1,4 +1,3 @@
-import os
 # config = dict(
 #     dataset_path="https://huggingface.co/datasets/BaiqiL/GenAI-Bench-1600/raw/main/genai_image.json",
 #     split="test_1600",
