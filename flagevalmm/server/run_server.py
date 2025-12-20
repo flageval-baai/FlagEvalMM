@@ -33,13 +33,33 @@ def parse_args():
 
 
 def load_tasks(
-    task_config_files: List[str], runtime_args: argparse.Namespace
+    task_entries: List, runtime_args: argparse.Namespace
 ) -> Dict[str, Config]:
     config_dict = {}
-    for task_config_file in task_config_files:
+    if not isinstance(task_entries, list) or not task_entries:
+        raise ValueError("cfg.tasks.files must be a non-empty list")
+
+    # Allow per-task data_root: tasks.files = [{file, data_root}, ...]
+    global_data_root = getattr(runtime_args, "data_root", None)
+
+    for idx, task in enumerate(task_entries):
+        if not isinstance(task, dict):
+            raise ValueError(
+                f"cfg.tasks.files[{idx}] must be a dict like {{file, data_root}}, got: {type(task)}"
+            )
+        task_config_file = task.get("file")
+        if not task_config_file:
+            raise ValueError(f"cfg.tasks.files[{idx}] missing required key 'file'")
+
+        task_data_root = task.get("data_root", global_data_root)
+        per_task_args = argparse.Namespace(
+            debug=getattr(runtime_args, "debug", False),
+            try_run=getattr(runtime_args, "try_run", False),
+            data_root=task_data_root,
+        )
         cfg = Config.fromfile(task_config_file, lazy_import=False)
         task_name = cfg.dataset.name
-        cfg = merge_args(cfg, task_config_file, runtime_args)
+        cfg = merge_args(cfg, task_config_file, per_task_args)
         maybe_register_class(cfg, task_config_file)
         config_dict[task_name] = cfg
     logger.info(f"Loaded {len(config_dict)} tasks: {config_dict.keys()}")

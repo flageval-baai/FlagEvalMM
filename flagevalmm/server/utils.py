@@ -74,7 +74,7 @@ class RunCfg:
     model: Dict[str, Any] = field(default_factory=dict)
     infer: InferCfg = field(default_factory=InferCfg)
     # Free-form extra config for adapters.
-    extra_config: Dict[str, Any] = field(default_factory=dict)
+    extra_args: Dict[str, Any] = field(default_factory=dict)
 
 
 @retry(wait=wait_random_exponential(min=2, max=10), stop=stop_after_attempt(3))

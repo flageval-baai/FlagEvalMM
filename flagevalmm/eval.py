@@ -48,6 +48,34 @@ def _resolve_output_dir(cfg_from_file: dict) -> str:
     return f"{model_name}_{time.strftime('%Y%m%d_%H%M%S')}"
 
 
+def _normalize_tasks(tasks_list, global_data_root):
+    """
+    Normalize task entries to a list of dicts with keys: file, data_root.
+    Accepts string entries for backward compatibility.
+    """
+    if not isinstance(tasks_list, list):
+        logger.warning("tasks.files is not a list, nothing to run")
+        return []
+
+    normalized = []
+    for idx, task in enumerate(tasks_list):
+        if isinstance(task, str):
+            normalized.append({"file": task, "data_root": global_data_root})
+            continue
+
+        if isinstance(task, dict):
+            task_file = task.get("file")
+            if not task_file:
+                logger.warning(f"Task entry at index {idx} missing 'file', skip")
+                continue
+            data_root = task.get("data_root", global_data_root)
+            normalized.append({"file": task_file, "data_root": data_root})
+            continue
+
+        logger.warning(f"Unsupported task entry at index {idx}: {task}, skip")
+    return normalized
+
+
 def build_run_cfg(
     cfg_path: str, chosen_server_port: int, exec_override: str | None = None
 ) -> Any:
@@ -80,13 +108,17 @@ def build_run_cfg(
 class ServerWrapper:
     def filter_finished_tasks(self, tasks, output_dir):
         finished_tasks = []
-        for task_file in tasks:
+        for task in tasks:
+            task_file = task.get("file") if isinstance(task, dict) else task
+            if not task_file:
+                logger.warning("Task entry without file path, skip")
+                continue
             task_cfg = Config.fromfile(task_file)
             task_name = task_cfg.dataset.name
             if osp.exists(osp.join(output_dir, task_name, f"{task_name}.json")):
                 logger.info(f"Task {task_name} already finished, skip")
                 continue
-            finished_tasks.append(task_file)
+            finished_tasks.append(task)
         return finished_tasks
 
     def __init__(self, args):
@@ -166,16 +198,26 @@ class ServerWrapper:
 
         self.output_dir = self.run_cfg["tasks"]["output_dir"]
 
-        if not self.run_cfg.get("tasks", {}).get("files", []):
+        tasks_cfg = (
+            self.run_cfg.get("tasks", {})
+            if isinstance(self.run_cfg.get("tasks", {}), dict)
+            else {}
+        )
+        tasks = _normalize_tasks(
+            tasks_cfg.get("files", []), tasks_cfg.get("data_root")
+        )
+        if not tasks:
             logger.info("No tasks to run, exit")
             return
+        # Persist normalized tasks for downstream consumers (adapters, server)
+        self.run_cfg["tasks"]["files"] = tasks
 
-        tasks = self.run_cfg.get("tasks", {}).get("files", [])
-        if self.run_cfg.get("tasks", {}).get("skip", True):
+        if tasks_cfg.get("skip", True):
             tasks = self.filter_finished_tasks(tasks, self.output_dir)
             if len(tasks) == 0:
                 logger.info("No tasks to run after filtering finished tasks, exit")
                 return
+            self.run_cfg["tasks"]["files"] = tasks
 
         # Persist run cfg as YAML (so adapters can read it via --cfg PATH)
         os.makedirs(self.output_dir, exist_ok=True)
@@ -188,8 +230,12 @@ class ServerWrapper:
 
     def run_model_adapter(self):
         try:
-            command = self._build_command()
+            use_torchrun, num_procs = self._should_use_torchrun()
+            command = self._build_command(use_torchrun=use_torchrun, num_procs=num_procs)
+            if use_torchrun:
+                logger.info(f"Launching adapter with torchrun ({num_procs} processes)")
             # Create a new process group
+            print(f'command: {command}')
             self.infer_process = subprocess.Popen(
                 command,
                 preexec_fn=os.setsid if os.name != "nt" else None,
@@ -205,15 +251,36 @@ class ServerWrapper:
         finally:
             logger.info("Command execution finished.")
 
-    def _build_command(self):
+    def _should_use_torchrun(self) -> tuple[bool, int]:
+        """Use torchrun only for uni adapters when num_workers > 1."""
+        tasks_cfg = (
+            self.run_cfg.get("tasks", {})
+            if isinstance(self.run_cfg.get("tasks", {}), dict)
+            else {}
+        )
+        num_workers = max(1, int(tasks_cfg.get("num_workers") or 1))
+        exec_path = osp.normpath(self.exec or "")
+        uni_marker = f"model_zoo{osp.sep}uni{osp.sep}"
+        is_uni_adapter = uni_marker in exec_path and exec_path.endswith(".py")
+        return is_uni_adapter and num_workers > 1, num_workers
+
+    def _build_command(self, use_torchrun: bool = False, num_procs: int = 1):
         """Private method to build the command for model execution"""
         command = []
         if self.exec.endswith("py"):
             assert osp.exists(self.exec), f"model path {self.exec} not found"
-            command += [
-                "python",
-                self.exec,
-            ]
+            if use_torchrun and num_procs > 1:
+                command += [
+                    "torchrun",
+                    "--nproc_per_node",
+                    str(num_procs),
+                    self.exec,
+                ]
+            else:
+                command += [
+                    "python",
+                    self.exec,
+                ]
 
         else:
             assert osp.exists(f"{self.exec}/run.sh"), f"run.sh not found in {self.exec}"
@@ -324,21 +391,25 @@ def evaluate_only(args):
     )
     output_root = run_cfg["tasks"]["output_dir"]
 
-    tasks = run_cfg.get("tasks", {}).get("files", [])
+    tasks_cfg = (
+        run_cfg.get("tasks", {}) if isinstance(run_cfg.get("tasks", {}), dict) else {}
+    )
+    tasks = _normalize_tasks(tasks_cfg.get("files", []), tasks_cfg.get("data_root"))
     if not tasks:
         logger.info("No tasks to run, exit")
         return
 
     # Derive runtime flags for task config patching from merged run_cfg.
-    tasks_cfg = (
-        run_cfg.get("tasks", {}) if isinstance(run_cfg.get("tasks", {}), dict) else {}
-    )
     try_run = bool(tasks_cfg.get("try_run", False))
     debug = bool(tasks_cfg.get("debug", False) or try_run)
-    data_root = tasks_cfg.get("data_root", None)
-    runtime_args = argparse.Namespace(debug=debug, try_run=try_run, data_root=data_root)
 
-    for task_file in tasks:
+    for task in tasks:
+        task_file = task.get("file") if isinstance(task, dict) else task
+        data_root = task.get("data_root") if isinstance(task, dict) else None
+        runtime_args = argparse.Namespace(
+            debug=debug, try_run=try_run, data_root=data_root
+        )
+
         task_cfg = Config.fromfile(task_file)
         task_cfg = merge_args(task_cfg, task_file, runtime_args)
         maybe_register_class(task_cfg, task_file)

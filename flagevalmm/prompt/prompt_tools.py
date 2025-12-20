@@ -15,7 +15,7 @@ def remove_images_symbol(text):
     return result
 
 
-def encode_image(
+def encode_image_old(
     image_or_path: Union[str, Image.Image],
     max_size=None,
     min_short_side=None,
@@ -69,4 +69,32 @@ def encode_image(
                 img.save(output2, format=format, quality=95)
                 image_data = output2.getvalue()
                 base64_img = base64.b64encode(image_data).decode("utf-8")
+    return base64_img
+
+
+def encode_image(
+    image_or_path: Union[str, Image.Image],
+    max_size=None,
+    min_short_side=None,
+    max_long_side=None,
+):
+    """
+    Encode image as base64 JPEG without padding or resizing.
+
+    Notes:
+    - This function intentionally does NOT apply padding (min_short_side) or resizing
+      (max_long_side / max_size). The parameters are kept for backward compatibility.
+    """
+    if isinstance(image_or_path, str):
+        img = Image.open(image_or_path)
+    else:
+        img = image_or_path
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+
+    format = "JPEG"
+    with BytesIO() as output:
+        img.save(output, format=format, quality=100)
+        image_data = output.getvalue()
+        base64_img = base64.b64encode(image_data).decode("utf-8")
     return base64_img
