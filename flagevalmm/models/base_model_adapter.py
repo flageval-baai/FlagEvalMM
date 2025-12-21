@@ -3,6 +3,8 @@ import copy
 from typing import List, Dict, Any, Callable, Optional, Union
 import os.path as osp
 from accelerate import Accelerator
+from accelerate.utils import InitProcessGroupKwargs
+from datetime import timedelta
 from torch.utils.data import DataLoader
 
 import os
@@ -221,7 +223,8 @@ class BaseModelAdapter:
         if not task_info.get("model_path"):
             task_info["model_path"] = self.model_name
         if enable_accelerate:
-            self.accelerator = Accelerator()
+            kwargs = InitProcessGroupKwargs(timeout=timedelta(seconds=5400))
+            self.accelerator = Accelerator(kwargs_handlers=[kwargs])
         else:
             self.accelerator = None
         self.model_init(task_info)

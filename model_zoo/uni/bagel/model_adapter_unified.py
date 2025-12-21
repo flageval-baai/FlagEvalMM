@@ -55,6 +55,13 @@ class BagelDataset(ServerDataset):
 
 
 class ModelAdapter(BaseModelAdapter):
+    """
+    Unified adapter for Bagel:
+    - VQA: standard chat inference
+    - T2I: text-only generation
+    - I2I: image editing (condition on source image) using the same generation backbone
+    """
+
     def preprocess_item_for_save(
         self, item: Dict[str, Any], question_id: str, meta_info: Dict[str, Any]
     ) -> Dict[str, Any]:
@@ -106,12 +113,12 @@ class ModelAdapter(BaseModelAdapter):
                     )
                 )
                 print("Successfully loaded generation model")
-                # Keep generation components available for T2I.
+                # Keep generation components available for T2I/I2I.
                 self.vae_model = vae_model.to(
                     device=device, dtype=torch.bfloat16
                 ).eval()
                 self.gen_model = model
-                self._t2i_initialized = True
+                self._gen_initialized = True
             else:
                 model, self.tokenizer, self.new_token_ids = load_model_and_tokenizer(
                     ckpt_path
@@ -123,11 +130,16 @@ class ModelAdapter(BaseModelAdapter):
                 model = model.module
         self.model = model
         self.image_transform = build_transform()
-        # VAE transform for image editing (I2I) path; defaults match gen_edit.py.
+        # VAE transform for image editing (I2I) path; defaults mirror gen_edit.py.
         self.vae_transform = ImageTransform(
             max_image_size=int(extra_args.get("i2i_vae_max_image_size", 1024)),
             min_image_size=int(extra_args.get("i2i_vae_min_image_size", 512)),
             image_stride=int(extra_args.get("i2i_vae_image_stride", 16)),
+        )
+        self.vit_transform = ImageTransform(
+            max_image_size=int(extra_args.get("i2i_vit_max_image_size", 980)),
+            min_image_size=int(extra_args.get("i2i_vit_min_image_size", 378)),
+            image_stride=int(extra_args.get("i2i_vit_image_stride", 14)),
         )
 
     def run_one_task(self, task_name: str, meta_info: Dict[str, Any]):
@@ -144,39 +156,100 @@ class ModelAdapter(BaseModelAdapter):
             task_type=meta_info["type"],
             task_manager=self.task_manager,
         )
-        if is_t2i:
-            self._run_t2i_task(task_name, meta_info)
-        elif is_i2i:
-            self._run_i2i_task(task_name, meta_info)
+        if is_t2i or is_i2i:
+            self._run_gen_task(task_name, meta_info, is_i2i=is_i2i)
         else:
             self._run_vqa_task(task_name, meta_info)
 
-    def _run_t2i_task(self, task_name: str, meta_info: Dict[str, Any]):
-        # T2I components are expected to be initialized in `model_init`
-        # when `model.use_gen_model=true`.
+    def _extract_source_path(self, data: Dict[str, Any], question_id: str) -> str:
+        source_path = (
+            data.get("source_path")
+            or data.get("source")
+            or data.get("img_path")
+            or data.get("image")
+        )
+        if not source_path:
+            raise KeyError(f"Missing source image path for sample {question_id}")
+        return str(source_path)
+
+    def _cache_append_prompts(
+        self,
+        past_key_values,
+        newlens,
+        new_rope,
+        prompts: list[str],
+        device,
+    ):
+        """
+        Append one or more text prompts into KV cache.
+
+        This is the shared "system prompt / user prompt / think prompt" stage:
+        prepare_prompts -> move tensors -> forward_cache_update_text.
+        """
+        generation_input, newlens, new_rope = self.model.prepare_prompts(
+            curr_kvlens=newlens,
+            curr_rope=new_rope,
+            prompts=prompts,
+            tokenizer=self.tokenizer,
+            new_token_ids=self.new_token_ids,
+        )
+        generation_input = self._move_generation_input_to_device(generation_input, device)
+        with torch.amp.autocast("cuda", enabled=True, dtype=torch.bfloat16):
+            past_key_values = self.model.forward_cache_update_text(
+                past_key_values, **generation_input
+            )
+        return past_key_values, newlens, new_rope
+
+    def _generate_think_text(
+        self,
+        past_key_values,
+        newlens,
+        new_rope,
+        device,
+        think_max_length: int,
+        think_temperature: float,
+    ) -> str:
+        """
+        Generate think text from current cache, without mutating it.
+        Caller can decide how to post-process and whether to re-inject.
+        """
+        tmp_generation_input = self.model.prepare_start_tokens(
+            newlens, new_rope, self.new_token_ids
+        )
+        tmp_generation_input = self._move_generation_input_to_device(
+            tmp_generation_input, device
+        )
+        with torch.amp.autocast("cuda", enabled=True, dtype=torch.bfloat16):
+            generated_token_ids = self.model.generate_text(
+                past_key_values=copy.deepcopy(past_key_values),
+                max_length=think_max_length,
+                do_sample=True,
+                temperature=think_temperature,
+                end_token_id=self.new_token_ids.get("eos_token_id"),
+                **tmp_generation_input,
+            )
+        decoded = self._decode_generated_text(generated_token_ids)
+        return self._extract_think_text(decoded)
+
+    def _run_gen_task(self, task_name: str, meta_info: Dict[str, Any], is_i2i: bool):
+        # T2I/I2I require generation components.
         if not hasattr(self, "gen_model") or not hasattr(self, "vae_model"):
             raise RuntimeError(
-                "T2I requires generation components, but they are not initialized. "
+                "T2I/I2I requires generation components, but they are not initialized. "
                 "Please set `model.use_gen_model=true` in runtime config."
             )
+
         text_num = meta_info["length"]
         output_dir = meta_info["output_dir"]
         os.makedirs(output_dir, exist_ok=True)
         os.makedirs(self.get_items_dir(meta_info), exist_ok=True)
 
-        # T2I sampling knobs: prefer runtime `extra_args`, fallback to dataset meta_info defaults.
         extra_args = getattr(self, "extra_args", {}) or {}
-        print(f"extra_args: {extra_args}")
         save_items = bool(extra_args.get("save_items", True))
         num_images = int(extra_args.get("num_images", 1))
         batch_size = int(extra_args.get("batch_size", 1))
-        cfg_text_scale = float(extra_args.get("cfg_text_scale", 4.0))
-        cfg_img_scale = float(extra_args.get("cfg_img_scale", 1.5))
-        resolution = int(extra_args.get("resolution", 1024))
-        num_timesteps = int(extra_args.get("num_timesteps", 50))
-        cfg_interval = extra_args.get("cfg_interval", [0.4, 1.0])
-        cfg_renorm_min = float(extra_args.get("cfg_renorm_min", 0.0))
-        timestep_shift = float(extra_args.get("timestep_shift", 3.0))
+
+        # Shared optional "think" knobs.
         think = bool(extra_args.get("think", False))
         think_simple = bool(extra_args.get("think_simple", False))
         think_max_length = int(extra_args.get("think_max_length", 2048))
@@ -184,6 +257,21 @@ class ModelAdapter(BaseModelAdapter):
         think_system_prompt = str(
             extra_args.get("think_system_prompt", SYSTEM_PROMPT_WITH_THINK)
         )
+
+        # T2I knobs.
+        cfg_scale = float(extra_args.get("cfg_scale", 4.0))
+        resolution = int(extra_args.get("resolution", 1024))
+        num_timesteps = int(extra_args.get("num_timesteps", 50))
+        cfg_interval = extra_args.get("cfg_interval", [0.4, 1.0])
+        cfg_renorm_min = float(extra_args.get("cfg_renorm_min", 0.0))
+        timestep_shift = float(extra_args.get("timestep_shift", 3.0))
+
+        # I2I knobs.
+        cfg_text_scale = float(extra_args.get("cfg_text_scale", 4.0))
+        cfg_img_scale = float(extra_args.get("cfg_img_scale", 1.5))
+        cfg_type = str(extra_args.get("cfg_type", "parallel"))
+        cfg_renorm_type = str(extra_args.get("cfg_renorm_type", "global"))
+        use_vit = bool(extra_args.get("use_vit", False))
 
         output_info: list[dict[str, Any]] = []
         world_size = (
@@ -197,10 +285,12 @@ class ModelAdapter(BaseModelAdapter):
 
         for idx in range(rank, text_num, world_size):
             data = self.task_manager.get_data(task_name, idx)
-            print(f"data: {data}")
             prompt = data.get("prompt") or data.get("question")
             question_id = str(data.get("id") or data.get("question_id") or idx)
-            print(f"question_id: {question_id}")
+
+            source_path = None
+            if is_i2i:
+                source_path = self._extract_source_path(data, question_id)
 
             cached = self.load_item_if_exists(question_id, meta_info)
             if cached is not None:
@@ -211,33 +301,70 @@ class ModelAdapter(BaseModelAdapter):
                     f"Skipping {question_id} because item already exists: "
                     f"{self.get_item_path(question_id, meta_info)}"
                 )
-                output_info.append(
-                    {
-                        "question_id": str(cached.get("question_id", question_id)),
-                        "id": str(cached.get("id", question_id)),
-                        "prompt": cached.get("prompt", prompt),
-                        "images": cached_images,
-                    }
-                )
+                out_cached = {
+                    "question_id": str(cached.get("question_id", question_id)),
+                    "id": str(cached.get("id", question_id)),
+                    "prompt": cached.get("prompt", prompt),
+                    "images": cached_images,
+                }
+                if is_i2i:
+                    out_cached["source_path"] = cached.get("source_path", source_path)
+                output_info.append(out_cached)
                 continue
 
-            image_list, think_list = self._generate_images(
-                prompt=prompt,
-                num_images=num_images,
-                batch_size=batch_size,
-                cfg_text_scale=cfg_text_scale,
-                cfg_img_scale=cfg_img_scale,
-                cfg_interval=cfg_interval,
-                cfg_renorm_min=cfg_renorm_min,
-                timestep_shift=timestep_shift,
-                num_timesteps=num_timesteps,
-                resolution=resolution,
-                think=think,
-                think_simple=think_simple,
-                think_max_length=think_max_length,
-                think_temperature=think_temperature,
-                think_system_prompt=think_system_prompt,
-            )
+            # Produce image list + think list (if enabled) for both modes.
+            if is_i2i:
+                source_images, _ = load_pil_image(
+                    [source_path], img_idx=[0], reqiures_img=True, reduplicate=False
+                )
+                source_image = source_images[0]
+
+                image_list: list[Image.Image] = []
+                think_list: list[str] | None = [] if think else None
+                # For I2I, we run editing multiple times if num_images > 1.
+                for _ in range(num_images):
+                    edited_image, think_one = self._edit_image_with_text_img_cfg(
+                        image=source_image,
+                        prompt=prompt,
+                        extra_args=extra_args,
+                        vae_transform=self.vae_transform,
+                        vit_transform=self.vit_transform,
+                        use_think_default=think,
+                        stride=int(extra_args.get("i2i_stride", 16)),
+                        cfg_text_scale=cfg_text_scale,
+                        cfg_img_scale=cfg_img_scale,
+                        cfg_type=cfg_type,
+                        cfg_interval=cfg_interval,
+                        cfg_renorm_min=cfg_renorm_min,
+                        cfg_renorm_type=cfg_renorm_type,
+                        timestep_shift=timestep_shift,
+                        num_timesteps=num_timesteps,
+                        use_vit=use_vit,
+                        think_temperature=think_temperature,
+                        think_max_length=int(extra_args.get("think_max_length", 10240)),
+                        think_system_prompt=think_system_prompt,
+                    )
+                    image_list.append(edited_image)
+                    if think_list is not None and think_one:
+                        # Store only the last think segment for this edit (usually length=1).
+                        think_list.append(think_one[-1])
+            else:
+                image_list, think_list = self._generate_images(
+                    prompt=prompt,
+                    num_images=num_images,
+                    batch_size=batch_size,
+                    cfg_scale=cfg_scale,
+                    cfg_interval=cfg_interval,
+                    cfg_renorm_min=cfg_renorm_min,
+                    timestep_shift=timestep_shift,
+                    num_timesteps=num_timesteps,
+                    resolution=resolution,
+                    think=think,
+                    think_simple=think_simple,
+                    think_max_length=think_max_length,
+                    think_temperature=think_temperature,
+                    think_system_prompt=think_system_prompt,
+                )
 
             sample_dir = os.path.join(output_dir, "samples")
             os.makedirs(sample_dir, exist_ok=True)
@@ -258,11 +385,12 @@ class ModelAdapter(BaseModelAdapter):
                 "prompt": prompt,
                 "images": image_names,
             }
+            if is_i2i:
+                out_item_result["source_path"] = source_path
 
             output_info.append(out_item_result)
             if save_items:
                 out_item_save: dict[str, Any] = dict(out_item_result)
-                # Save think content + absolute image paths in items JSON.
                 out_item_save["image_paths"] = image_paths
                 if think_list is not None:
                     out_item_save["think"] = think_list
@@ -274,7 +402,6 @@ class ModelAdapter(BaseModelAdapter):
 
         # save results for each rank, then gather on main
         if world_size == 1:
-            # single-process: keep legacy output name
             self.save_result(output_info, meta_info, rank=None)
             return
 
@@ -293,13 +420,26 @@ class ModelAdapter(BaseModelAdapter):
         vit_transform: ImageTransform,
         use_think_default: bool = False,
         stride: int = 16,
+        # Overrideable knobs (so unified loop can pass task-level values)
+        num_timesteps: int = 50,
+        cfg_text_scale: float = 4.0,
+        cfg_img_scale: float = 1.5,
+        cfg_type: str = "parallel",
+        cfg_interval=None,
+        cfg_renorm_min: float = 0.0,
+        cfg_renorm_type: str = "global",
+        timestep_shift: float = 3.0,
+        use_vit: bool = False,
+        think_temperature: float = 0.3,
+        think_max_length: int = 10240,
+        think_system_prompt: str = SYSTEM_PROMPT_WITH_THINK,
     ) -> tuple[Image.Image, list[str] | None]:
         """
-        Mirror gen_edit.editing_with_text_img_cfg to edit an image with text + source conditioning.
+        Edit an image with text + source conditioning (mirrors gen_edit.editing_with_text_img_cfg).
         """
-        def _make_divisible(value, stride):
-            """Ensure the value is divisible by the stride."""
-            return max(stride, int(round(value / stride) * stride))
+
+        def _make_divisible(value, stride_):
+            return max(stride_, int(round(value / stride_) * stride_))
 
         def _apply_scale(width, height, scale):
             new_width = round(width * scale)
@@ -310,25 +450,17 @@ class ModelAdapter(BaseModelAdapter):
 
         device = next(self.gen_model.parameters()).device
 
-        # Hyperparameters.
-        num_timesteps = int(extra_args.get("num_timesteps", 50))
-        cfg_text_scale = float(extra_args.get("cfg_text_scale", 4.0))
-        cfg_img_scale = float(extra_args.get("cfg_img_scale", 1.5))
-        cfg_type = str(extra_args.get("cfg_type", "serial_text_img"))
-        cfg_interval = extra_args.get("cfg_interval", [0.4, 1.0])
-        cfg_renorm_min = float(extra_args.get("cfg_renorm_min", 0.0))
-        cfg_renorm_type = str(extra_args.get("cfg_renorm_type", "text_channel"))
-        timestep_shift = float(extra_args.get("timestep_shift", 3.0))
-        use_vit = bool(extra_args.get("use_vit", False))
+        if cfg_interval is None:
+            cfg_interval = extra_args.get("cfg_interval", [0.4, 1.0])
+
         use_think = bool(extra_args.get("think", use_think_default))
-        think_temperature = float(extra_args.get("think_temperature", 0.3))
-        think_max_length = int(extra_args.get("think_max_length", 10240))
         seed = extra_args.get("seed", None)
 
         # Optional seeding for reproducibility.
         if seed is not None:
             import random
             import numpy as np
+
             random.seed(seed)
             np.random.seed(seed)
             torch.manual_seed(seed)
@@ -357,20 +489,13 @@ class ModelAdapter(BaseModelAdapter):
 
         # Optional think priming (system prompt).
         if use_think:
-            generation_input, newlens, new_rope = self.model.prepare_prompts(
-                curr_kvlens=newlens,
-                curr_rope=new_rope,
-                prompts=[SYSTEM_PROMPT_WITH_THINK],
-                tokenizer=self.tokenizer,
-                new_token_ids=self.new_token_ids,
+            past_key_values, newlens, new_rope = self._cache_append_prompts(
+                past_key_values=past_key_values,
+                newlens=newlens,
+                new_rope=new_rope,
+                prompts=[think_system_prompt],
+                device=device,
             )
-            with torch.amp.autocast("cuda", enabled=True, dtype=torch.bfloat16):
-                generation_input = self._move_generation_input_to_device(
-                    generation_input, device
-                )
-                past_key_values = self.model.forward_cache_update_text(
-                    past_key_values, **generation_input
-                )
 
         # Encode source image via VAE path (conditioning).
         generation_input, newlens, new_rope = self.model.prepare_vae_images(
@@ -381,9 +506,7 @@ class ModelAdapter(BaseModelAdapter):
             new_token_ids=self.new_token_ids,
             timestep=0.0,
         )
-        generation_input = self._move_generation_input_to_device(
-            generation_input, device
-        )
+        generation_input = self._move_generation_input_to_device(generation_input, device)
         with torch.amp.autocast("cuda", enabled=True, dtype=torch.bfloat16):
             past_key_values = self.model.forward_cache_update_vae(
                 self.vae_model, past_key_values, **generation_input
@@ -415,54 +538,31 @@ class ModelAdapter(BaseModelAdapter):
         )
 
         # Main prompt.
-        generation_input, newlens, new_rope = self.model.prepare_prompts(
-            curr_kvlens=newlens,
-            curr_rope=new_rope,
+        past_key_values, newlens, new_rope = self._cache_append_prompts(
+            past_key_values=past_key_values,
+            newlens=newlens,
+            new_rope=new_rope,
             prompts=[prompt],
-            tokenizer=self.tokenizer,
-            new_token_ids=self.new_token_ids,
+            device=device,
         )
-        generation_input = self._move_generation_input_to_device(
-            generation_input, device
-        )
-        with torch.amp.autocast("cuda", enabled=True, dtype=torch.bfloat16):
-            past_key_values = self.model.forward_cache_update_text(
-                past_key_values, **generation_input
-            )
 
         # Optional think loop (generate + re-inject).
         if use_think:
-            tmp_generation_input = self.model.prepare_start_tokens(
-                newlens, new_rope, self.new_token_ids
+            think_output = self._generate_think_text(
+                past_key_values=past_key_values,
+                newlens=newlens,
+                new_rope=new_rope,
+                device=device,
+                think_max_length=think_max_length,
+                think_temperature=think_temperature,
             )
-            tmp_generation_input = self._move_generation_input_to_device(
-                tmp_generation_input, device
-            )
-            with torch.amp.autocast("cuda", enabled=True, dtype=torch.bfloat16):
-                generated_token_ids = self.model.generate_text(
-                    past_key_values=copy.deepcopy(past_key_values),
-                    max_length=think_max_length,
-                    do_sample=True,
-                    temperature=think_temperature,
-                    end_token_id=self.new_token_ids.get("eos_token_id"),
-                    **tmp_generation_input,
-                )
-            decoded = self._decode_generated_text(generated_token_ids)
-            think_output = self._extract_think_text(decoded)
-            generation_input, newlens, new_rope = self.model.prepare_prompts(
-                curr_kvlens=newlens,
-                curr_rope=new_rope,
+            past_key_values, newlens, new_rope = self._cache_append_prompts(
+                past_key_values=past_key_values,
+                newlens=newlens,
+                new_rope=new_rope,
                 prompts=[think_output],
-                tokenizer=self.tokenizer,
-                new_token_ids=self.new_token_ids,
+                device=device,
             )
-            generation_input = self._move_generation_input_to_device(
-                generation_input, device
-            )
-            with torch.amp.autocast("cuda", enabled=True, dtype=torch.bfloat16):
-                past_key_values = self.model.forward_cache_update_text(
-                    past_key_values, **generation_input
-                )
             assert think_list is not None
             think_list.append(think_output)
 
@@ -473,9 +573,6 @@ class ModelAdapter(BaseModelAdapter):
             image_sizes=[(h, w)],
             new_token_ids=self.new_token_ids,
         )
-        generation_input = self._move_generation_input_to_device(
-            generation_input, device
-        )
 
         # Image CFG branch (text side).
         cfg_img_past_key_values = NaiveCache(
@@ -484,27 +581,20 @@ class ModelAdapter(BaseModelAdapter):
         cfg_img_newlens = [0]
         cfg_img_new_rope = [0]
         cfg_img_texts = (
-            [SYSTEM_PROMPT_WITH_THINK, prompt, think_list[0]]
+            [think_system_prompt, prompt, think_list[0]]
             if use_think and think_list
             else [prompt]
         )
         for text in cfg_img_texts:
-            generation_input_cfg_img, cfg_img_newlens, cfg_img_new_rope = (
-                self.model.prepare_prompts(
-                    curr_kvlens=cfg_img_newlens,
-                    curr_rope=cfg_img_new_rope,
+            cfg_img_past_key_values, cfg_img_newlens, cfg_img_new_rope = (
+                self._cache_append_prompts(
+                    past_key_values=cfg_img_past_key_values,
+                    newlens=cfg_img_newlens,
+                    new_rope=cfg_img_new_rope,
                     prompts=[text],
-                    tokenizer=self.tokenizer,
-                    new_token_ids=self.new_token_ids,
+                    device=device,
                 )
             )
-            generation_input_cfg_img = self._move_generation_input_to_device(
-                generation_input_cfg_img, device
-            )
-            with torch.amp.autocast("cuda", enabled=True, dtype=torch.bfloat16):
-                cfg_img_past_key_values = self.model.forward_cache_update_text(
-                    cfg_img_past_key_values, **generation_input_cfg_img
-                )
 
         generation_input_cfg_img = self.model.prepare_vae_latent_cfg(
             curr_kvlens=cfg_img_newlens,
@@ -519,9 +609,7 @@ class ModelAdapter(BaseModelAdapter):
             "cfg_text_packed_query_indexes": generation_input_cfg_text[
                 "cfg_packed_query_indexes"
             ],
-            "cfg_text_key_values_lens": generation_input_cfg_text[
-                "cfg_key_values_lens"
-            ],
+            "cfg_text_key_values_lens": generation_input_cfg_text["cfg_key_values_lens"],
             "cfg_text_packed_key_value_indexes": generation_input_cfg_text[
                 "cfg_packed_key_value_indexes"
             ],
@@ -533,9 +621,7 @@ class ModelAdapter(BaseModelAdapter):
             "cfg_img_packed_query_indexes": generation_input_cfg_img[
                 "cfg_packed_query_indexes"
             ],
-            "cfg_img_key_values_lens": generation_input_cfg_img[
-                "cfg_key_values_lens"
-            ],
+            "cfg_img_key_values_lens": generation_input_cfg_img["cfg_key_values_lens"],
             "cfg_img_packed_key_value_indexes": generation_input_cfg_img[
                 "cfg_packed_key_value_indexes"
             ],
@@ -545,9 +631,7 @@ class ModelAdapter(BaseModelAdapter):
             generation_input = self._move_generation_input_to_device(
                 generation_input, device
             )
-            cfg_text_args = self._move_generation_input_to_device(
-                cfg_text_args, device
-            )
+            cfg_text_args = self._move_generation_input_to_device(cfg_text_args, device)
             cfg_img_args = self._move_generation_input_to_device(cfg_img_args, device)
             unpacked_latent = self.model.generate_image(
                 past_key_values=past_key_values,
@@ -585,119 +669,6 @@ class ModelAdapter(BaseModelAdapter):
         edited_image = Image.fromarray(edited_image)
 
         return edited_image, think_list
-
-    def _run_i2i_task(self, task_name: str, meta_info: Dict[str, Any]):
-        # I2I uses generation components and conditions on a source image.
-        if not hasattr(self, "gen_model") or not hasattr(self, "vae_model"):
-            raise RuntimeError(
-                "I2I requires generation components, but they are not initialized. "
-                "Please set `model.use_gen_model=true` in runtime config."
-            )
-        
-        text_num = meta_info["length"]
-        output_dir = meta_info["output_dir"]
-        os.makedirs(output_dir, exist_ok=True)
-        os.makedirs(self.get_items_dir(meta_info), exist_ok=True)
-
-        extra_args = getattr(self, "extra_args", {}) or {}
-        print(f"extra_args: {extra_args}")
-        save_items = bool(extra_args.get("save_items", True))
-
-        vae_transform = ImageTransform(1024, 512, 16)
-        vit_transform = ImageTransform(980, 378, 14)
-
-        output_info: list[dict[str, Any]] = []
-        world_size = (
-            self.accelerator.state.num_processes if self.accelerator is not None else 1
-        )
-        rank = (
-            self.accelerator.state.local_process_index
-            if self.accelerator is not None
-            else 0
-        )
-
-        for idx in range(rank, text_num, world_size):
-            data = self.task_manager.get_data(task_name, idx)
-            prompt = data.get("prompt") or data.get("question")
-            question_id = str(data.get("id") or data.get("question_id") or idx)
-            source_path = (
-                data.get("source_path")
-                or data.get("source")
-                or data.get("img_path")
-                or data.get("image")
-            )
-            if not source_path:
-                raise KeyError(f"Missing source image path for sample {question_id}")
-
-            cached = self.load_item_if_exists(question_id, meta_info)
-            if cached is not None:
-                cached_images = cached.get("images", [])
-                if isinstance(cached_images, str):
-                    cached_images = [cached_images]
-                logger.info(
-                    f"Skipping {question_id} because item already exists: "
-                    f"{self.get_item_path(question_id, meta_info)}"
-                )
-                output_info.append(
-                    {
-                        "question_id": str(cached.get("question_id", question_id)),
-                        "id": str(cached.get("id", question_id)),
-                        "prompt": cached.get("prompt", prompt),
-                        "images": cached_images,
-                        "source_path": source_path,
-                    }
-                )
-                continue
-
-            source_images, _ = load_pil_image(
-                [source_path], img_idx=[0], reqiures_img=True, reduplicate=False
-            )
-            source_image = source_images[0]
-
-            edited_image, think_list = self._edit_image_with_text_img_cfg(
-                image=source_image,
-                prompt=prompt,
-                extra_args=extra_args,
-                vae_transform=vae_transform,
-                vit_transform=vit_transform,
-            )
-
-            sample_dir = os.path.join(output_dir, "samples")
-            os.makedirs(sample_dir, exist_ok=True)
-
-            image_name = f"{question_id}_00000.png"
-            sample_path = os.path.join(sample_dir, image_name)
-            edited_image.save(sample_path)
-
-            out_item_result: dict[str, Any] = {
-                "question_id": question_id,
-                "id": question_id,
-                "prompt": prompt,
-                "images": [image_name],
-                "source_path": source_path,
-            }
-            output_info.append(out_item_result)
-
-            if save_items:
-                out_item_save: dict[str, Any] = dict(out_item_result)
-                out_item_save["image_paths"] = [sample_path]
-                if think_list is not None:
-                    out_item_save["think"] = think_list
-                self.save_item(
-                    out_item_save,
-                    question_id=question_id,
-                    meta_info=meta_info,
-                )
-
-        if world_size == 1:
-            self.save_result(output_info, meta_info, rank=None)
-            return
-
-        self.save_result(output_info, meta_info, rank=rank)
-        if self.accelerator is not None:
-            self.accelerator.wait_for_everyone()
-            if self.accelerator.is_main_process:
-                self.collect_results_and_save(meta_info)
 
     def _run_vqa_task(self, task_name: str, meta_info: Dict[str, Any]):
         results = []
@@ -779,9 +750,7 @@ class ModelAdapter(BaseModelAdapter):
 
         print("rank", rank, "finished")
 
-    def _move_generation_input_to_device(
-        self, generation_input: Dict[str, Any], device
-    ):
+    def _move_generation_input_to_device(self, generation_input: Dict[str, Any], device):
         for k, v in generation_input.items():
             if isinstance(v, torch.Tensor):
                 generation_input[k] = v.to(device)
@@ -814,8 +783,7 @@ class ModelAdapter(BaseModelAdapter):
         prompt: str,
         num_images: int,
         batch_size: int,
-        cfg_text_scale: float,
-        cfg_img_scale: float,
+        cfg_scale: float,
         cfg_interval,
         cfg_renorm_min: float,
         timestep_shift: float,
@@ -828,7 +796,7 @@ class ModelAdapter(BaseModelAdapter):
         think_system_prompt: str = SYSTEM_PROMPT_WITH_THINK,
     ):
         device = next(self.gen_model.parameters()).device
-        image_list = []
+        image_list: list[Image.Image] = []
         think_list: list[str] | None = [] if think else None
 
         assert batch_size == 1, "batch_size must be 1 for T2I"
@@ -846,56 +814,32 @@ class ModelAdapter(BaseModelAdapter):
             # Optional: do a "think" step (generate a short plan), then feed it back.
             if think:
                 # 1) system prompt
-                generation_input, newlens, new_rope = self.model.prepare_prompts(
-                    curr_kvlens=newlens,
-                    curr_rope=new_rope,
+                past_key_values, newlens, new_rope = self._cache_append_prompts(
+                    past_key_values=past_key_values,
+                    newlens=newlens,
+                    new_rope=new_rope,
                     prompts=[think_system_prompt],
-                    tokenizer=self.tokenizer,
-                    new_token_ids=self.new_token_ids,
+                    device=device,
                 )
-                generation_input = self._move_generation_input_to_device(
-                    generation_input, device
-                )
-                with torch.amp.autocast("cuda", enabled=True, dtype=torch.bfloat16):
-                    past_key_values = self.model.forward_cache_update_text(
-                        past_key_values, **generation_input
-                    )
 
                 # 2) user prompt
-                generation_input, newlens, new_rope = self.model.prepare_prompts(
-                    curr_kvlens=newlens,
-                    curr_rope=new_rope,
+                past_key_values, newlens, new_rope = self._cache_append_prompts(
+                    past_key_values=past_key_values,
+                    newlens=newlens,
+                    new_rope=new_rope,
                     prompts=[prompt],
-                    tokenizer=self.tokenizer,
-                    new_token_ids=self.new_token_ids,
+                    device=device,
                 )
-                generation_input = self._move_generation_input_to_device(
-                    generation_input, device
-                )
-                with torch.amp.autocast("cuda", enabled=True, dtype=torch.bfloat16):
-                    past_key_values = self.model.forward_cache_update_text(
-                        past_key_values, **generation_input
-                    )
 
                 # 3) generate think text without mutating main cache (then re-feed text)
-                tmp_past_key_values = copy.deepcopy(past_key_values)
-                tmp_generation_input = self.model.prepare_start_tokens(
-                    newlens, new_rope, self.new_token_ids
+                think_output = self._generate_think_text(
+                    past_key_values=past_key_values,
+                    newlens=newlens,
+                    new_rope=new_rope,
+                    device=device,
+                    think_max_length=think_max_length,
+                    think_temperature=think_temperature,
                 )
-                tmp_generation_input = self._move_generation_input_to_device(
-                    tmp_generation_input, device
-                )
-                with torch.amp.autocast("cuda", enabled=True, dtype=torch.bfloat16):
-                    generated_token_ids = self.model.generate_text(
-                        past_key_values=tmp_past_key_values,
-                        max_length=think_max_length,
-                        do_sample=True,
-                        temperature=think_temperature,
-                        end_token_id=self.new_token_ids.get("eos_token_id"),
-                        **tmp_generation_input,
-                    )
-                decoded = self._decode_generated_text(generated_token_ids)
-                think_output = self._extract_think_text(decoded)
                 if think_simple:
                     # Keep the part after </think> if present (same behavior as infer_wise.py).
                     parts = think_output.split("</think>")
@@ -903,39 +847,24 @@ class ModelAdapter(BaseModelAdapter):
                         think_output = parts[1].strip()
 
                 # 4) feed think back into cache
-                generation_input, newlens, new_rope = self.model.prepare_prompts(
-                    curr_kvlens=newlens,
-                    curr_rope=new_rope,
+                past_key_values, newlens, new_rope = self._cache_append_prompts(
+                    past_key_values=past_key_values,
+                    newlens=newlens,
+                    new_rope=new_rope,
                     prompts=[think_output],
-                    tokenizer=self.tokenizer,
-                    new_token_ids=self.new_token_ids,
+                    device=device,
                 )
-                generation_input = self._move_generation_input_to_device(
-                    generation_input, device
-                )
-                with torch.amp.autocast("cuda", enabled=True, dtype=torch.bfloat16):
-                    past_key_values = self.model.forward_cache_update_text(
-                        past_key_values, **generation_input
-                    )
                 assert think_list is not None
                 think_list.append(think_output)
             else:
-                generation_input, newlens, new_rope = self.model.prepare_prompts(
-                    curr_kvlens=newlens,
-                    curr_rope=new_rope,
+                # Non-think path: can batch prompts.
+                past_key_values, newlens, new_rope = self._cache_append_prompts(
+                    past_key_values=past_key_values,
+                    newlens=newlens,
+                    new_rope=new_rope,
                     prompts=[prompt] * curr_batch,
-                    tokenizer=self.tokenizer,
-                    new_token_ids=self.new_token_ids,
+                    device=device,
                 )
-                generation_input = self._move_generation_input_to_device(
-                    generation_input, device
-                )
-                with torch.no_grad():
-                    # Keep autocast dtype consistent with model weights (bf16 by default).
-                    with torch.amp.autocast("cuda", enabled=True, dtype=torch.bfloat16):
-                        past_key_values = self.model.forward_cache_update_text(
-                            past_key_values, **generation_input
-                        )
 
             generation_input = self.gen_model.prepare_vae_latent(
                 curr_kvlens=newlens,
@@ -967,8 +896,7 @@ class ModelAdapter(BaseModelAdapter):
                     unpacked_latent = self.model.generate_image(
                         past_key_values=past_key_values,
                         num_timesteps=num_timesteps,
-                        cfg_text_scale=cfg_text_scale,
-                        cfg_img_scale=cfg_img_scale,
+                        cfg_text_scale=cfg_scale,
                         cfg_interval=cfg_interval,
                         cfg_renorm_min=cfg_renorm_min,
                         timestep_shift=timestep_shift,
@@ -989,7 +917,9 @@ class ModelAdapter(BaseModelAdapter):
                     )
 
             for latent in unpacked_latent:
-                latent = latent.reshape(1, resolution // 16, resolution // 16, 2, 2, 16)
+                latent = latent.reshape(
+                    1, resolution // 16, resolution // 16, 2, 2, 16
+                )
                 latent = torch.einsum("nhwpqc->nchpwq", latent)
                 latent = latent.reshape(1, 16, resolution // 8, resolution // 8)
                 # VAE is fp16 (or other), so ensure latent dtype matches to avoid
@@ -1023,3 +953,4 @@ if __name__ == "__main__":
         task_names=None,
     )
     model_adapter.run()
+

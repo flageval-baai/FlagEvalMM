@@ -12,6 +12,7 @@ from .extract_evaluator import ExtractEvaluator
 from .fvd_evaluator import FVDEvaluator
 from .wise_evaluator import WiseEvaluator
 from .longtext_bench_evaluator import LongTextBenchEvaluator
+from .gedit_evaluator import GEditEvaluator
 
 __all__ = [
     "BaseEvaluator",
@@ -28,4 +29,5 @@ __all__ = [
     "FVDEvaluator",
     "WiseEvaluator",
     "LongTextBenchEvaluator",
+    "GEditEvaluator",
 ]

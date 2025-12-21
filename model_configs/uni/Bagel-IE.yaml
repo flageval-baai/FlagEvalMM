@@ -1,0 +1,48 @@
+tasks:
+  files:
+    # - file: tasks/t2i/wise/wise.py
+    #   data_root: /share/project/mmdataset/t2i/wise/
+    # - file: tasks/t2i/longtext_bench/longtext_bench.py
+    #   data_root: /share/project/mmdataset/t2i/LongText-Bench/
+    - file: tasks/t2i/gedit/gedit.py
+      data_root: /share/project/mmdataset/t2i/GEdit-Bench
+  debug: false
+  try_run: false
+  output_dir: outputs/Bagel_Gen_new_cfg/
+  num_workers: 8
+  skip: false
+
+server:
+  local_mode: true
+  quiet: false
+
+model:
+  model_name: Bagel
+  model_path: /share/project/models/vlm/BAGEL-7B-MoT
+  exec: model_zoo/uni/bagel/model_adapter.py
+
+extra_args:
+  save_items: true
+  num_images: 1
+  batch_size: 1
+  cfg_text_scale: 4.0
+  cfg_img_scale: 1.5
+  resolution: 1024
+  num_timesteps: 50
+  cfg_interval: [0.4, 1.0]
+  cfg_renorm_min: 0.0
+  timestep_shift: 3.0
+  think: ture
+  think_simple: false
+  use_vit: false
+  # save_items: true
+  # num_images: 1
+  # batch_size: 1
+  # cfg_scale: 4.0
+  # resolution: 1024
+  # num_timesteps: 50
+  # cfg_interval: [0.4, 1.0]
+  # cfg_renorm_min: 0.0
+  # timestep_shift: 3.0
+  # think: false
+  # think_simple: false
