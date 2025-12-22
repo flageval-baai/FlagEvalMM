@@ -32,25 +32,16 @@ class EvaluationServer:
         config_dict: Dict,
         model_path: str,
         output_dir: str,
-        port: int = 5000,
-        host: str = "127.0.0.1",
         debug: bool = True,
         quiet: bool = False,
-        local_mode: bool = False,
     ) -> None:
         self.debug = debug
-        self.port = port
-        self.host = host
         self.config_dict = config_dict
         self.model_path = model_path
         self.output_dir = output_dir
         self.active_task: OrderedDict[str, Any] = OrderedDict()
         self.max_active_task_num = 10
         self.quiet = quiet
-        if not local_mode:
-            self.app = Flask(__name__)
-        else:
-            self.app = None
         self.active_processes: Dict[str, multiprocessing.Process] = {}
 
         if self.quiet:
@@ -59,8 +50,6 @@ class EvaluationServer:
                 self.app.logger.disabled = True
             log = logging.getLogger("werkzeug")
             log.disabled = True
-        if not local_mode:
-            self.set_routes()
 
     def load_dataset(self, task_name: str) -> None:
         logger.info(f"Loading dataset for task {task_name}")

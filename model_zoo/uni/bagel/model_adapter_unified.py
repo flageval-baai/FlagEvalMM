@@ -945,11 +945,7 @@ if __name__ == "__main__":
     args = parse_args()
     defaults_obj = RunCfg()
     model_adapter = ModelAdapter(
-        server_ip=defaults_obj.server.ip,
-        server_port=defaults_obj.server.port,
-        timeout=defaults_obj.server.timeout,
         extra_cfg=args.cfg,
-        local_mode=defaults_obj.server.local_mode,
         task_names=None,
     )
     model_adapter.run()

@@ -8,8 +8,6 @@ from datetime import timedelta
 from torch.utils.data import DataLoader
 
 import os
-
-from flagevalmm.server.utils import get_meta, get_task_info, submit, get_data
 from flagevalmm.common.logger import get_logger
 from flagevalmm.server.evaluation_server import EvaluationServer
 from mmengine.config import Config
@@ -68,44 +66,29 @@ def load_tasks(
 class TaskManager:
     def __init__(
         self,
-        server_ip: str,
-        server_port: int,
-        timeout: int = 1000,
-        local_mode: bool = False,
         task_names: List[Dict[str, Any]] = None,
         model_path: str = None,
         task_config: Dict = None,
         **kwargs,
     ):
-        self.server_ip = server_ip
-        self.server_port = server_port
-        self.timeout = timeout
-        self.local_mode = local_mode
-        if local_mode:
-            assert task_names is not None, "tasks.files must be provided in local mode"
+        assert task_names is not None, "tasks.files must be provided in local mode"
         self.task_names = task_names
-        debug = task_config.get("debug", False) or task_config.get("try_run", False)
+        try_run = task_config.get("try_run", False)
+        config_dict = load_tasks(
+            task_names,
+            debug=try_run,
+            data_root=task_config.get("data_root", None),
+        )
 
-        if local_mode:
-            config_dict = load_tasks(
-                task_names,
-                debug=debug,
-                data_root=task_config.get("data_root", None),
-            )
-
-            self.evaluation_server = EvaluationServer(
-                config_dict,
-                output_dir=task_config.get("output_dir", None),
-                model_path=model_path,
-                debug=debug,
-                quiet=task_config.get("quiet", False),
-                local_mode=True,
-            )
+        self.evaluation_server = EvaluationServer(
+            config_dict,
+            output_dir=task_config.get("output_dir", None),
+            model_path=model_path,
+            debug=try_run,
+            quiet=task_config.get("quiet", False),
+        )
 
     def get_task_info(self):
-        if not self.local_mode:
-            return get_task_info(self.server_ip, self.server_port)
-
         task_info = {
             "task_names": list(self.evaluation_server.config_dict.keys()),
             "model_path": self.evaluation_server.model_path,
@@ -113,49 +96,26 @@ class TaskManager:
         return task_info
 
     def get_meta_info(self, task_name: str):
-        if not self.local_mode:
-            return get_meta(task_name, self.server_ip, self.server_port)
         return self.evaluation_server.get_task_meta_info(task_name)
 
     def submit(self, task_name: str, model_name: str, output_dir: str):
-        if not self.local_mode:
-            submit(
-                task_name,
-                model_name,
-                self.server_ip,
-                self.server_port,
-                self.timeout,
-                output_dir,
-            )
-        else:
-            self.evaluation_server.evaluate_task(task_name, model_name, output_dir)
+        self.evaluation_server.evaluate_task(task_name, model_name, output_dir)
 
     def get_data(self, task_name: str, index: int):
-        if not self.local_mode:
-            return get_data(index, task_name, self.server_ip, self.server_port)
         return self.evaluation_server.get_task_data_by_index(task_name, index)
 
 
 class BaseModelAdapter:
     def __init__(
         self,
-        server_ip: str,
-        server_port: int,
-        timeout: int = 1000,
         enable_accelerate: bool = True,
         extra_cfg: str | Dict | None = None,
-        local_mode: bool = False,
         task_names: List[Dict[str, Any]] = None,
         **kwargs,
     ) -> None:
 
         extra_cfg_nested = load_run_cfg(extra_cfg)
 
-        server_cfg = (
-            extra_cfg_nested.get("server", {})
-            if isinstance(extra_cfg_nested.get("server", {}), dict)
-            else {}
-        )
         tasks_cfg = (
             extra_cfg_nested.get("tasks", {})
             if isinstance(extra_cfg_nested.get("tasks", {}), dict)
@@ -177,21 +137,10 @@ class BaseModelAdapter:
             else {}
         )
 
-        server_ip = server_cfg.get("ip", server_ip)
-        server_port = server_cfg.get("port", server_port)
-        timeout = server_cfg.get("timeout", timeout)
-        local_mode = server_cfg.get("local_mode", local_mode)
         task_names = tasks_cfg.get("files", task_names)
         model_path = model_cfg.get("model_path") or model_cfg.get("model_name")
 
-        self.server_ip = server_ip
-        self.server_port = server_port
-        self.timeout = timeout
-
         self.task_manager = TaskManager(
-            server_ip,
-            server_port,
-            local_mode=local_mode,
             task_names=task_names,
             model_path=model_path,
             task_config=tasks_cfg,
@@ -204,17 +153,16 @@ class BaseModelAdapter:
         # We keep both:
         # - `task_info["extra_args"]` for traceability
         # - top-level keys (non-overriding) for adapter convenience
-        if local_mode and extra_args:
-            task_info["extra_args"] = extra_args
-            conflicts = set(task_info.keys()) & set(extra_args.keys())
-            if conflicts:
-                logger.warning(
-                    "extra_args keys already exist in task_info; keeping existing values: "
-                    f"{sorted(conflicts)}"
-                )
-            for k, v in extra_args.items():
-                if k not in task_info:
-                    task_info[k] = v
+        task_info["extra_args"] = extra_args
+        conflicts = set(task_info.keys()) & set(extra_args.keys())
+        if conflicts:
+            logger.warning(
+                "extra_args keys already exist in task_info; keeping existing values: "
+                f"{sorted(conflicts)}"
+            )
+        for k, v in extra_args.items():
+            if k not in task_info:
+                task_info[k] = v
 
         self.task_info = task_info
         self.model_name: str = task_info.get("model_name", None)

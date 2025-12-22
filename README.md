@@ -25,10 +25,6 @@ tasks: # task configuration
   num_workers: 8 # number of workers for inference
   skip: false # skip mode, skip the task if it has been run
 
-server: # server configuration
-  local_mode: true
-  quiet: false
-
 model: # model configuration
   model_name: Bagel
   model_path: /share/project/models/vlm/BAGEL-7B-MoT

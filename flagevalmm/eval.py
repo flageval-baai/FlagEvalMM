@@ -77,7 +77,7 @@ def _normalize_tasks(tasks_list, global_data_root):
 
 
 def build_run_cfg(
-    cfg_path: str, chosen_server_port: int, exec_override: str | None = None
+    cfg_path: str, exec_override: str | None = None
 ) -> Any:
     """
     Build a structured run config (YAML-friendly) using dataclass defaults + user config file.
@@ -85,11 +85,6 @@ def build_run_cfg(
     Note: This is runtime config only; task dataset configs in tasks/ are not modified.
     """
     cfg = load_run_cfg_with_defaults(cfg_path)
-
-    # Force runtime-chosen port into config to match launched eval server.
-    cfg.setdefault("server", {})
-    if isinstance(cfg["server"], dict):
-        cfg["server"]["port"] = chosen_server_port
 
     # Optional exec override without touching YAML
     if exec_override:
@@ -124,11 +119,6 @@ class ServerWrapper:
     def __init__(self, args):
         self.args = args
         self.exec = args.exec
-        self.port = None
-        self.evaluation_server_ip = None
-        self.local_mode = None
-        self.evaluation_server = None
-        self.evaluation_server_pid = None
         self.infer_process = None
         # Register cleanup at exit
         atexit.register(self.cleanup)
@@ -138,50 +128,10 @@ class ServerWrapper:
 
     def start(self):
         """Main method to start the server and run the model"""
-        # Decide evaluation server port first (remote uses random port; local/disabled uses cfg).
-        cfg_preview = load_run_cfg_with_defaults(self.args.cfg)
-        server_preview = (
-            cfg_preview.get("server", {})
-            if isinstance(cfg_preview.get("server", {}), dict)
-            else {}
-        )
-        defaults_obj = RunCfg()
-
-        disable_eval = bool(
-            server_preview.get(
-                "disable_evaluation_server",
-                defaults_obj.server.disable_evaluation_server,
-            )
-        )
-        local_mode = bool(
-            server_preview.get("local_mode", defaults_obj.server.local_mode)
-        )
-
-        # Base port/ip for local/disabled mode.
-        base_port = server_preview.get("port", defaults_obj.server.port)
-
-        if disable_eval or local_mode:
-            self.port = int(base_port)
-        else:
-            self.port = get_random_port()
-            logger.info(f"Using port {self.port}")
-
-        # Build config after knowing port
         self.run_cfg = build_run_cfg(
             cfg_path=self.args.cfg,
-            chosen_server_port=self.port,
             exec_override=self.exec,
         )
-        server_cfg = self.run_cfg.get("server", {})
-        if isinstance(server_cfg, dict):
-            self.evaluation_server_ip = server_cfg.get("ip", defaults_obj.server.ip)
-            self.local_mode = server_cfg.get(
-                "local_mode", defaults_obj.server.local_mode
-            )
-        else:
-            self.evaluation_server_ip = defaults_obj.server.ip
-            self.local_mode = defaults_obj.server.local_mode
-
         # Adapter entrypoint: prefer config, then CLI override, then default.
         model_cfg = (
             self.run_cfg.get("model", {})
@@ -207,7 +157,6 @@ class ServerWrapper:
         if not tasks:
             logger.info("No tasks to run, exit")
             return
-        # Persist normalized tasks for downstream consumers (adapters, server)
         self.run_cfg["tasks"]["files"] = tasks
 
         if tasks_cfg.get("skip", True):
@@ -221,9 +170,6 @@ class ServerWrapper:
         os.makedirs(self.output_dir, exist_ok=True)
         self.run_cfg_path = osp.join(self.output_dir, "run_config.yaml")
         OmegaConf.save(config=OmegaConf.create(self.run_cfg), f=self.run_cfg_path)
-
-        # Launch server (needs output_dir), then run adapter
-        self.maybe_launch_evaluation_server(server_cfg, self.output_dir)
         self.run_model_adapter()
 
     def run_model_adapter(self):
@@ -292,43 +238,6 @@ class ServerWrapper:
         command.extend(["--cfg", self.run_cfg_path])
         return command
 
-    def maybe_launch_evaluation_server(self, server_cfg, output_dir):
-        if server_cfg.get("local_mode", True) or server_cfg.get(
-            "disable_evaluation_server", True
-        ):
-            self.evaluation_server = None
-            return
-        assert output_dir, "output_dir is required when launching evaluation server"
-        # Prefer nested runtime config (run_config.yaml) instead of passing flat flags.
-        # run_server.py reads tasks/model/server from --cfg.
-        command = [
-            "python",
-            "flagevalmm/server/run_server.py",
-            "--cfg",
-            self.run_cfg_path,
-        ]
-        if server_cfg.get("quiet", False):
-            command.append("--quiet")
-
-        self.evaluation_server = subprocess.Popen(command, start_new_session=True)
-        # wait for server to start or timeout
-        for _ in range(10):
-            if self.is_server_running():
-                break
-            time.sleep(10)
-        else:
-            raise RuntimeError("Server failed to start")
-
-        self.evaluation_server_pid = self.evaluation_server.pid
-
-    def is_server_running(self):
-        try:
-            response = requests.get(
-                f"{self.evaluation_server_ip}:{self.port}/task_info", timeout=10
-            )
-            return response.status_code == 200
-        except requests.RequestException:
-            return False
 
     def cleanup(self):
         if self.infer_process:
@@ -353,41 +262,13 @@ class ServerWrapper:
             finally:
                 self.infer_process = None
 
-        if not hasattr(self, "evaluation_server") or self.evaluation_server is None:
-            return
-        try:
-            if self.is_server_running():
-                # check if eval_finished
-                while True:
-                    response = requests.get(
-                        f"{self.evaluation_server_ip}:{self.port}/eval_finished"
-                    )
-                    if response.json()["status"] == 1:
-                        break
-                    time.sleep(10)
-                    logger.info("Waiting for eval to finish...")
-                self.evaluation_server.terminate()
-                self.evaluation_server.wait()
-                logger.info(
-                    f"Server with PID {self.evaluation_server_pid} has been terminated.\nPort {self.port} is released"
-                )
-        except Exception as e:
-            logger.error(f"Error during cleanup: {e}")
         logger.info("ServerWrapper cleanup completed")
 
 
 def evaluate_only(args):
     # Keep evaluate_only behavior: output_dir resolution uses same logic as run_cfg
-    cfg_preview = load_run_cfg_with_defaults(args.cfg)
-    server_cfg = (
-        cfg_preview.get("server", {})
-        if isinstance(cfg_preview.get("server", {}), dict)
-        else {}
-    )
-    defaults_obj = RunCfg()
-    chosen_port = server_cfg.get("port", defaults_obj.server.port)
     run_cfg = build_run_cfg(
-        args.cfg, chosen_server_port=int(chosen_port), exec_override=args.exec
+        args.cfg, exec_override=args.exec
     )
     output_root = run_cfg["tasks"]["output_dir"]
 
@@ -401,13 +282,12 @@ def evaluate_only(args):
 
     # Derive runtime flags for task config patching from merged run_cfg.
     try_run = bool(tasks_cfg.get("try_run", False))
-    debug = bool(tasks_cfg.get("debug", False) or try_run)
 
     for task in tasks:
         task_file = task.get("file") if isinstance(task, dict) else task
         data_root = task.get("data_root") if isinstance(task, dict) else None
         runtime_args = argparse.Namespace(
-            debug=debug, try_run=try_run, data_root=data_root
+            try_run=try_run, data_root=data_root
         )
 
         task_cfg = Config.fromfile(task_file)
