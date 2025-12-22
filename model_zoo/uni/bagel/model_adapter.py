@@ -123,12 +123,8 @@ class ModelAdapter(BaseModelAdapter):
                 model = model.module
         self.model = model
         self.image_transform = build_transform()
-        # VAE transform for image editing (I2I) path; defaults match gen_edit.py.
-        self.vae_transform = ImageTransform(
-            max_image_size=int(extra_args.get("i2i_vae_max_image_size", 1024)),
-            min_image_size=int(extra_args.get("i2i_vae_min_image_size", 512)),
-            image_stride=int(extra_args.get("i2i_vae_image_stride", 16)),
-        )
+        self.vae_transform = ImageTransform(1024, 512, 16)
+        self.vit_transform = ImageTransform(980, 378, 14)
 
     def run_one_task(self, task_name: str, meta_info: Dict[str, Any]):
         # Determine task type from meta info
@@ -289,8 +285,6 @@ class ModelAdapter(BaseModelAdapter):
         image: Image.Image,
         prompt: str,
         extra_args: Dict[str, Any],
-        vae_transform: ImageTransform,
-        vit_transform: ImageTransform,
         use_think_default: bool = False,
         stride: int = 16,
     ) -> tuple[Image.Image, list[str] | None]:
@@ -338,8 +332,8 @@ class ModelAdapter(BaseModelAdapter):
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
 
-        max_image_size = vae_transform.resize_transform.max_size
-        min_image_size = vae_transform.resize_transform.min_size
+        max_image_size = self.vae_transform.resize_transform.max_size
+        min_image_size = self.vae_transform.resize_transform.min_size
         # Prepare image size
         w, h = image.size
         scale = min(max_image_size / max(w, h), 1.0)
@@ -377,7 +371,7 @@ class ModelAdapter(BaseModelAdapter):
             curr_kvlens=newlens,
             curr_rope=new_rope,
             images=[image],
-            transforms=vae_transform,
+            transforms=self.vae_transform,
             new_token_ids=self.new_token_ids,
             timestep=0.0,
         )
@@ -395,7 +389,7 @@ class ModelAdapter(BaseModelAdapter):
                 curr_kvlens=newlens,
                 curr_rope=new_rope,
                 images=[image],
-                transforms=vit_transform,
+                transforms=self.vit_transform,
                 new_token_ids=self.new_token_ids,
             )
             generation_input = self._move_generation_input_to_device(
@@ -603,9 +597,6 @@ class ModelAdapter(BaseModelAdapter):
         print(f"extra_args: {extra_args}")
         save_items = bool(extra_args.get("save_items", True))
 
-        vae_transform = ImageTransform(1024, 512, 16)
-        vit_transform = ImageTransform(980, 378, 14)
-
         output_info: list[dict[str, Any]] = []
         world_size = (
             self.accelerator.state.num_processes if self.accelerator is not None else 1
@@ -657,9 +648,7 @@ class ModelAdapter(BaseModelAdapter):
             edited_image, think_list = self._edit_image_with_text_img_cfg(
                 image=source_image,
                 prompt=prompt,
-                extra_args=extra_args,
-                vae_transform=vae_transform,
-                vit_transform=vit_transform,
+                extra_args=extra_args
             )
 
             sample_dir = os.path.join(output_dir, "samples")
