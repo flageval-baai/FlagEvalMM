@@ -93,30 +93,30 @@ class ModelAdapter(BaseModelAdapter):
             if getattr(self, "accelerator", None) is not None
             else torch.device("cuda" if torch.cuda.is_available() else "cpu")
         )
-        with (
-            self.accelerator.main_process_first()
-            if getattr(self, "accelerator", None) is not None
-            else nullcontext()
-        ):
-            print(f"use_gen_model: {use_gen_model}")
-            if use_gen_model:
-                model, self.tokenizer, self.new_token_ids, vae_model = (
-                    load_gen_model_and_tokenizer(
-                        ckpt_path, max_latent_size=max_latent_size
-                    )
+        # with (
+        #     self.accelerator.main_process_first()
+        #     if getattr(self, "accelerator", None) is not None
+        #     else nullcontext()
+        # ):
+        print(f"use_gen_model: {use_gen_model}")
+        if use_gen_model:
+            model, self.tokenizer, self.new_token_ids, vae_model = (
+                load_gen_model_and_tokenizer(
+                    ckpt_path, max_latent_size=max_latent_size
                 )
-                print("Successfully loaded generation model")
-                # Keep generation components available for T2I.
-                self.vae_model = vae_model.to(
-                    device=device, dtype=torch.bfloat16
-                ).eval()
-                self.gen_model = model
-                self._t2i_initialized = True
-            else:
-                model, self.tokenizer, self.new_token_ids = load_model_and_tokenizer(
-                    ckpt_path
-                )
-            model = model.to(device=device, dtype=torch.bfloat16).eval()
+            )
+            print("Successfully loaded generation model")
+            # Keep generation components available for T2I.
+            self.vae_model = vae_model.to(
+                device=device, dtype=torch.bfloat16
+            ).eval()
+            self.gen_model = model
+            self._t2i_initialized = True
+        else:
+            model, self.tokenizer, self.new_token_ids = load_model_and_tokenizer(
+                ckpt_path
+            )
+        model = model.to(device=device, dtype=torch.bfloat16).eval()
         if getattr(self, "accelerator", None) is not None:
             model = self.accelerator.prepare_model(model, evaluation_mode=True)
             if hasattr(model, "module"):
@@ -1004,11 +1004,7 @@ if __name__ == "__main__":
     args = parse_args()
     defaults_obj = RunCfg()
     model_adapter = ModelAdapter(
-        server_ip=defaults_obj.server.ip,
-        server_port=defaults_obj.server.port,
-        timeout=defaults_obj.server.timeout,
         extra_cfg=args.cfg,
-        local_mode=defaults_obj.server.local_mode,
         task_names=None,
     )
     model_adapter.run()

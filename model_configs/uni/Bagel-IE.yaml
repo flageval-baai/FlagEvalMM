@@ -12,10 +12,6 @@ tasks:
   num_workers: 8
   skip: false
 
-server:
-  local_mode: true
-  quiet: false
-
 model:
   model_name: Bagel
   model_path: /share/project/models/vlm/BAGEL-7B-MoT

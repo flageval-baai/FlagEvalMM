@@ -24,16 +24,6 @@ from omegaconf import DictConfig, OmegaConf
 
 
 @dataclass
-class ServerCfg:
-    ip: str = "http://localhost"
-    port: int = 5000
-    timeout: int = 1000
-    local_mode: bool = True
-    quiet: bool = False
-    disable_evaluation_server: bool = False
-
-
-@dataclass
 class TasksCfg:
     files: list[str] = field(default_factory=list)
     data_root: Optional[str] = None
@@ -69,68 +59,11 @@ class RunCfg:
     - Use `load_run_cfg()` to load user-provided config without injecting defaults.
     """
 
-    server: ServerCfg = field(default_factory=ServerCfg)
     tasks: TasksCfg = field(default_factory=TasksCfg)
     model: Dict[str, Any] = field(default_factory=dict)
     infer: InferCfg = field(default_factory=InferCfg)
     # Free-form extra config for adapters.
     extra_args: Dict[str, Any] = field(default_factory=dict)
-
-
-@retry(wait=wait_random_exponential(min=2, max=10), stop=stop_after_attempt(3))
-def get_meta(task_name: str, server_ip: str, server_port: int, timeout: int = 1000):
-    url = f"{server_ip}:{server_port}/meta_info?task={task_name}"
-    meta_info = requests.get(url, timeout=timeout).json()
-    return meta_info
-
-
-@retry(wait=wait_random_exponential(min=2, max=10), stop=stop_after_attempt(3))
-def get_task_info(server_ip: str, server_port: int, timeout: int = 1000):
-    url = f"{server_ip}:{server_port}/task_info"
-    task_info = requests.get(url, timeout=timeout).json()
-    return task_info
-
-
-@retry(wait=wait_random_exponential(min=2, max=10), stop=stop_after_attempt(3))
-def submit(
-    task_name: str,
-    model_name: str,
-    server_ip: str,
-    server_port: int,
-    timeout: int = 1000,
-    output_dir: str = "",
-) -> Any:
-    url = f"{server_ip}:{server_port}/evaluate?task={task_name}&model_name={model_name}"
-    if output_dir:
-        url += f"&output_dir={output_dir}"
-    response = requests.get(url, timeout=timeout)
-    return response.json()
-
-
-@retry(wait=wait_random_exponential(min=2, max=10), stop=stop_after_attempt(3))
-def get_data(
-    index: int, task_name: str, server_ip: str, server_port: int, timeout: int = 1000
-) -> Any:
-    url = f"{server_ip}:{server_port}/get_data?index={index}&task={task_name}"
-    response = requests.get(url, timeout=timeout)
-    if response.status_code != 200:
-        raise Exception(
-            f"Failed to get data from server: {response.status_code} reason: {response.text}"
-        )
-    return response.json()
-
-
-def get_retrieval_data(
-    index: int,
-    task_name: str,
-    data_type: str,
-    server_ip: str,
-    server_port: int,
-    timeout: int = 1000,
-):
-    url = f"{server_ip}:{server_port}/get_retrieval_data?index={index}&type={data_type}&task={task_name}"
-    response = requests.get(url, timeout=timeout).json()
-    return response
 
 
 def parse_args():
@@ -260,8 +193,6 @@ def get_random_port() -> int:
 
 
 def merge_args(cfg: Config, task_config_file: str, args: argparse.Namespace) -> Config:
-    if getattr(args, "debug", None) is True:
-        cfg.server.debug = True
     if getattr(args, "data_root", None):
         cfg.dataset.data_root = args.data_root
     if getattr(args, "try_run", None) is True:
