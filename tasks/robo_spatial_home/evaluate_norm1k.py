@@ -182,7 +182,7 @@ def evaluate_answer_v2(gt, normed_answer):
 
     mask_img = Image.open(osp.join(gt["data_root"], gt["mask_path"]))
 
-    points = text2pts(normed_answer, width=gt["image_width"], height=gt["image_height"])
+    points = text2pts_norm1k(normed_answer, width=gt["image_width"], height=gt["image_height"])
     acc = calculate_mask_score(points, mask_img)
     # draw_point_result(gt, mask_img, acc, points)
     return acc
