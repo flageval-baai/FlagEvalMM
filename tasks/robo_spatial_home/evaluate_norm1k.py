@@ -5,7 +5,7 @@ import ast
 from flagevalmm.evaluator.pre_process import normalize_string
 import os.path as osp
 from PIL import Image
-from flagevalmm.evaluator.point_utils import text2pts, calculate_mask_score
+from flagevalmm.evaluator.point_utils import text2pts_norm1k, calculate_mask_score
 
 
 # From the official evaluation code of RoboSpatial-Home: https://github.com/chanhee-luke/RoboSpatial-Eval/blob/master/evaluation.py
