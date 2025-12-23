@@ -3,7 +3,7 @@ from PIL import Image
 from collections import defaultdict
 import os.path as osp
 
-from flagevalmm.evaluator.point_utils import text2pts, calculate_mask_score
+from flagevalmm.evaluator.point_utils import calculate_mask_score, text2pts_norm1k
 
 
 def get_result(annotations: Dict, predictions: List[Dict]) -> Dict:
@@ -13,7 +13,7 @@ def get_result(annotations: Dict, predictions: List[Dict]) -> Dict:
         gt = annotations[question_id]
         try:
             pred["raw_answer"] = pred["answer"]
-            points = text2pts(
+            points = text2pts_norm1k(
                 pred.get("answer", ""),
                 width=gt["image_width"],
                 height=gt["image_height"],

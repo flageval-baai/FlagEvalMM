@@ -7,7 +7,7 @@ config = dict(
 
 post_prompt_point = """Your task is to identify specific points in the image based on the question. Respond with a brief explanation if needed, followed by a list of 2D point coordinates.
 
-Each point should be represented as a normalized (x, y) tuple, where both x and y values are floats between 0 and 1, corresponding to the position within the image (e.g., for a point at pixel (50, 75) in a 100*100 image, the normalized coordinate is (0.5, 0.75)).
+Each point should be represented as a normalized (x, y) tuple, where both x and y values are floats between 0 and 1000, corresponding to the position within the image (e.g., for a point at pixel (50, 75) in a 100*100 image, the normalized coordinate is (500, 750)).
 
 Format your final answer strictly as follows on the last line of your response:
 Answer: [(x1, y1), (x2, y2), ..., (xn, yn)]
@@ -38,7 +38,7 @@ dataset = dict(
         post_prompt=post_prompt,
     ),
     config=config,
-    name="robo_spatial_home_all",
+    name="robo_spatial_home_all_norm1k",
 )
 
-evaluator = dict(type="BaseEvaluator", eval_func="evaluate.py")
+evaluator = dict(type="BaseEvaluator", eval_func="evaluate_norm1k.py")
