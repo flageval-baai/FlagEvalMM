@@ -117,6 +117,7 @@ class ServerWrapper:
         return finished_tasks
 
     def __init__(self, args):
+        
         self.args = args
         self.exec = args.exec
         self.infer_process = None
@@ -125,6 +126,8 @@ class ServerWrapper:
         self.run_cfg_path = None
         self.run_cfg = None
         self.output_dir = None
+        cfg = Config.fromfile(args.cfg)
+        self.server_cfg = cfg.get("server", {})
 
     def start(self):
         """Main method to start the server and run the model"""
@@ -138,6 +141,7 @@ class ServerWrapper:
             if isinstance(self.run_cfg.get("model", {}), dict)
             else {}
         )
+            
         if model_cfg.get("exec"):
             self.exec = model_cfg.get("exec")
         if self.exec is None:
@@ -174,16 +178,22 @@ class ServerWrapper:
 
     def run_model_adapter(self):
         try:
-            use_torchrun, num_procs = self._should_use_torchrun()
+            use_torchrun, num_procs, master_port = self._should_use_torchrun()
             command = self._build_command(
-                use_torchrun=use_torchrun, num_procs=num_procs
+                use_torchrun=use_torchrun, num_procs=num_procs, master_port=master_port
             )
+            env = os.environ.copy()
+            if isinstance(self.server_cfg, dict):
+                cuda_visible_devices = self.server_cfg.get("cuda_visible_devices")
+                if cuda_visible_devices:
+                    env["CUDA_VISIBLE_DEVICES"] = str(cuda_visible_devices)
             if use_torchrun:
                 logger.info(f"Launching adapter with torchrun ({num_procs} processes)")
             # Create a new process group
             print(f"command: {command}")
             self.infer_process = subprocess.Popen(
                 command,
+                env=env,
                 preexec_fn=os.setsid if os.name != "nt" else None,
                 creationflags=(
                     0 if os.name != "nt" else subprocess.CREATE_NEW_PROCESS_GROUP
@@ -208,26 +218,38 @@ class ServerWrapper:
         exec_path = osp.normpath(self.exec or "")
         uni_marker = f"model_zoo{osp.sep}uni{osp.sep}"
         is_uni_adapter = uni_marker in exec_path and exec_path.endswith(".py")
-        return is_uni_adapter and num_workers > 1, num_workers
+        if self.server_cfg.get("port") is not None:
+            master_port = int(self.server_cfg.get("port"))
+        else:
+            master_port = None
+        return is_uni_adapter and num_workers > 1, num_workers, master_port
 
-    def _build_command(self, use_torchrun: bool = False, num_procs: int = 1):
+    def _build_command(self, use_torchrun: bool = False, num_procs: int = 1, master_port: int | None = None):
         """Private method to build the command for model execution"""
         command = []
         if self.exec.endswith("py"):
             assert osp.exists(self.exec), f"model path {self.exec} not found"
-            if use_torchrun and num_procs > 1:
+            if use_torchrun:
                 command += [
                     "torchrun",
-                    "--nproc_per_node",
-                    str(num_procs),
-                    self.exec,
                 ]
+                if num_procs > 1:
+                    command += [
+                        "--nproc_per_node",
+                        str(num_procs),
+                    ]
+                if master_port is not None:
+                    command += [
+                        "--master-port",
+                        str(master_port),
+                    ]
             else:
                 command += [
                     "python",
-                    self.exec,
                 ]
-
+            command += [
+                self.exec,
+            ]
         else:
             assert osp.exists(f"{self.exec}/run.sh"), f"run.sh not found in {self.exec}"
             command += [

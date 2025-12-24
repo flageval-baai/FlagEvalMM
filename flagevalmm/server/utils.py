@@ -62,6 +62,7 @@ class RunCfg:
     tasks: TasksCfg = field(default_factory=TasksCfg)
     model: Dict[str, Any] = field(default_factory=dict)
     infer: InferCfg = field(default_factory=InferCfg)
+    server: Dict[str, Any] = field(default_factory=dict)
     # Free-form extra config for adapters.
     extra_args: Dict[str, Any] = field(default_factory=dict)
 
