@@ -46,7 +46,7 @@ dataset = dict(
         post_prompt=post_prompt_func,
     ),
     config=config,
-    name="erqa+",
+    name="ERQAPlus",
 )
 
 evaluator = dict(type="BaseEvaluator", eval_func="evaluate.py")
