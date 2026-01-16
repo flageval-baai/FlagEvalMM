@@ -3,8 +3,7 @@ config = dict(
     split="relation",
     processed_dataset_path="ARPGrounding",
     processor="process.py",
-    # 如果你用 load_dataset(data_dir, name=...) 才需要这个
-    # dataset_name="",
+
 )
 
 dataset = dict(
