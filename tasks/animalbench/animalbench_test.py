@@ -1,5 +1,5 @@
 config = dict(
-    dataset_path="YourOrg/Animal-Bench",  # TODO: Replace with actual HuggingFace repo ID
+    dataset_path="jynkris1016/Animal-Bench",
     split="test",
     processed_dataset_path="AnimalBench",
     processor="process.py",

@@ -6,34 +6,30 @@ from typing import List
 import glob
 import subprocess
 
-# Video prefix mapping for different sub-tasks
-# Assuming videos are organized in videos/ directory with subdirectories
-VIDEO_PREFIX_MAP = {
-    # Common tasks
-    "action_count.json": "videos",
-    "action_localization.json": "videos",
-    "action_prediction.json": "videos",
-    "action_sequence.json": "videos",
-    "object_count.json": "videos",
-    "object_existence.json": "videos",
-    "reasoning.json": "videos",
-    # Animal Kingdom (AK) tasks
-    "AK_action_recognition.json": "videos/AK",
-    "AK_object_recognition.json": "videos/AK",
-    "AK_bm.json": "videos/AK",
-    "AK_pd.json": "videos/AK",
-    "AK_pm.json": "videos/AK",
-    "AK_sa.json": "videos/AK",
-    # LoTE-Animal tasks
-    "LoTE_bm.json": "videos/LoTE",
-    "LoTE_sa.json": "videos/LoTE",
-    # MammalNet (mmnet) tasks
-    "mmnet_action_recognition.json": "videos/mmnet",
-    "mmnet_object_recognition.json": "videos/mmnet",
-    "mmnet_bm.json": "videos/mmnet",
-    "mmnet_pd.json": "videos/mmnet",
-    "mmnet_pm.json": "videos/mmnet",
-    "mmnet_sa.json": "videos/mmnet",
+# Video prefix mapping for different sub-tasks.
+# Map JSON stem -> local video folder (relative to data_root).
+JSON_TO_LOCAL_DIR = {
+    "action_count": "TGIF-QA",
+    "action_localization": "animal_kingdom/video_grounding",
+    "action_prediction": "animal_kingdom/video_grounding",
+    "action_sequence": "animal_kingdom/video_grounding",
+    "AK_action_recognition": "animal_kingdom/video",
+    "AK_bm": "animal_kingdom/video",
+    "AK_object_recognition": "animal_kingdom/video",
+    "AK_pd": "animal_kingdom/video",
+    "AK_pm": "animal_kingdom/video",
+    "AK_sa": "animal_kingdom/video",
+    "LoTE_bm": "LoTE-Animal",
+    "LoTE_sa": "LoTE-Animal",
+    "mmnet_action_recognition": "mmnet",
+    "mmnet_bm": "mmnet",
+    "mmnet_object_recognition": "mmnet",
+    "mmnet_pd": "mmnet",
+    "mmnet_pm": "mmnet",
+    "mmnet_sa": "mmnet",
+    "object_count": "MSRVTT-QA",
+    "object_existence": "mmnet",
+    "reasoning": "NExT-QA",
 }
 
 CHOICE_LABELS = ["A", "B", "C", "D", "E", "F"]
@@ -135,7 +131,9 @@ def process(cfg):
     
     for json_path in json_files:
         filename = os.path.basename(json_path)
-        video_prefix = VIDEO_PREFIX_MAP.get(filename, "videos")  # Default to "videos" if not in map
+        json_stem = Path(json_path).stem
+        local_dir = JSON_TO_LOCAL_DIR.get(json_stem, "")
+        video_prefix = osp.join("videos", local_dir) if local_dir else "videos"
         
         print(f"Processing {filename} with video prefix: {video_prefix}")
         processed = process_single_json(json_path, video_prefix)

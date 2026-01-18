@@ -17,20 +17,50 @@ Animal-Bench includes 20 JSON files covering:
 
 ## Video Path Organization
 
-Videos are expected to be organized as:
+Videos are expected to be organized under `videos/` with subfolders mapped by
+JSON task name:
 ```
 videos/
-  ├── AK/          # Animal Kingdom videos
-  ├── LoTE/        # LoTE-Animal videos
-  ├── mmnet/       # MammalNet videos
-  └── *.mp4        # Common task videos
+  ├── TGIF-QA/                       # action_count
+  ├── animal_kingdom/
+  │   ├── video/                     # AK_* tasks
+  │   └── video_grounding/           # action_localization/prediction/sequence
+  ├── LoTE-Animal/                   # LoTE_* tasks
+  ├── mmnet/                         # mmnet_* and object_existence
+  ├── MSRVTT-QA/                     # object_count
+  └── NExT-QA/                       # reasoning
+```
+
+Mapping used in `process.py`:
+```
+action_count -> TGIF-QA
+action_localization -> animal_kingdom/video_grounding
+action_prediction -> animal_kingdom/video_grounding
+action_sequence -> animal_kingdom/video_grounding
+AK_action_recognition -> animal_kingdom/video
+AK_bm -> animal_kingdom/video
+AK_object_recognition -> animal_kingdom/video
+AK_pd -> animal_kingdom/video
+AK_pm -> animal_kingdom/video
+AK_sa -> animal_kingdom/video
+LoTE_bm -> LoTE-Animal
+LoTE_sa -> LoTE-Animal
+mmnet_action_recognition -> mmnet
+mmnet_bm -> mmnet
+mmnet_object_recognition -> mmnet
+mmnet_pd -> mmnet
+mmnet_pm -> mmnet
+mmnet_sa -> mmnet
+object_count -> MSRVTT-QA
+object_existence -> mmnet
+reasoning -> NExT-QA
 ```
 
 ## Configuration
 
 Before using, update `animalbench_test.py`:
-1. Replace `"YourOrg/Animal-Bench"` with actual HuggingFace repo ID
-2. Ensure video paths match the expected structure
+1. Dataset repo ID is set to `"jynkris1016/Animal-Bench"`
+2. Ensure video paths match the expected structure above
 
 ## Usage
 
@@ -45,3 +75,4 @@ The task follows the same pattern as MVBench:
 - The download function will skip if HuggingFace download fails (for local development)
 - If JSON directory doesn't exist after download, it will try to use local `Animal-Bench/data` directory
 - Video paths are relative to `data_root` which is `{cache_dir}/{processed_dataset_path}/{split}`
+- The HuggingFace repo stores videos as zip files under `videos/`; extract them so the folder layout matches the mapping above
