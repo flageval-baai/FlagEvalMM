@@ -10,6 +10,7 @@ BBOX_PROMPT = (
     "For example, a valid bbox might be (0.1, 0.2, 0.5, 0.6)."
 )
 
+
 def process(cfg):
     """
     Expect HF dataset rows like:
@@ -33,7 +34,6 @@ def process(cfg):
         data = load_dataset(data_dir, split=split)
 
     content = []
-    bad_cases = []
     for row in data:
         image_id = row["image_id"]
         image = row["image"].convert("RGB")
@@ -49,7 +49,6 @@ def process(cfg):
         pairs = row.get("pairs", [])
         for i, pair in enumerate(pairs):
             pos_phrase = str(pair["pos_phrase"]).lower()
-
 
             x, y, bw, bh = pair["pos_bbox_xywh"]
             x1, y1, x2, y2 = x, y, x + bw, y + bh
@@ -72,7 +71,6 @@ def process(cfg):
                 round(x2 / w, 4),
                 round(y2 / h, 4),
             ]
-
 
             x, y, bw, bh = pair["neg_bbox_xywh"]
             x1, y1, x2, y2 = x, y, x + bw, y + bh

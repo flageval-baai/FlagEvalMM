@@ -3,7 +3,6 @@ config = dict(
     split="relation",
     processed_dataset_path="ARPGrounding",
     processor="process.py",
-
 )
 
 dataset = dict(
