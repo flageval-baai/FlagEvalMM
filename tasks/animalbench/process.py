@@ -57,24 +57,24 @@ def extract_video_zips(output_dir):
     if not osp.exists(videos_dir):
         print(f"Videos directory not found at {videos_dir}")
         return
-    
+
     zip_files = glob.glob(osp.join(videos_dir, "*.zip"))
     if not zip_files:
         print("No zip files found to extract")
         return
-    
+
     for zip_path in zip_files:
         zip_name = Path(zip_path).stem  # e.g., "TGIF-QA"
         extract_to = osp.join(videos_dir, zip_name)
-        
+
         # Skip if already extracted
         if osp.exists(extract_to) and os.listdir(extract_to):
             print(f"Already extracted: {zip_name}")
             continue
-        
+
         print(f"Extracting {zip_name}.zip...")
         try:
-            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            with zipfile.ZipFile(zip_path, "r") as zip_ref:
                 zip_ref.extractall(extract_to)
             print(f"  Extracted to {extract_to}")
         except Exception as e:
@@ -92,13 +92,15 @@ def process_single_json(json_file, video_prefix) -> List[dict]:
     for ann in annotations:
         raw_answer = ann["answer"]
         options = ann["candidates"]
-        
+
         # Find answer index in candidates
         try:
             answer_index = options.index(raw_answer)
         except ValueError:
             # If answer not found in candidates, skip this item
-            print(f"Warning: Answer '{raw_answer}' not found in candidates for video {ann.get('video', 'unknown')}")
+            print(
+                f"Warning: Answer '{raw_answer}' not found in candidates for video {ann.get('video', 'unknown')}"
+            )
             continue
 
         # Build video path: video_prefix + video filename
@@ -109,7 +111,11 @@ def process_single_json(json_file, video_prefix) -> List[dict]:
             {
                 "question": ann["question"],
                 "raw_answer": raw_answer,
-                "answer": CHOICE_LABELS[answer_index] if answer_index < len(CHOICE_LABELS) else str(answer_index),
+                "answer": (
+                    CHOICE_LABELS[answer_index]
+                    if answer_index < len(CHOICE_LABELS)
+                    else str(answer_index)
+                ),
                 "options": options,
                 "sub_task": sub_task,
                 "question_type": "multiple-choice",
@@ -133,21 +139,23 @@ def process(cfg):
     else:
         output_dir = osp.join(cfg.processed_dataset_path, split)
     os.makedirs(output_dir, exist_ok=True)
-    
+
     # Download dataset
     download_dataset(data_dir, output_dir)
-    
+
     # Extract video zip files
     extract_video_zips(output_dir)
 
     all_processed_data = []
     # Process each JSON file in the directory
     json_dir = osp.join(output_dir, "json")
-    
+
     # Check if json_dir exists, if not, try to use local data directory
     if not osp.exists(json_dir):
         # Try to use local Animal-Bench/data directory if available
-        local_data_dir = osp.join(osp.dirname(osp.dirname(osp.dirname(__file__))), "Animal-Bench", "data")
+        local_data_dir = osp.join(
+            osp.dirname(osp.dirname(osp.dirname(__file__))), "Animal-Bench", "data"
+        )
         if osp.exists(local_data_dir):
             print(f"Using local data directory: {local_data_dir}")
             json_dir = local_data_dir
@@ -155,19 +163,19 @@ def process(cfg):
             print(f"Warning: JSON directory not found at {json_dir}")
             print("Please ensure data is downloaded or provide correct path")
             return
-    
+
     json_files = glob.glob(osp.join(json_dir, "*.json"))
-    
+
     if not json_files:
         print(f"Warning: No JSON files found in {json_dir}")
         return
-    
+
     for json_path in json_files:
         filename = os.path.basename(json_path)
         json_stem = Path(json_path).stem
         local_dir = JSON_TO_LOCAL_DIR.get(json_stem, "")
         video_prefix = osp.join("videos", local_dir) if local_dir else "videos"
-        
+
         print(f"Processing {filename} with video prefix: {video_prefix}")
         processed = process_single_json(json_path, video_prefix)
         all_processed_data.extend(processed)
@@ -181,4 +189,6 @@ def process(cfg):
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(all_processed_data, f, indent=2, ensure_ascii=False)
 
-    print(f"\nProcessed {len(all_processed_data)} items in total. Data saved to {output_file}")
+    print(
+        f"\nProcessed {len(all_processed_data)} items in total. Data saved to {output_file}"
+    )
