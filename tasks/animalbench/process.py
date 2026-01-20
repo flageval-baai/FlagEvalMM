@@ -5,6 +5,7 @@ import os.path as osp
 from typing import List
 import glob
 import subprocess
+import zipfile
 
 # Video prefix mapping for different sub-tasks.
 # Map JSON stem -> local video folder (relative to data_root).
@@ -36,8 +37,7 @@ CHOICE_LABELS = ["A", "B", "C", "D", "E", "F"]
 
 
 def download_dataset(repo_id, output_dir):
-    """Download dataset from HuggingFace (placeholder for now)"""
-    # TODO: Replace with actual HuggingFace repo ID when uploaded
+    """Download dataset from HuggingFace"""
     command = f"huggingface-cli download {repo_id} --repo-type dataset --local-dir {output_dir}"
     print(command)
     try:
@@ -49,6 +49,36 @@ def download_dataset(repo_id, output_dir):
         print(f"Download failed: {e.stderr}")
         # For now, skip download if it fails (using local data)
         print("Skipping download, using local data if available")
+
+
+def extract_video_zips(output_dir):
+    """Extract all zip files in videos/ directory"""
+    videos_dir = osp.join(output_dir, "videos")
+    if not osp.exists(videos_dir):
+        print(f"Videos directory not found at {videos_dir}")
+        return
+    
+    zip_files = glob.glob(osp.join(videos_dir, "*.zip"))
+    if not zip_files:
+        print("No zip files found to extract")
+        return
+    
+    for zip_path in zip_files:
+        zip_name = Path(zip_path).stem  # e.g., "TGIF-QA"
+        extract_to = osp.join(videos_dir, zip_name)
+        
+        # Skip if already extracted
+        if osp.exists(extract_to) and os.listdir(extract_to):
+            print(f"Already extracted: {zip_name}")
+            continue
+        
+        print(f"Extracting {zip_name}.zip...")
+        try:
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(extract_to)
+            print(f"  Extracted to {extract_to}")
+        except Exception as e:
+            print(f"  Failed to extract {zip_path}: {e}")
 
 
 def process_single_json(json_file, video_prefix) -> List[dict]:
@@ -104,8 +134,11 @@ def process(cfg):
         output_dir = osp.join(cfg.processed_dataset_path, split)
     os.makedirs(output_dir, exist_ok=True)
     
-    # Download dataset (placeholder for now)
+    # Download dataset
     download_dataset(data_dir, output_dir)
+    
+    # Extract video zip files
+    extract_video_zips(output_dir)
 
     all_processed_data = []
     # Process each JSON file in the directory
