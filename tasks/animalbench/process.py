@@ -53,7 +53,7 @@ def download_dataset(repo_id, output_dir):
 
 def extract_video_zips(output_dir):
     """Extract all zip files in videos/ directory
-    
+
     Returns:
         set: Set of successfully extracted folder names
     """
@@ -68,7 +68,7 @@ def extract_video_zips(output_dir):
         return set()
 
     successful_extracts = set()
-    
+
     for zip_path in zip_files:
         zip_name = Path(zip_path).stem  # e.g., "TGIF-QA"
         extract_to = osp.join(videos_dir, zip_name)
@@ -85,19 +85,26 @@ def extract_video_zips(output_dir):
                 # First, extract to a temporary location
                 temp_extract = osp.join(videos_dir, f"_temp_{zip_name}")
                 os.makedirs(temp_extract, exist_ok=True)
-                
+
                 # Extract all files
                 zip_ref.extractall(temp_extract)
-                
+
                 # Check if there's a single top-level directory with the same name
                 temp_contents = os.listdir(temp_extract)
-                
-                if len(temp_contents) == 1 and osp.isdir(osp.join(temp_extract, temp_contents[0])):
+
+                if len(temp_contents) == 1 and osp.isdir(
+                    osp.join(temp_extract, temp_contents[0])
+                ):
                     # If zip contains a single directory, move its contents up one level
                     inner_dir = osp.join(temp_extract, temp_contents[0])
-                    if temp_contents[0] == zip_name or temp_contents[0] in [zip_name.replace('-', '_'), zip_name.replace('_', '-')]:
+                    if temp_contents[0] == zip_name or temp_contents[0] in [
+                        zip_name.replace("-", "_"),
+                        zip_name.replace("_", "-"),
+                    ]:
                         # Same name detected, move contents directly
-                        print(f"  Detected nested '{temp_contents[0]}' directory, flattening...")
+                        print(
+                            f"  Detected nested '{temp_contents[0]}' directory, flattening..."
+                        )
                         os.rename(inner_dir, extract_to)
                     else:
                         # Different name, keep as is
@@ -105,27 +112,33 @@ def extract_video_zips(output_dir):
                 else:
                     # Multiple items at top level, keep structure as is
                     os.rename(temp_extract, extract_to)
-                
+
                 # Clean up temp directory if it still exists
                 if osp.exists(temp_extract):
                     import shutil
+
                     shutil.rmtree(temp_extract)
-                    
+
                 print(f"  Successfully extracted to {extract_to}")
                 successful_extracts.add(zip_name)
-                
+
         except zipfile.BadZipFile as e:
             print(f"  ✗ ERROR: Bad zip file {zip_path}: {e}")
-            print(f"  → Skipping {zip_name}, related data will be excluded from evaluation")
+            print(
+                f"  → Skipping {zip_name}, related data will be excluded from evaluation"
+            )
         except Exception as e:
             print(f"  ✗ ERROR: Failed to extract {zip_path}: {type(e).__name__}: {e}")
-            print(f"  → Skipping {zip_name}, related data will be excluded from evaluation")
+            print(
+                f"  → Skipping {zip_name}, related data will be excluded from evaluation"
+            )
             # Clean up any partial extraction
             temp_extract = osp.join(videos_dir, f"_temp_{zip_name}")
             if osp.exists(temp_extract):
                 import shutil
+
                 shutil.rmtree(temp_extract)
-    
+
     return successful_extracts
 
 
@@ -191,23 +204,12 @@ def process(cfg):
     # Download dataset
     download_dataset(data_dir, output_dir)
 
-    # Extract video zip files and get list of successful extractions
-    successful_extracts = extract_video_zips(output_dir)
-    
-    # Build set of available video folders for checking
-    videos_dir = osp.join(output_dir, "videos")
-    available_video_folders = set()
-    if osp.exists(videos_dir):
-        available_video_folders = {
-            item for item in os.listdir(videos_dir) 
-            if osp.isdir(osp.join(videos_dir, item)) and not item.startswith('_temp_')
-        }
-    
-    print(f"\nAvailable video folders: {sorted(available_video_folders)}")
+    # Extract video zip files
+    extract_video_zips(output_dir)
 
     all_processed_data = []
     skipped_tasks = []
-    
+
     # Process each JSON file in the directory
     json_dir = osp.join(output_dir, "json")
 
@@ -236,7 +238,7 @@ def process(cfg):
         json_stem = Path(json_path).stem
         local_dir = JSON_TO_LOCAL_DIR.get(json_stem, "")
         video_prefix = osp.join("videos", local_dir) if local_dir else "videos"
-        
+
         # Check if required video directory exists
         video_dir_check = osp.join(output_dir, video_prefix)
         if not osp.exists(video_dir_check):
@@ -257,16 +259,16 @@ def process(cfg):
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(all_processed_data, f, indent=2, ensure_ascii=False)
 
-    print(
-        f"\n{'='*60}"
-    )
+    print(f"\n{'='*60}")
     print(f"Processed {len(all_processed_data)} items in total.")
     print(f"Data saved to {output_file}")
-    
+
     if skipped_tasks:
-        print(f"\n⚠ Skipped {len(skipped_tasks)} tasks due to missing video directories:")
+        print(
+            f"\n⚠ Skipped {len(skipped_tasks)} tasks due to missing video directories:"
+        )
         for task in skipped_tasks:
             print(f"  - {task}")
         print("\nThese tasks will not be included in the evaluation.")
-    
+
     print(f"{'='*60}")
