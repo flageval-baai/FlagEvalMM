@@ -1,5 +1,5 @@
 config = dict(
-    dataset_path="jynkris1016/Animal-Bench",
+    dataset_path="shiyili1111/Animal-Bench",
     split="test",
     processed_dataset_path="AnimalBench",
     processor="process.py",
