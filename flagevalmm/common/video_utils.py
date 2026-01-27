@@ -28,14 +28,18 @@ def read_video_pyav(video_path: str, max_num_frames: int, return_tensors: bool =
         if total_frames == 0:
             raise ValueError(f"No video frames found in {video_path}")
         if total_frames > max_num_frames:
-            indices = np.arange(0, total_frames, total_frames / max_num_frames).astype(int)
+            indices = np.arange(0, total_frames, total_frames / max_num_frames).astype(
+                int
+            )
         else:
             indices = np.arange(total_frames)
         frames = [all_frames[i] for i in indices]
     else:
         # Normal path: frame count is known
         if total_frames > max_num_frames:
-            indices = np.arange(0, total_frames, total_frames / max_num_frames).astype(int)
+            indices = np.arange(0, total_frames, total_frames / max_num_frames).astype(
+                int
+            )
         else:
             indices = np.arange(total_frames)
         frames = []
