@@ -76,6 +76,8 @@ class VqaBaseDataset(Dataset):
             question = self.prompt_template.build_prompt(
                 question=question,
                 question_type=annotation["question_type"],
+                evaluator=annotation.get("evaluator", None),
+                evaluator_kwargs=annotation.get("evaluator_kwargs", None),
                 subject=annotation.get("subject", None),
             )
         return question
@@ -95,7 +97,11 @@ class VqaBaseDataset(Dataset):
             "question_id": str(annotation["question_id"]),
             "type": annotation["question_type"],
         }
-        if self.with_label:
+        if annotation.get("video_path", None) is not None:
+            ret["video_path"] = osp.join(self.data_root, annotation["video_path"])
+            if len(img_path) == 0:
+                ret.pop("img_path")
+        if self.with_label and annotation.get("answer", None) is not None:
             ret["label"] = annotation["answer"]
         return ret
 

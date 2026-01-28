@@ -1,4 +1,5 @@
 import re
+from flagevalmm.models.api_response import ApiResponse
 from flagevalmm.registry import EVALUATORS
 from flagevalmm.evaluator import BaseEvaluator
 import json
@@ -230,7 +231,12 @@ class ExtractEvaluator(BaseEvaluator):
             extracted_answer = self.llm_evaluator.infer(
                 chat_messages=message, temperature=0, top_p=1, seed=42
             )
-            return extracted_answer.replace("Extracted answer: ", "").strip()
+            # Handle both ApiResponse and string returns
+            if hasattr(extracted_answer, "content"):
+                content = extracted_answer.content
+            else:
+                content = str(extracted_answer)
+            return content.replace("Extracted answer: ", "").strip()
         except Exception as e:
             logger.error(f"Error in evaluating by llm: {e}")
             return "[FAILED]"
@@ -248,7 +254,11 @@ class ExtractEvaluator(BaseEvaluator):
             compare_result = self.llm_evaluator.infer(
                 chat_messages=message, temperature=0, top_p=1, seed=42
             )
-            return compare_result.replace("Judgement: ", "").strip()
+            assert isinstance(
+                compare_result, ApiResponse
+            ), f"response is not an ApiResponse: {compare_result}"
+            content = compare_result.content
+            return content.replace("Judgement: ", "").strip()
 
         except Exception as e:
             logger.error(f"Error in evaluating by llm: {e}")
@@ -263,9 +273,13 @@ class ExtractEvaluator(BaseEvaluator):
         )
         try:
             message = self.llm_evaluator.build_message(query=prompt)
-            grade_letter = self.llm_evaluator.infer(
+            grade_letter_response = self.llm_evaluator.infer(
                 chat_messages=message, temperature=0, top_p=1, seed=42
-            ).strip()
+            )
+            assert isinstance(
+                grade_letter_response, ApiResponse
+            ), f"response is not an ApiResponse: {grade_letter_response}"
+            grade_letter = grade_letter_response.content.strip()
 
             # Convert grade letter to score
             if grade_letter == "A":  # CORRECT

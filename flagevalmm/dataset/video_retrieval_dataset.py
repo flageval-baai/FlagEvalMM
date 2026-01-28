@@ -32,7 +32,7 @@ class VideoRetrievalDataset(Dataset):
         self.annotations = json.load(open(osp.join(self.data_root, anno_file)))
         self.name = name
         if debug:
-            self.annotations = self.annotations[:160]
+            self.annotations = self.annotations[:16]
         # flatten the caption list
 
         self.captions = [annotation["prompt"] for annotation in self.annotations]

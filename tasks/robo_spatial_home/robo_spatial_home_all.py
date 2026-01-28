@@ -41,4 +41,4 @@ dataset = dict(
     name="robo_spatial_home_all",
 )
 
-evaluator = dict(type="BaseEvaluator", eval_func="robo_spatial_evaluate.py")
+evaluator = dict(type="BaseEvaluator", eval_func="evaluate.py")

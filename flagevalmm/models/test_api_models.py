@@ -5,6 +5,7 @@ from flagevalmm.models.hunyuan import Hunyuan
 from flagevalmm.models.http_client import HttpClient
 from flagevalmm.models.claude import Claude
 from flagevalmm.models.gemini import Gemini
+from flagevalmm.models.api_response import ApiResponse
 
 
 class BaseTestModel:
@@ -14,10 +15,16 @@ class BaseTestModel:
         messages = self.model.build_message(query, system_prompt=system_prompt)
         answer = self.model.infer(messages)
 
+        # Handle both ApiResponse and string returns for backward compatibility
+        if isinstance(answer, ApiResponse):
+            content = answer.content
+        else:
+            content = answer
+
         # Add assertions to verify the result
-        self.assertIsNotNone(answer)
-        self.assertTrue(isinstance(answer, str))
-        self.assertGreater(len(answer), 0)
+        self.assertIsNotNone(content)
+        self.assertTrue(isinstance(content, str))
+        self.assertGreater(len(content), 0)
 
     def test_generate_joke_with_image(self):
         query = "Look at this image and create a funny joke based on what you see"
@@ -26,10 +33,16 @@ class BaseTestModel:
         )
         answer = self.model.infer(messages)
 
+        # Handle both ApiResponse and string returns for backward compatibility
+        if isinstance(answer, ApiResponse):
+            content = answer.content
+        else:
+            content = answer
+
         # Add assertions to verify the result
-        self.assertIsNotNone(answer)
-        self.assertTrue(isinstance(answer, str))
-        self.assertGreater(len(answer), 0)
+        self.assertIsNotNone(content)
+        self.assertTrue(isinstance(content, str))
+        self.assertGreater(len(content), 0)
 
 
 class TestGPTModel(BaseTestModel, unittest.TestCase):

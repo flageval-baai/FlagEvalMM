@@ -68,12 +68,12 @@ def get_score(annotations: Dict, pred: str, model: GPT) -> Tuple[float, bool]:
 
         if response:
             try:
-                data = json.loads(response)
+                data = json.loads(response.content)
                 score = data["score"]
                 if 0.0 <= score <= 1.0:
                     grade_sample_run_complete = True
                     val_success = True
-            except ValueError:
+            except Exception:
                 time.sleep(1)
                 temperature += 0.5
                 logger.info(
@@ -105,10 +105,12 @@ def get_result(annotations: Dict, predictions: List[Dict], llm_evaluator: GPT) -
         pred["val_success"] = val_success
         overall_score += score
     overall_score = round(overall_score / len(predictions) * 100, 4)
-    cap_scores = {cap: 0 for cap in cap_columns.squeeze().tolist()}
-    cap_details_scores = {
-        detail: 0 for detail in cap_details_columns.squeeze().tolist()
-    }
+
+    caps = cap_columns[0].tolist()
+    cap_scores = {cap: 0 for cap in caps}
+
+    details = cap_details_columns[0].tolist()
+    cap_details_scores = {detail: 0 for detail in details}
 
     # Count the number of results for each capability and detail
     cap_counts = {cap: 0 for cap in cap_scores}

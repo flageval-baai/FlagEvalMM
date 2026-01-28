@@ -51,5 +51,5 @@ class Text2ImageBaseDataset(Dataset):
         anno_dict = {}
         for i in range(num):
             cur_data = self.data[i]
-            anno_dict[cur_data["id"]] = cur_data
+            anno_dict[str(cur_data["id"])] = cur_data
         return anno_dict

@@ -1,6 +1,6 @@
 import json
 import copy
-from typing import List, Dict, Any, Callable, Optional
+from typing import List, Dict, Any, Callable, Optional, Union
 import os.path as osp
 from accelerate import Accelerator
 from torch.utils.data import DataLoader
@@ -12,6 +12,7 @@ from flagevalmm.common.logger import get_logger
 from flagevalmm.server.evaluation_server import EvaluationServer
 from mmengine.config import Config
 from flagevalmm.server.utils import maybe_register_class
+from flagevalmm.models.api_response import ProcessResult
 
 os.environ["no_proxy"] = "127.0.0.1,localhost"
 logger = get_logger(__name__)
@@ -196,7 +197,7 @@ class BaseModelAdapter:
 
     def save_result(
         self,
-        result: List[Dict[str, Any]],
+        result: List[Union[ProcessResult, Dict[str, Any]]],
         meta_info: Dict[str, Any],
         rank: int | None = None,
     ) -> None:
@@ -206,20 +207,42 @@ class BaseModelAdapter:
             output_file = osp.join(
                 meta_info["output_dir"], f"{meta_info['name']}_rank{rank}.json"
             )
+
+        # Convert ProcessResult to dictionary format
+        serializable_result = []
+        for item in result:
+            if isinstance(item, dict):
+                serializable_result.append(item)
+            elif isinstance(item, ProcessResult):
+                serializable_result.append(item.to_dict())
+            else:
+                raise NotImplementedError
+
         try:
+            serializable_result = sorted(
+                serializable_result, key=lambda x: x.get("question_id", "")
+            )
             with open(output_file, "w") as f:
-                json.dump(result, f, indent=2, ensure_ascii=False)
+                json.dump(serializable_result, f, indent=2, ensure_ascii=False)
         except Exception as e:
             logger.info(f"Error saving result: {e}")
             with open(output_file, "w") as f:
-                json.dump(result, f, indent=2, ensure_ascii=True)
+                json.dump(serializable_result, f, indent=2, ensure_ascii=True)
 
     def save_item(
-        self, result: Dict[str, Any], question_id: str, meta_info: Dict[str, Any]
+        self,
+        result: ProcessResult,
+        question_id: str,
+        meta_info: Dict[str, Any],
     ):
         output_dir = osp.join(meta_info["output_dir"], "items")
+
+        # Convert ProcessResult to dictionary format
+        serializable_result = result.to_dict()
+        serializable_result = result.to_dict()
+
         with open(osp.join(output_dir, f"{question_id}.json"), "w") as f:
-            json.dump(result, f, indent=2, ensure_ascii=False)
+            json.dump(serializable_result, f, indent=2, ensure_ascii=False)
 
     def collect_results_and_save(
         self,

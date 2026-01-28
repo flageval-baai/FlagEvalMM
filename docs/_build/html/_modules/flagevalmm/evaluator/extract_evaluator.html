@@ -1,0 +1,686 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../../">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" />
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2024.08.06 -->
+        <title>flagevalmm.evaluator.extract_evaluator - FlagEvalMM 0.3.5 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/custom.css?v=e3d4171f" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../../index.html"><div class="brand">FlagEvalMM 0.3.5 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../../index.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo only-light" src="../../../_static/logo.png" alt="Light Logo"/>
+    <img class="sidebar-logo only-dark" src="../../../_static/logo.png" alt="Dark Logo"/>
+  </div>
+  
+  
+</a><form class="sidebar-search-container" method="get" action="../../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quick Start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../usage.html">Usage Guide</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../configuration.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../tasks.html">Add New Tasks</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/flagevalmm.html">flagevalmm Package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/models.html">Models Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/evaluator.html">Evaluator Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/dataset.html">Dataset Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/common.html">Common Module</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Additional Information</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/flageval-baai/FlagEvalMM">GitHub Repository</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <h1>Source code for flagevalmm.evaluator.extract_evaluator</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">flagevalmm.registry</span> <span class="kn">import</span> <span class="n">EVALUATORS</span>
+<span class="kn">from</span> <span class="nn">flagevalmm.evaluator</span> <span class="kn">import</span> <span class="n">BaseEvaluator</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os.path</span> <span class="k">as</span> <span class="nn">osp</span>
+<span class="kn">from</span> <span class="nn">torch.utils.data</span> <span class="kn">import</span> <span class="n">Dataset</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Any</span>
+<span class="kn">from</span> <span class="nn">concurrent.futures</span> <span class="kn">import</span> <span class="n">ThreadPoolExecutor</span><span class="p">,</span> <span class="n">as_completed</span>
+
+<span class="kn">from</span> <span class="nn">flagevalmm.models</span> <span class="kn">import</span> <span class="n">HttpClient</span>
+<span class="kn">from</span> <span class="nn">flagevalmm.common.logger</span> <span class="kn">import</span> <span class="n">get_logger</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">get_logger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+<span class="c1">### This prompts are modified from the MathVerse: https://github.com/ZrrSkywalker/MathVerse/blob/main/evaluation/prompts.py</span>
+
+<span class="n">demo_prompt_extract</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">I am providing you a response from a model to a math problem, termed &#39;Model Response&#39;. You should extract the answer from the response as &#39;Extracted Answer&#39;. Directly output the extracted answer with no explanation.</span>
+<span class="s2">If the answer is a choice, you should output the choice letter rather than the answer.</span>
+
+<span class="s2">1.</span>
+<span class="s2">Model response: &#39;Rounded to two decimal places, the perimeter of the sector is approximately:</span><span class="se">\n\n</span><span class="s2">(-2, 1)&#39;</span>
+<span class="s2">Extracted Answer: (-2, 1)</span>
+
+<span class="s2">2.</span>
+<span class="s2">Model response: &#39;at those points.</span><span class="se">\n\n</span><span class="s2">Therefore, the correct option that represents the meaning of the intersection points of the graphs is:</span><span class="se">\n\n</span><span class="s2">D. They give the solutions to the equation $f(t)=g(t)$.&quot;,&#39;</span>
+<span class="s2">Extracted Answer: D</span>
+
+<span class="s2">3.</span>
+<span class="s2">Model response: &#39; at 1 (there&#39;s a closed circle at y = 1), the range in interval notation is </span><span class="se">\\</span><span class="s2">((-4, 1]</span><span class="se">\\</span><span class="s2">).</span><span class="se">\n\n</span><span class="s2">Final values:</span><span class="se">\n</span><span class="s2">Domain: </span><span class="se">\\</span><span class="s2">((-3, 3]</span><span class="se">\\</span><span class="s2">)</span><span class="se">\n</span><span class="s2">Range: </span><span class="se">\\</span><span class="s2">((-4, 1]</span><span class="se">\\</span><span class="s2">)&#39;</span>
+<span class="s2">Extracted Answer: Domain: </span><span class="se">\\</span><span class="s2">((-3, 3]</span><span class="se">\\</span><span class="s2">)</span><span class="se">\n</span><span class="s2">Range: </span><span class="se">\\</span><span class="s2">((-4, 1]</span><span class="se">\\</span><span class="s2">)</span>
+
+<span class="s2">4.</span>
+<span class="s2">Model response: &#39;As it stands, I cannot provide the correct option letter because there isn&#39;t enough information to solve for &#39;y&#39;.&#39;</span>
+<span class="s2">Extracted Answer: null</span>
+
+<span class="s2">5.</span>
+<span class="s2">Model response: &#39;Given that AB = 17.6 meters, we can now substitute into the equation:</span><span class="se">\n\n</span><span class="s2">d = 17.6 / cos(38</span><span class="se">\u00b0</span><span class="s2">)</span><span class="se">\n\n</span><span class="s2">Therefore, to one decimal place, the distance d between Ned and Bart is approximately 22.3 meters.&#39;</span>
+<span class="s2">Extracted answer: 22.3</span>
+
+<span class="s2">6.</span>
+<span class="s2">Model response:  have all the coefficients for the quadratic function:</span><span class="se">\n\\</span><span class="s2">( f(x) = ax^2 + bx + c </span><span class="se">\\</span><span class="s2">)</span><span class="se">\n\\</span><span class="s2">( f(x) = -1x^2 - 2x + 1 </span><span class="se">\\</span><span class="s2">)</span><span class="se">\n\n</span><span class="s2">Therefore, the equation for the graphed function </span><span class="se">\\</span><span class="s2">( f </span><span class="se">\\</span><span class="s2">) is:</span><span class="se">\n\\</span><span class="s2">( f(x) = -x^2 - 2x + 1 </span><span class="se">\\</span><span class="s2">)&quot;&#39;</span>
+<span class="s2">Extracted answer: f(x) = -x^2 - 2x + 1</span>
+
+<span class="s2">7.</span>
+<span class="s2">Model response: </span><span class="si">{answer}</span>
+<span class="s2">Extracted answer: </span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+<span class="n">demo_prompt_score</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">Below are two answers to a math question. Question is [Question], [Standard Answer] is the standard answer to the question, and [Model_answer] is the answer extracted from a model&#39;s output to this question.  Determine whether these two answers are consistent.</span>
+<span class="s2">Please note that only when the [Model_answer] completely matches the [Standard Answer] means they are consistent. For non-multiple-choice questions, if the meaning is expressed in the same way, it is also considered consistent, for example, 0.5m and 50cm.</span>
+<span class="s2">If they are consistent, Judement is 1; if they are different, Judement is 0.</span>
+
+<span class="s2">[Question]: Write the set of numbers represented on the number line in interval notation.</span>
+<span class="s2">[Standard Answer]: (-2,1]</span>
+<span class="s2">[Model_answer] : Extracted Answer: </span><span class="se">\\</span><span class="s2">((-2, 1)</span><span class="se">\\</span><span class="s2">)</span>
+<span class="s2">Judgement: 0</span>
+
+<span class="s2">[Question]: As shown in the figure, circle O has a radius 1.0, if angle BAC = 60.0, then the length of BC is ()</span><span class="se">\n</span><span class="s2">Choices:</span><span class="se">\n</span><span class="s2">A:2</span><span class="se">\n</span><span class="s2">B:2</span><span class="se">\u221a</span><span class="s2">{{3}}</span><span class="se">\n</span><span class="s2">C:</span><span class="se">\u221a</span><span class="s2">{{3}}</span><span class="se">\n</span><span class="s2">D:2</span><span class="se">\u221a</span><span class="s2">{{2}}</span>
+<span class="s2">[Standard Answer]: C</span>
+<span class="s2">[Model_answer] : B:2</span><span class="se">\u221a</span><span class="s2">{{3}}</span>
+<span class="s2">Judgement: 0</span>
+
+<span class="s2">[Question]: Find the domain and range of the function f using interval notation.</span>
+<span class="s2">[Standard Answer]: domain: [-4, 0) and range: (-3, 1]</span>
+<span class="s2">[Model_answer] : Range: </span><span class="se">\\</span><span class="s2">((-4, 1]</span><span class="se">\\</span><span class="s2">)</span>
+<span class="s2">Judgement: 0</span>
+
+<span class="s2">[Question]: As shown in the figure, circle O has a radius 1.0, if angle BAC = 60.0, then the length of BC is ()</span><span class="se">\n</span><span class="s2">Choices:</span><span class="se">\n</span><span class="s2">A:2</span><span class="se">\n</span><span class="s2">B:2</span><span class="se">\u221a</span><span class="s2">{{3}}</span><span class="se">\n</span><span class="s2">C:</span><span class="se">\u221a</span><span class="s2">{{3}}</span><span class="se">\n</span><span class="s2">D:2</span><span class="se">\u221a</span><span class="s2">{{2}}</span>
+<span class="s2">[Standard Answer]: C</span>
+<span class="s2">[Model_answer] : null</span>
+<span class="s2">Judgement: 0</span>
+
+<span class="s2">[Question]: Given the graph of the ellipse that intersects with x-axis at 9 and -9 and with y-axis at 3 and -3, determine its equation.A. </span><span class="se">\\</span><span class="s2">frac{{x^2}}{{81}} + </span><span class="se">\\</span><span class="s2">frac{{y^2}}{{9}} = 1 B. Can not determine.</span><span class="se">\n</span>
+<span class="s2">[Standard Answer]: A</span>
+<span class="s2">[Model_answer] : </span><span class="se">\\</span><span class="s2">frac{{x^2}}{{81}} + </span><span class="se">\\</span><span class="s2">frac{{y^2}}{{9}} = 1</span>
+<span class="s2">Judgement: 1</span>
+
+<span class="s2">[Question]: </span><span class="si">{question}</span>
+<span class="s2">[Standard Answer]: </span><span class="si">{answer}</span>
+<span class="s2">[Model_answer] : </span><span class="si">{extracted_answer}</span>
+<span class="s2">Judgement: &quot;&quot;&quot;</span>
+
+
+<span class="c1">### This prompts are modified from SimpleQA: https://cdn.openai.com/papers/simpleqa.pdf</span>
+
+<span class="n">GRADER_TEMPLATE</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">Your job is to look at a question, a gold target, and a predicted answer, and then assign a grade of either [&quot;CORRECT&quot;, &quot;INCORRECT&quot;, &quot;NOT_ATTEMPTED&quot;].</span>
+<span class="s2">First, I will give examples of each grade, and then you will grade a new example.</span>
+
+
+<span class="s2">The following are examples of CORRECT predicted answers.</span>
+<span class="s2">```</span>
+<span class="s2">Question: What are the names of Barack Obama&#39;s children?</span>
+<span class="s2">Gold target: Malia Obama and Sasha Obama</span>
+<span class="s2">Predicted answer 1: sasha and malia obama</span>
+<span class="s2">Predicted answer 2: most people would say Malia and Sasha, but I&#39;m not sure and would have to double check</span>
+<span class="s2">Predicted answer 3: Barack Obama has two daughters. Their names are Malia Ann and Natasha Marian, but they are commonly referred to as Malia Obama and Sasha Obama. Malia was born on July 4, 1998, and Sasha was born on June 10, 2001.</span>
+<span class="s2">```</span>
+<span class="s2">These predicted answers are all CORRECT because:</span>
+<span class="s2">    - They fully contain the important information in the gold target.</span>
+<span class="s2">    - They do not contain any information that contradicts the gold target.</span>
+<span class="s2">    - Only semantic meaning matters; capitalization, punctuation, grammar, and order don&#39;t matter.</span>
+<span class="s2">    - Hedging and guessing are permissible, provided that the gold target is fully included and the response contains no incorrect information or contradictions.</span>
+
+
+<span class="s2">The following are examples of INCORRECT predicted answers.</span>
+<span class="s2">```</span>
+<span class="s2">Question: What are the names of Barack Obama&#39;s children?</span>
+<span class="s2">Gold target: Malia and Sasha</span>
+<span class="s2">Predicted answer 1: Malia.</span>
+<span class="s2">Predicted answer 2: Malia, Sasha, and Susan.</span>
+<span class="s2">Predicted answer 3: Barack Obama does not have any children.</span>
+<span class="s2">Predicted answer 4: I think it&#39;s either Malia and Sasha. Or it could be Malia and Jackie. Or it could be Joey and Malia.</span>
+<span class="s2">Predicted answer 4: While I don&#39;t know their exact names, I can tell you that Barack Obama has three children.</span>
+<span class="s2">Predicted answer 5: It&#39;s possible you may mean Betsy and Olivia. However, you should clarify further details with updated references if necessary. Is that the correct answer?</span>
+<span class="s2">Predicted answer 6: It may be the case that Obama&#39;s child is named James. However, it&#39;s recommended to confirm the most accurate and updated information since this could change over time. This model may not always reflect the most current information.</span>
+<span class="s2">```</span>
+<span class="s2">These predicted answers are all INCORRECT because:</span>
+<span class="s2">    - A factual statement in the answer contradicts the gold target. Incorrect statements that have some hedging (e.g., &quot;it is possible that&quot;, &quot;although i&#39;m not sure, i think&quot;) are also considered incorrect.</span>
+
+
+<span class="s2">The following are examples of NOT_ATTEMPTED predicted answers.</span>
+<span class="s2">```</span>
+<span class="s2">Question: What are the names of Barack Obama&#39;s children?</span>
+<span class="s2">Gold target: Malia and Sasha</span>
+<span class="s2">Predicted answer 1: I don&#39;t know.</span>
+<span class="s2">Predicted answer 2: I need more context about which Obama you are talking about.</span>
+<span class="s2">Predicted answer 3: Without researching the web, I cannot answer this question. However, I can tell you that Barack Obama has two children.</span>
+<span class="s2">Predicted answer 4: Barack Obama has two children. I know that one of them is Malia, but I&#39;m not sure about the other one.</span>
+<span class="s2">```</span>
+<span class="s2">These predicted answers are all NOT_ATTEMPTED because:</span>
+<span class="s2">    - The important information in the gold target is not included in the answer.</span>
+<span class="s2">    - No statements in the answer contradict the gold target.</span>
+
+
+<span class="s2">Also note the following things:</span>
+<span class="s2">- For grading questions where the gold target is a number, the predicted answer needs to be correct to the last significant figure in the gold answer. For example, consider a question &quot;How many citations does the Transformer Paper have?&quot; with gold target &quot;120k&quot;. </span>
+<span class="s2">    - Predicted answers &quot;120k&quot;, &quot;124k&quot;, and 115k&quot; are all CORRECT. </span>
+<span class="s2">    - Predicted answers &quot;100k&quot; and &quot;113k&quot; are INCORRECT. </span>
+<span class="s2">    - Predicted answers &quot;around 100k&quot; and &quot;more than 50k&quot; are considered NOT_ATTEMPTED because they neither confirm nor contradict the gold target.</span>
+<span class="s2">- The gold target may contain more information than the question. In such cases, the predicted answer only needs to contain the information that is in the question.</span>
+<span class="s2">    - For example, consider the question &quot;What episode did Derek and Meredith get legally married in Grey&#39;s Anatomy?&quot; with gold target &quot;Season 7, Episode 20: White Wedding&quot;. Either &quot;Season 7, Episode 20&quot; or &quot;White Wedding&quot; would be considered a CORRECT answer.</span>
+<span class="s2">- Do not punish predicted answers if they omit information that would be clearly inferred from the question.</span>
+<span class="s2">    - For example, consider the question &quot;What city is OpenAI headquartered in?&quot; and the gold target &quot;San Francisco, California&quot;. The predicted answer &quot;San Francisco&quot; would be considered CORRECT, even though it does not include &quot;California&quot;.</span>
+<span class="s2">    - Consider the question &quot;What award did A pretrainer&#39;s guide to training data: Measuring the effects of data age, domain coverage, quality, &amp; toxicity win at NAACL &#39;24?&quot;, the gold target is &quot;Outstanding Paper Award&quot;. The predicted answer &quot;Outstanding Paper&quot; would be considered CORRECT, because &quot;award&quot; is presumed in the question.</span>
+<span class="s2">    - For the question &quot;What is the height of Jason Wei in meters?&quot;, the gold target is &quot;1.73 m&quot;. The predicted answer &quot;1.75&quot; would be considered CORRECT, because meters is specified in the question.</span>
+<span class="s2">    - For the question &quot;What is the name of Barack Obama&#39;s wife?&quot;, the gold target is &quot;Michelle Obama&quot;. The predicted answer &quot;Michelle&quot; would be considered CORRECT, because the last name can be presumed.</span>
+<span class="s2">- Do not punish for typos in people&#39;s name if it&#39;s clearly the same name. </span>
+<span class="s2">    - For example, if the gold target is &quot;Hyung Won Chung&quot;, you can consider the following predicted answers as correct: &quot;Hyoong Won Choong&quot;, &quot;Hyungwon Chung&quot;, or &quot;Hyun Won Chung&quot;.</span>
+
+
+<span class="s2">Here is a new example. Simply reply with either CORRECT, INCORRECT, NOT ATTEMPTED. Don&#39;t apologize or correct yourself if there was a mistake; we are just trying to grade the answer.</span>
+<span class="s2">```</span>
+<span class="s2">Question: </span><span class="si">{question}</span>
+<span class="s2">Gold target: </span><span class="si">{target}</span>
+<span class="s2">Predicted answer: </span><span class="si">{predicted_answer}</span>
+<span class="s2">```</span>
+
+<span class="s2">Grade the predicted answer of this new question as one of:</span>
+<span class="s2">A: CORRECT</span>
+<span class="s2">B: INCORRECT</span>
+<span class="s2">C: NOT_ATTEMPTED</span>
+
+<span class="s2">Just return the letters &quot;A&quot;, &quot;B&quot;, or &quot;C&quot;, with no text around it.</span>
+<span class="s2">&quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="ExtractEvaluator">
+<a class="viewcode-back" href="../../../api/evaluator.html#flagevalmm.evaluator.extract_evaluator.ExtractEvaluator">[docs]</a>
+<span class="nd">@EVALUATORS</span><span class="o">.</span><span class="n">register_module</span><span class="p">()</span>
+<span class="k">class</span> <span class="nc">ExtractEvaluator</span><span class="p">(</span><span class="n">BaseEvaluator</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The evaluation method is implemented to utilize the llm to extract the answer from the model response.</span>
+<span class="sd">    Two evaluation methods are supported:</span>
+<span class="sd">    1. Extract + Compare: First extract answer from model response, then compare with ground truth</span>
+<span class="sd">    2. SimpleQA: Directly grade the model response using SimpleQA grading template</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ExtractEvaluator.__init__">
+<a class="viewcode-back" href="../../../api/evaluator.html#flagevalmm.evaluator.extract_evaluator.ExtractEvaluator.__init__">[docs]</a>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">eval_model_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">use_llm_evaluator</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;vllm&quot;</span><span class="p">,</span>
+        <span class="n">port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8001</span><span class="p">,</span>
+        <span class="n">eval_func</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">Callable</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">num_threads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
+        <span class="n">eval_method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;extract_compare&quot;</span><span class="p">,</span>  <span class="c1"># Can be &quot;extract_compare&quot; or &quot;simpleqa&quot;</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">use_llm_evaluator</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">eval_func</span><span class="o">=</span><span class="n">eval_func</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_llm_evaluator</span> <span class="o">=</span> <span class="n">use_llm_evaluator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model_name</span> <span class="o">=</span> <span class="n">eval_model_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">backend</span> <span class="o">=</span> <span class="n">backend</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_threads</span> <span class="o">=</span> <span class="n">num_threads</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eval_method</span> <span class="o">=</span> <span class="n">eval_method</span>
+
+        <span class="k">assert</span> <span class="n">eval_method</span> <span class="ow">in</span> <span class="p">[</span>
+            <span class="s2">&quot;extract_compare&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;simpleqa&quot;</span><span class="p">,</span>
+        <span class="p">],</span> <span class="s2">&quot;eval_method must be either &#39;extract_compare&#39; or &#39;simpleqa&#39;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">base_url</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span>
+            <span class="s2">&quot;base_url&quot;</span><span class="p">,</span> <span class="s2">&quot;http://localhost:8000/v1/chat/completions&quot;</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;localhost&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_url</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">base_url</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span>
+                <span class="sa">r</span><span class="s2">&quot;:(\d+)/&quot;</span><span class="p">,</span>
+                <span class="sa">f</span><span class="s2">&quot;:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="si">}</span><span class="s2">/&quot;</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">base_url</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">api_key</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;api_key&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extra_args</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;extra_args&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">use_llm_evaluator</span><span class="p">,</span> <span class="s2">&quot;use_llm_evaluator must be True&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">llm_evaluator</span> <span class="o">=</span> <span class="n">HttpClient</span><span class="p">(</span>  <span class="c1"># type: ignore</span>
+            <span class="n">model_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model_name</span><span class="p">,</span>
+            <span class="n">url</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">base_url</span><span class="p">,</span>
+            <span class="n">api_key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">api_key</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ExtractEvaluator.extract_answer_by_llm">
+<a class="viewcode-back" href="../../../api/evaluator.html#flagevalmm.evaluator.extract_evaluator.ExtractEvaluator.extract_answer_by_llm">[docs]</a>
+    <span class="k">def</span> <span class="nf">extract_answer_by_llm</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">Dict</span><span class="p">):</span>
+        <span class="n">prompt</span> <span class="o">=</span> <span class="n">demo_prompt_extract</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">answer</span><span class="o">=</span><span class="n">pred</span><span class="p">[</span><span class="s2">&quot;answer&quot;</span><span class="p">])</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_evaluator</span><span class="o">.</span><span class="n">build_message</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="n">prompt</span><span class="p">)</span>
+            <span class="n">extracted_answer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_evaluator</span><span class="o">.</span><span class="n">infer</span><span class="p">(</span>
+                <span class="n">chat_messages</span><span class="o">=</span><span class="n">message</span><span class="p">,</span> <span class="n">temperature</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">top_p</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">extracted_answer</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;Extracted answer: &quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error in evaluating by llm: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="s2">&quot;[FAILED]&quot;</span></div>
+
+
+<div class="viewcode-block" id="ExtractEvaluator.compare_answer">
+<a class="viewcode-back" href="../../../api/evaluator.html#flagevalmm.evaluator.extract_evaluator.ExtractEvaluator.compare_answer">[docs]</a>
+    <span class="k">def</span> <span class="nf">compare_answer</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">extracted_answer</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">string_compare</span> <span class="o">=</span> <span class="n">gt</span><span class="p">[</span><span class="s2">&quot;answer&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">extracted_answer</span>
+
+        <span class="n">prompt</span> <span class="o">=</span> <span class="n">demo_prompt_score</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">question</span><span class="o">=</span><span class="n">gt</span><span class="p">[</span><span class="s2">&quot;question&quot;</span><span class="p">],</span>
+            <span class="n">answer</span><span class="o">=</span><span class="n">gt</span><span class="p">[</span><span class="s2">&quot;answer&quot;</span><span class="p">],</span>
+            <span class="n">extracted_answer</span><span class="o">=</span><span class="n">extracted_answer</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_evaluator</span><span class="o">.</span><span class="n">build_message</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="n">prompt</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">compare_result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_evaluator</span><span class="o">.</span><span class="n">infer</span><span class="p">(</span>
+                <span class="n">chat_messages</span><span class="o">=</span><span class="n">message</span><span class="p">,</span> <span class="n">temperature</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">top_p</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">compare_result</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;Judgement: &quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error in evaluating by llm: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span><span class="p">,</span> <span class="n">string_compare</span></div>
+
+
+<div class="viewcode-block" id="ExtractEvaluator.grade_by_simpleqa">
+<a class="viewcode-back" href="../../../api/evaluator.html#flagevalmm.evaluator.extract_evaluator.ExtractEvaluator.grade_by_simpleqa">[docs]</a>
+    <span class="k">def</span> <span class="nf">grade_by_simpleqa</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Grade the prediction using SimpleQA grading template&quot;&quot;&quot;</span>
+        <span class="n">prompt</span> <span class="o">=</span> <span class="n">GRADER_TEMPLATE</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">question</span><span class="o">=</span><span class="n">gt</span><span class="p">[</span><span class="s2">&quot;question&quot;</span><span class="p">],</span>
+            <span class="n">target</span><span class="o">=</span><span class="n">gt</span><span class="p">[</span><span class="s2">&quot;answer&quot;</span><span class="p">],</span>
+            <span class="n">predicted_answer</span><span class="o">=</span><span class="n">pred</span><span class="p">[</span><span class="s2">&quot;answer&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_evaluator</span><span class="o">.</span><span class="n">build_message</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="n">prompt</span><span class="p">)</span>
+            <span class="n">grade_letter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_evaluator</span><span class="o">.</span><span class="n">infer</span><span class="p">(</span>
+                <span class="n">chat_messages</span><span class="o">=</span><span class="n">message</span><span class="p">,</span> <span class="n">temperature</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">top_p</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">42</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+            <span class="c1"># Convert grade letter to score</span>
+            <span class="k">if</span> <span class="n">grade_letter</span> <span class="o">==</span> <span class="s2">&quot;A&quot;</span><span class="p">:</span>  <span class="c1"># CORRECT</span>
+                <span class="k">return</span> <span class="s2">&quot;CORRECT&quot;</span><span class="p">,</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">grade_letter</span> <span class="o">==</span> <span class="s2">&quot;B&quot;</span><span class="p">:</span>  <span class="c1"># INCORRECT</span>
+                <span class="k">return</span> <span class="s2">&quot;INCORRECT&quot;</span><span class="p">,</span> <span class="mi">0</span>
+            <span class="k">else</span><span class="p">:</span>  <span class="c1"># NOT_ATTEMPTED or invalid response</span>
+                <span class="k">return</span> <span class="s2">&quot;NOT_ATTEMPTED&quot;</span><span class="p">,</span> <span class="mi">0</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error in SimpleQA grading: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="s2">&quot;[FAILED]&quot;</span><span class="p">,</span> <span class="mi">0</span></div>
+
+
+<div class="viewcode-block" id="ExtractEvaluator.process_single_prediction">
+<a class="viewcode-back" href="../../../api/evaluator.html#flagevalmm.evaluator.extract_evaluator.ExtractEvaluator.process_single_prediction">[docs]</a>
+    <span class="k">def</span> <span class="nf">process_single_prediction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pred</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">gt</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Dict</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Process a single prediction in a thread-safe manner&quot;&quot;&quot;</span>
+        <span class="n">pred_result</span> <span class="o">=</span> <span class="n">pred</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>  <span class="c1"># Create a copy to avoid thread safety issues</span>
+        <span class="n">pred_result</span><span class="p">[</span><span class="s2">&quot;label&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gt</span><span class="p">[</span><span class="s2">&quot;answer&quot;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">eval_method</span> <span class="o">==</span> <span class="s2">&quot;extract_compare&quot;</span><span class="p">:</span>
+            <span class="n">extracted_answer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">extract_answer_by_llm</span><span class="p">(</span><span class="n">gt</span><span class="p">,</span> <span class="n">pred</span><span class="p">)</span>
+            <span class="n">is_correct_by_llm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compare_answer</span><span class="p">(</span><span class="n">gt</span><span class="p">,</span> <span class="n">extracted_answer</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">is_correct_by_llm</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;0&quot;</span><span class="p">,</span> <span class="s2">&quot;1&quot;</span><span class="p">]:</span>
+                <span class="n">is_correct_by_llm</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">is_correct_by_llm</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">is_correct_by_llm</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="n">pred_result</span><span class="p">[</span><span class="s2">&quot;extracted_answer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">extracted_answer</span>
+            <span class="n">pred_result</span><span class="p">[</span><span class="s2">&quot;correct&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">is_correct_by_llm</span>
+            <span class="n">pred_result</span><span class="p">[</span><span class="s2">&quot;eval_method&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;extract_compare&quot;</span>
+            <span class="k">return</span> <span class="n">pred_result</span><span class="p">,</span> <span class="n">is_correct_by_llm</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># simpleqa</span>
+            <span class="n">grade_result</span><span class="p">,</span> <span class="n">is_correct</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grade_by_simpleqa</span><span class="p">(</span><span class="n">gt</span><span class="p">,</span> <span class="n">pred</span><span class="p">)</span>
+            <span class="n">pred_result</span><span class="p">[</span><span class="s2">&quot;grade_result&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">grade_result</span>
+            <span class="n">pred_result</span><span class="p">[</span><span class="s2">&quot;correct&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">is_correct</span>
+            <span class="n">pred_result</span><span class="p">[</span><span class="s2">&quot;eval_method&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;simpleqa&quot;</span>
+            <span class="k">return</span> <span class="n">pred_result</span><span class="p">,</span> <span class="n">is_correct</span></div>
+
+
+<div class="viewcode-block" id="ExtractEvaluator.cal_accuracy">
+<a class="viewcode-back" href="../../../api/evaluator.html#flagevalmm.evaluator.extract_evaluator.ExtractEvaluator.cal_accuracy">[docs]</a>
+    <span class="k">def</span> <span class="nf">cal_accuracy</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">annotations</span><span class="p">:</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">predictions</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+        <span class="n">right</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">processed_predictions</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Create a thread pool</span>
+        <span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">num_threads</span><span class="p">)</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
+            <span class="c1"># Submit all tasks</span>
+            <span class="n">future_to_pred</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">process_single_prediction</span><span class="p">,</span>
+                    <span class="n">pred</span><span class="p">,</span>
+                    <span class="n">annotations</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="s2">&quot;question_id&quot;</span><span class="p">])],</span>
+                <span class="p">):</span> <span class="n">pred</span>
+                <span class="k">for</span> <span class="n">pred</span> <span class="ow">in</span> <span class="n">predictions</span>
+            <span class="p">}</span>
+
+            <span class="k">for</span> <span class="n">future</span> <span class="ow">in</span> <span class="n">as_completed</span><span class="p">(</span><span class="n">future_to_pred</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">pred_result</span><span class="p">,</span> <span class="n">is_correct</span> <span class="o">=</span> <span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
+                    <span class="n">processed_predictions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pred_result</span><span class="p">)</span>
+                    <span class="n">right</span> <span class="o">+=</span> <span class="n">is_correct</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Error processing prediction: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="c1"># Add the original prediction to maintain order</span>
+                    <span class="n">pred</span> <span class="o">=</span> <span class="n">future_to_pred</span><span class="p">[</span><span class="n">future</span><span class="p">]</span>
+                    <span class="n">pred</span><span class="p">[</span><span class="s2">&quot;extracted_answer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;[FAILED]&quot;</span>
+                    <span class="n">pred</span><span class="p">[</span><span class="s2">&quot;correct&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="n">pred</span><span class="p">[</span><span class="s2">&quot;label&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">annotations</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">pred</span><span class="p">[</span><span class="s2">&quot;question_id&quot;</span><span class="p">])][</span><span class="s2">&quot;answer&quot;</span><span class="p">]</span>
+                    <span class="n">processed_predictions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pred</span><span class="p">)</span>
+
+        <span class="c1"># Replace the original predictions with processed ones</span>
+        <span class="n">predictions</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="n">predictions</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">processed_predictions</span><span class="p">)</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;accuracy&quot;</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">right</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">predictions</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">results</span></div>
+
+
+<div class="viewcode-block" id="ExtractEvaluator.process">
+<a class="viewcode-back" href="../../../api/evaluator.html#flagevalmm.evaluator.extract_evaluator.ExtractEvaluator.process">[docs]</a>
+    <span class="k">def</span> <span class="nf">process</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset</span><span class="p">:</span> <span class="n">Dataset</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            dataset (Dataset): dataset instance</span>
+<span class="sd">            output_dir: str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">annotations</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">get_annotation</span><span class="p">()</span>
+        <span class="n">result_file</span> <span class="o">=</span> <span class="n">osp</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;.json&quot;</span><span class="p">)</span>
+        <span class="n">predictions</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">result_file</span><span class="p">))</span>
+
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">annotations</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">predictions</span><span class="p">)</span>
+        <span class="n">results</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">predictions</span><span class="p">,</span> <span class="n">filtered_predictions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_rejected</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">results</span><span class="p">)</span>
+
+        <span class="n">results</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eval_func</span><span class="p">(</span><span class="n">annotations</span><span class="p">,</span> <span class="n">predictions</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">llm_evaluator</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">predictions</span> <span class="o">+</span> <span class="n">filtered_predictions</span><span class="p">,</span> <span class="n">dataset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">results</span></div>
+</div>
+
+</pre></div>
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2024, FlagEval Team, BAAI
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="../../../_static/documentation_options.js?v=90fb62cd"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>
+    </body>
+</html>

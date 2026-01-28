@@ -1,0 +1,68 @@
+/* Custom CSS for FlagEvalMM documentation */
+
+/* Logo adjustments */
+.sidebar-brand img {
+    max-height: 60px;
+    margin: 10px 0;
+}
+
+/* Code block styling */
+.highlight {
+    border-radius: 6px;
+    margin: 1em 0;
+}
+
+/* Custom admonition styling */
+.admonition.tip {
+    border-left: 4px solid #28a745;
+}
+
+.admonition.warning {
+    border-left: 4px solid #ffc107;
+}
+
+.admonition.important {
+    border-left: 4px solid #dc3545;
+}
+
+/* Table styling */
+table.docutils {
+    border-collapse: collapse;
+    margin: 1em 0;
+}
+
+table.docutils th,
+table.docutils td {
+    border: 1px solid #ddd;
+    padding: 8px 12px;
+}
+
+table.docutils th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+}
+
+/* Navigation improvements */
+.toctree-wrapper {
+    margin: 1em 0;
+}
+
+/* Custom styling for API documentation */
+.class dt {
+    background-color: #f8f9fa;
+    border-left: 4px solid #007bff;
+    padding: 6px 12px;
+    margin-top: 1em;
+}
+
+.method dt {
+    background-color: #f8f9fa;
+    border-left: 4px solid #28a745;
+    padding: 4px 8px;
+}
+
+/* Center aligned images */
+.align-center {
+    display: block;
+    margin: 0 auto;
+} 

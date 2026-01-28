@@ -37,10 +37,12 @@ def parse_args():
 GPU_REQUIREMENTS = {
     "Qwen2-VL-72B-Instruct": 4,
     "Qwen2.5-VL-72B-Instruct": 4,
+    "QVQ-72B-Preview": 4,
     "InternVL2-Llama3-76B": 4,
     "InternVL2-26B": 4,
     "InternVL2_5-26B": 4,
-    "InternVL2_5-78B": 8,
+    "InternVL2_5-78B": 4,
+    "InternVL3-78B": 4,
     "llava-onevision-qwen2-72b-ov-chat-hf": 4,
     "Molmo-72B-0924": 4,
     "NVLM-D-72B": 4,
@@ -189,7 +191,7 @@ if __name__ == "__main__":
 
     cmds = []
     for model_name, backend in config.model_info:
-        cmd = f"flagevalmm --tasks {' '.join(config.tasks)} --cfg {args.cfg_dir}/{model_name}.json --quiet --skip"
+        cmd = f"flagevalmm --tasks {' '.join(config.tasks)} --cfg {args.cfg_dir}/{model_name}.json --quiet"
 
         if output_dir:
             cmd += f" --output-dir {output_dir}/{model_name}"

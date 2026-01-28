@@ -6,6 +6,7 @@ import re
 from typing import Optional, List, Any, Union, Dict
 from flagevalmm.common.logger import get_logger
 from flagevalmm.models.base_api_model import BaseApiModel
+from flagevalmm.models.api_response import ApiResponse, ApiUsage
 from flagevalmm.prompt.prompt_tools import encode_image
 from flagevalmm.common.video_utils import load_image_or_video
 from PIL import Image
@@ -20,8 +21,8 @@ class HttpClient(BaseApiModel):
         self,
         model_name: str,
         chat_name: Optional[str] = None,
-        max_tokens: int = 4096,
-        temperature: float = 0.0,
+        max_tokens: int = 32768,
+        temperature: Optional[float] = None,
         max_image_size: Optional[int] = None,
         min_short_side: Optional[int] = None,
         max_long_side: Optional[int] = None,
@@ -29,6 +30,9 @@ class HttpClient(BaseApiModel):
         use_cache: bool = False,
         api_key: Optional[str] = None,
         url: Optional[Union[str, httpx.URL]] = None,
+        reasoning: Optional[Dict[str, Any]] = None,
+        provider: Optional[Dict[str, Any]] = None,
+        retry_time: Optional[int] = None,
         **kwargs,
     ) -> None:
         super().__init__(
@@ -41,6 +45,9 @@ class HttpClient(BaseApiModel):
             max_long_side=max_long_side,
             max_num_frames=max_num_frames,
             use_cache=use_cache,
+            reasoning=reasoning,
+            provider=provider,
+            retry_time=retry_time,
             **kwargs,
         )
         self.url = url
@@ -61,17 +68,26 @@ class HttpClient(BaseApiModel):
 
     def _non_streaming_chat(self, data):
         """Handle non-streaming API requests."""
+        if not hasattr(self, "retry_time"):
+            retry_time = 300
+        else:
+            retry_time = self.retry_time
+
         response = requests.post(
-            self.url, headers=self.headers, data=json.dumps(data), timeout=300
+            self.url,
+            headers=self.headers,
+            data=json.dumps(data),
+            timeout=retry_time,
         )
         try:
             response_json = response.json()
         except Exception as e:
             raise Exception(f"Error: {response.text}, {e}")
-
         if response.status_code != 200:
             if "error" not in response_json:
-                yield f"Error code: {response_json['message']}"
+                yield ApiResponse.from_content(
+                    f"Error code: {response_json['message']}"
+                )
                 return
             err_msg = response_json["error"]
             if "code" in err_msg and "message" in err_msg:
@@ -80,23 +96,34 @@ class HttpClient(BaseApiModel):
                     or err_msg["code"] == "1301"
                     or "no candidates" in err_msg["message"].lower()
                 ):
-                    yield err_msg["message"]
+                    yield ApiResponse.from_content(err_msg["message"])
                     return
             raise Exception(
                 f"Request failed with status code {response.status_code}: {err_msg}"
             )
+
+        # Parse usage information if available
+        usage = None
+        if "usage" in response_json:
+            usage = ApiUsage.from_dict(response_json["usage"])
+
         if "choices" in response_json:
             message = response_json["choices"][0]["message"]
+            res = ""
+            reasoning_content = message.get(
+                "reasoning_content", message.get("reasoning", "")
+            )
+            if reasoning_content:
+                res = f"<think>{reasoning_content}</think>\n"
             if "content" in message:
-                res = ""
-                if message.get("reasoning_content", None):
-                    res = f"<think>{message['reasoning_content']}</think>\n"
                 res += message["content"]
-                yield res
+                yield ApiResponse(content=res, usage=usage)
             else:
-                yield ""
+                yield ApiResponse(content="", usage=usage)
         else:
-            yield response_json["completions"][0]["text"]
+            yield ApiResponse(
+                content=response_json["completions"][0]["text"], usage=usage
+            )
 
     def _streaming_chat(self, data):
         """Handle streaming API requests."""
@@ -117,6 +144,8 @@ class HttpClient(BaseApiModel):
                 if line:
                     # Remove "data: " prefix if it exists (common in SSE)
                     line_text = line.decode("utf-8")
+                    if '"usage":null' not in line_text:
+                        print(f"line_text: {line_text}")
                     if line_text.startswith("data: "):
                         line_text = line_text[6:]
 
@@ -137,13 +166,17 @@ class HttpClient(BaseApiModel):
                                 if think_start is False:
                                     think_start = True
                                     content = f"<think>{content}"
-                                yield content
+                                yield ApiResponse.from_content(content)
                             if "content" in delta and delta["content"]:
                                 content = delta["content"]
                                 if think_start:
                                     content = f"</think>\n{content}"
                                     think_start = False
-                                yield content
+                                if chunk.get("usage") is not None:
+                                    usage = ApiUsage.from_dict(chunk["usage"])
+                                    yield ApiResponse(content=content, usage=usage)
+                                else:
+                                    yield ApiResponse.from_content(content)
                     except json.JSONDecodeError as e:
                         raise Exception(
                             f"Failed to parse chunk: {line_text}, error: {e}"
@@ -240,7 +273,7 @@ class HttpClient(BaseApiModel):
 
         parts = re.split(r"(<image \d+>)", query)
         for part in parts:
-            if not part:
+            if len(part.strip()) == 0:
                 continue
             if re.match(IMAGE_REGEX, part):
                 # It's an image reference
@@ -253,6 +286,7 @@ class HttpClient(BaseApiModel):
                     }
                 )
             else:
+                assert len(part.strip()) > 0, f"part: {part}"
                 # It's a text part
                 content.append({"type": "text", "text": part})
         # If there are no referenced images, add all images to the message, not interleaved

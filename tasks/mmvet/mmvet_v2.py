@@ -17,9 +17,9 @@ evaluator = dict(
     type="BaseEvaluator",
     eval_func="evaluate.py",
     use_llm_evaluator=True,
-    use_cache=True,
+    use_cache=False,
     base_url=os.getenv("FLAGEVAL_BASE_URL"),
     api_key=os.getenv("FLAGEVAL_API_KEY"),
-    model_name="gpt-4o-mini-2024-07-18",
+    eval_model_name="gpt-4o-mini-2024-07-18",
     chat_name="mmvet_v2_eval",
 )

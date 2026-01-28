@@ -26,11 +26,17 @@ dependencies = [
     "pandas",
     "datasets",
     "tenacity",
-    "decord",
     "openai",
     "av",
-    "accelerate"]  
+    "accelerate",
+    "word2number"]  
 requires-python = ">=3.10"
+
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit"
+]
 
 
 [tool.setuptools.packages.find]

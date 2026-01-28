@@ -773,7 +773,7 @@ def get_descriptive_result_gpt(
                 top_p=1,
                 seed=42,
             )
-            content = json.loads(response)
+            content = json.loads(response.content)
             verify_grading_output(content, length)
             break
         except Exception as e:
@@ -812,7 +812,7 @@ def get_reasoning_result_gpt(
                 top_p=1,
                 seed=42,
             )
-            content = json.loads(response)
+            content = json.loads(response.content)
             ext, scr = content["extracted_answer"], content["score"]
             break
         except Exception as e:

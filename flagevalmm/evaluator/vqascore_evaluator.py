@@ -27,7 +27,7 @@ class VqascoreEvaluator:
         vqascore_sum: float = 0
         for info in output_info:
             image_path = osp.join(output_dir, info["image"])
-            annotation = annotations[info["id"]]
+            annotation = annotations[str(info["id"])]
             text = annotation.get("prompt_en", annotation["prompt"])
 
             clip_flant5_score = self.clip_flant5(images=[image_path], texts=[text])
