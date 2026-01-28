@@ -7,8 +7,6 @@ config = dict(
 
 dataset = dict(
     type="VqaBaseDataset",
-    anno_file="testmini_converted.json",
-    data_root="AI4Math/MathVista",
     config=config,
     prompt_template=dict(type="PromptTemplate"),
     name="math_vista",

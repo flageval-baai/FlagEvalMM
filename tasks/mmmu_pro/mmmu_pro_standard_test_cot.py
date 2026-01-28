@@ -1,4 +1,4 @@
-_base_ = ["mmmu_pro_standand_test.py"]
+_base_ = ["mmmu_pro_standard_test.py"]
 
 dataset = dict(
     prompt_template=dict(
