@@ -31,6 +31,8 @@ class CLIPScoreEvaluator:
                 # to tensor
                 image = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0).to("cuda")
                 question_id = info["id"]
+                if isinstance(list(annotations.keys())[0], int):
+                    question_id = int(question_id)
                 prompt = annotations[question_id]["prompt"]
                 clip_score = self.metric(image, prompt).item()
                 score_sum += clip_score
