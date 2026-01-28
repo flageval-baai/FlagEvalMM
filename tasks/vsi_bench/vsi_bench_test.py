@@ -27,7 +27,8 @@ NA_QUESTION_TYPES = set(
 pre_prompt = "These are frames of a video.\n"
 
 
-def post_prompt(question_type: str, **kwargs) -> str:
+def post_prompt(annotation: dict, **kwargs) -> str:
+    question_type = annotation.get("question_type", "")
     prompt = "Carefully analyze the question above and reason through it step by step. Conclude your response with a line in the following format:"
     if question_type in MCA_QUESTION_TYPES:
         return f"{prompt}\nAnswer: $LETTER (without quotes), where $LETTER corresponds to the correct option."

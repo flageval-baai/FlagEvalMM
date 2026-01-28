@@ -6,7 +6,8 @@ config = dict(
 )
 
 
-def post_prompt_func(evaluator: str, **kwargs):
+def post_prompt_func(annotation: dict, **kwargs):
+    evaluator = annotation.get("evaluator", None)
 
     # English version (original)
     base_prompt = "**Finalize your output with:** `Final Answer:`, "

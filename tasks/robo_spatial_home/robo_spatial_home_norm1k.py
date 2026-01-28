@@ -24,7 +24,8 @@ Do not include additional text after this line.
 """
 
 
-def post_prompt(question_type: str, **kwargs):
+def post_prompt(annotation: dict, **kwargs):
+    question_type = annotation.get("question_type", "")
     if question_type == "point":
         return post_prompt_point
     else:
