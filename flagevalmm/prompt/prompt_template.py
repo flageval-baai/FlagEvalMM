@@ -1,4 +1,4 @@
-from typing import Optional, Callable, Union
+from typing import Optional, Callable, Union, Dict, Any
 from flagevalmm.registry import PROMPTS
 
 
@@ -19,9 +19,9 @@ class PromptTemplate:
             self.default_prompt_func if prompt_func is None else prompt_func
         )
 
-    def get_default_post_prompt(
-        self, *, question: str, question_type: str, **kwargs
-    ) -> str:
+    def get_default_post_prompt(self, *, annotation: Dict[str, Any], **kwargs) -> str:
+        question = annotation.get("question", "")
+        question_type = annotation.get("question_type", "default")
         is_cn = any("\u4e00" <= char <= "\u9fff" for char in question)
         cn_instructions = {
             "multiple-choice": "从给定的选项中直接选择答案的字母，不要多余的解释。",
@@ -51,38 +51,34 @@ class PromptTemplate:
         self,
         *,
         prompt: Optional[Union[str, Callable[..., str]]] = None,
-        question: str,
-        question_type: str,
+        annotation: Dict[str, Any],
         **kwargs,
     ) -> str:
         if prompt is None:
             return ""
         elif isinstance(prompt, str):
             return prompt
-        return prompt(question=question, question_type=question_type, **kwargs)
+        return prompt(annotation=annotation, **kwargs)
 
-    def default_prompt_func(self, question: str, question_type: str, **kwargs) -> str:
+    def default_prompt_func(self, annotation: Dict[str, Any], **kwargs) -> str:
+        question = annotation.get("question", "")
+
         pre_prompt = self.infer_prompt(
             prompt=self.pre_prompt,
-            question=question,
-            question_type=question_type,
+            annotation=annotation,
             **kwargs,
         )
         examples = self.infer_prompt(
             prompt=self.examples,
-            question=question,
-            question_type=question_type,
+            annotation=annotation,
             **kwargs,
         )
         if self.post_prompt is None:
-            post_prompt = self.get_default_post_prompt(
-                question=question, question_type=question_type
-            )
+            post_prompt = self.get_default_post_prompt(annotation=annotation)
         else:
             post_prompt = self.infer_prompt(
                 prompt=self.post_prompt,
-                question=question,
-                question_type=question_type,
+                annotation=annotation,
                 **kwargs,
             )
 

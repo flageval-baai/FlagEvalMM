@@ -6,7 +6,8 @@ config = dict(
 )
 
 
-def pre_prompt(question_type: str, **kwargs) -> str:
+def pre_prompt(annotation: dict, **kwargs) -> str:
+    question_type = annotation.get("question_type", "default")
     instrution_dic = {
         "multiple-choice": "请回答以下多项选择题，并选出正确选项。这些题目可能包括单选和多选题型。如果所提供的信息不足以确定一个明确的答案，那么请根据可用的数据和你的判断来选择最可能正确的选项。",
         "yes-no": "请回答以下判断题，并根据题目描述和所给的信息来判断问题中陈述的对错。如果信息不完整或不足以作出绝对判断，请运用你的逻辑推理和现有信息来做出最可能的判断。",
