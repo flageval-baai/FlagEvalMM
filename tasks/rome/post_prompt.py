@@ -6,9 +6,11 @@ def is_chinese(text):
     return False
 
 
-def post_prompt_func(
-    question: str, question_type: str, evaluator: str, evaluator_kwargs: dict, **kwargs
-):
+def post_prompt_func(annotation: dict, **kwargs):
+    question = annotation.get("question", "")
+    evaluator = annotation.get("evaluator", None)
+    evaluator_kwargs = annotation.get("evaluator_kwargs", {})
+
     # Check if input is Chinese
     is_chinese_input = is_chinese(question)
 

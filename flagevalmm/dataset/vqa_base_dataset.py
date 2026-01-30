@@ -72,14 +72,13 @@ class VqaBaseDataset(Dataset):
             question += "\n" + chr(base + i) + ". " + choice
         if len(img_path) > 0 and "<image 1>" not in question:
             question = "<image 1> " + question
+
+        # Create a modified annotation with the built question
+        modified_annotation = annotation.copy()
+        modified_annotation["question"] = question
+
         if self.prompt_template is not None:
-            question = self.prompt_template.build_prompt(
-                question=question,
-                question_type=annotation["question_type"],
-                evaluator=annotation.get("evaluator", None),
-                evaluator_kwargs=annotation.get("evaluator_kwargs", None),
-                subject=annotation.get("subject", None),
-            )
+            question = self.prompt_template.build_prompt(annotation=modified_annotation)
         return question
 
     def __getitem__(self, index: int) -> Dict[str, Any]:

@@ -9,7 +9,8 @@ config = dict(
 )
 
 
-def pre_prompt(question_type: str, **kwargs) -> str:
+def pre_prompt(annotation: dict, **kwargs) -> str:
+    question_type = annotation.get("question_type", "default")
     if question_type == "multi-choice":
         prompt = "According to the question shown in the image, please directly answer the question and provide the correct option letter, e.g., A, B, C, D.\nQuestion: "
     else:
