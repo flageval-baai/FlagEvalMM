@@ -18,6 +18,7 @@ Given a user's natural language request, extract the evaluation intent as a JSON
   "specific_benchmarks": ["explicit benchmark names if user mentioned them"],
   "is_comparison": false,
   "try_run": false,
+  "max_tasks": null,
   "constraints": {}
 }
 ```
@@ -61,4 +62,5 @@ Choose from these categories:
 3. If neither is specific, infer capabilities from context (e.g., "general evaluation" → ["vqa", "knowledge", "perception"])
 4. Set is_comparison=true when user wants to compare multiple models
 5. Set try_run=true when user mentions "quick test", "try", "sample", "debug", or "few samples"
-6. Return ONLY the JSON object, no other text
+6. Set max_tasks to an integer when the user specifies a limit on number of datasets/benchmarks (e.g., "at most 2 datasets" → max_tasks: 2, "use 1 benchmark" → max_tasks: 1). Leave null if no limit mentioned.
+7. Return ONLY the JSON object, no other text

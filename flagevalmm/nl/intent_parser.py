@@ -24,6 +24,7 @@ class EvalIntent:
     specific_benchmarks: list[str] = field(default_factory=list)
     is_comparison: bool = False
     try_run: bool = False
+    max_tasks: Optional[int] = None
     constraints: dict = field(default_factory=dict)
 
 
@@ -93,12 +94,30 @@ def parse_intent_with_keywords(query: str, catalog: TaskCatalog) -> EvalIntent:
     for keyword, name, provider in known_models:
         idx = query_lower.find(keyword)
         if idx >= 0:
+            # Check the match is not part of a longer word (e.g. "gpt-5" in "gpt-5-nano")
+            end = idx + len(keyword)
+            if end < len(query_lower) and (
+                query_lower[end].isalnum() or query_lower[end] in "-."
+            ):
+                continue
             # Check not already covered by a longer match
-            if not any(idx >= s and idx + len(keyword) <= e for s, e in matched_spans):
+            if not any(idx >= s and end <= e for s, e in matched_spans):
                 models.append(ModelSpec(name=name, provider=provider))
-                matched_spans.append((idx, idx + len(keyword)))
+                matched_spans.append((idx, end))
+    # If no known model matched, try to extract a model-like token from the query
     if not models:
-        models.append(ModelSpec(name="openai/gpt-4o-mini", provider="openrouter"))
+        import re
+
+        # Match patterns like "gpt-5-nano", "claude-3.5-sonnet", "my-model"
+        model_pattern = re.findall(r"\b([a-z][\w.-]*(?:-[\w.]+)+)\b", query_lower)
+        if model_pattern:
+            # Pick the most model-like token (contains a digit)
+            for candidate in model_pattern:
+                if any(c.isdigit() for c in candidate):
+                    models.append(ModelSpec(name=candidate, provider=None))
+                    break
+        if not models:
+            models.append(ModelSpec(name="openai/gpt-4o-mini", provider="openrouter"))
 
     # Detect capabilities
     cap_keywords = {
@@ -137,6 +156,22 @@ def parse_intent_with_keywords(query: str, catalog: TaskCatalog) -> EvalIntent:
         w in query_lower for w in ["try", "quick", "sample", "debug", "test run"]
     )
 
+    # Detect max tasks constraint (e.g. "at most 2 datasets", "use 3 benchmarks")
+    import re
+
+    max_tasks = None
+    max_match = re.search(
+        r"(?:at most|up to|max|only|just|use)\s+(\d+)\s+(?:dataset|benchmark|task)",
+        query_lower,
+    )
+    if max_match:
+        max_tasks = int(max_match.group(1))
+    # Also match "N datasets" without a qualifier
+    if max_tasks is None:
+        max_match = re.search(r"(\d+)\s+(?:dataset|benchmark|task)", query_lower)
+        if max_match:
+            max_tasks = int(max_match.group(1))
+
     # Default to general evaluation if nothing matched
     if not capabilities and not specific:
         capabilities = ["vqa", "knowledge", "perception"]
@@ -147,6 +182,7 @@ def parse_intent_with_keywords(query: str, catalog: TaskCatalog) -> EvalIntent:
         specific_benchmarks=specific,
         is_comparison=is_comparison,
         try_run=try_run,
+        max_tasks=max_tasks,
     )
 
 
@@ -184,5 +220,6 @@ def _dict_to_intent(data: dict) -> EvalIntent:
         specific_benchmarks=data.get("specific_benchmarks", []),
         is_comparison=data.get("is_comparison", False),
         try_run=data.get("try_run", False),
+        max_tasks=data.get("max_tasks"),
         constraints=data.get("constraints", {}),
     )

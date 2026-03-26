@@ -18,12 +18,24 @@ def select_tasks(intent: EvalIntent, catalog: TaskCatalog) -> list[dict]:
         results = catalog.search_by_capability(intent.capabilities)
 
     # Deduplicate by task_id
-    seen = set()
+    seen: set[str] = set()
     unique = []
     for entry in results:
         if entry["task_id"] not in seen:
             seen.add(entry["task_id"])
             unique.append(entry)
+
+    # Apply max_tasks limit — prefer tasks whose capabilities best match the intent
+    if intent.max_tasks and len(unique) > intent.max_tasks:
+        intent_caps = set(intent.capabilities)
+
+        # Score by: number of matching capabilities (more = better fit)
+        def relevance(entry: dict) -> int:
+            return len(intent_caps & set(entry.get("capabilities", [])))
+
+        unique.sort(key=relevance, reverse=True)
+        unique = unique[: intent.max_tasks]
+
     return unique
 
 
@@ -39,9 +51,22 @@ def generate_model_config(spec: ModelSpec) -> dict:
     }
 
     # Determine provider and URL
+    # Always prefer OpenRouter when its key is available (unless local)
     provider = spec.provider or _detect_provider(spec.name, spec.url)
+    if provider != "local" and _has_openrouter_key():
+        provider = "openrouter"
 
     if provider == "openrouter":
+        # Prefix bare model names for OpenRouter (e.g. "gpt-5-nano" → "openai/gpt-5-nano")
+        model_name = str(cfg["model_name"])
+        if "/" not in model_name:
+            name_lower = model_name.lower()
+            if any(m in name_lower for m in ["gpt", "o1-", "o3-", "o4-"]):
+                cfg["model_name"] = f"openai/{model_name}"
+            elif "claude" in name_lower:
+                cfg["model_name"] = f"anthropic/{model_name}"
+            elif "gemini" in name_lower:
+                cfg["model_name"] = f"google/{model_name}"
         cfg["url"] = "https://openrouter.ai/api/v1/chat/completions"
         cfg["api_key"] = _resolve_api_key(
             spec.api_key_env, ["OPEN_ROUTER_KEY", "OPENROUTER_API_KEY"]
@@ -73,11 +98,19 @@ def generate_model_config(spec: ModelSpec) -> dict:
     return cfg
 
 
+def _has_openrouter_key() -> bool:
+    return bool(
+        os.environ.get("OPEN_ROUTER_KEY") or os.environ.get("OPENROUTER_API_KEY")
+    )
+
+
 def _detect_provider(name: str, url: Optional[str]) -> str:
     name_lower = name.lower()
     if url and ("localhost" in url or "127.0.0.1" in url):
         return "local"
     if "/" in name:
+        return "openrouter"
+    if _has_openrouter_key():
         return "openrouter"
     if "claude" in name_lower:
         return "anthropic"

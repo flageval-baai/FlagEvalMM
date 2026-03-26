@@ -9,7 +9,7 @@ def execute(
     model_config: dict,
     output_dir: str,
     try_run: bool = False,
-    skip: bool = True,
+    skip: bool = False,
 ) -> str:
     """Run FlagEvalMM evaluation via subprocess.
 
@@ -28,8 +28,15 @@ def execute(
             cmd.append("--skip")
         cmd.extend(["--output-dir", output_dir])
 
+        # Ensure env vars used by task configs are set (some configs call
+        # os.getenv() at module level which fails under mmengine lazy import
+        # if the variable is completely absent)
+        env = os.environ.copy()
+        for var in ["FLAGEVAL_BASE_URL", "FLAGEVAL_API_KEY"]:
+            env.setdefault(var, "")
+
         print(f"\n  Running: {' '.join(cmd[:6])} ... ({len(task_paths)} tasks)")
-        result = subprocess.run(cmd)
+        result = subprocess.run(cmd, env=env)
         if result.returncode != 0:
             print(f"  Warning: evaluation exited with code {result.returncode}")
     finally:
