@@ -1,0 +1,545 @@
+{
+  "version": "1.0",
+  "tasks": [
+    {
+      "task_id": "mmmu_val",
+      "config_path": "tasks/mmmu/mmmu_val.py",
+      "display_name": "MMMU Validation",
+      "description": "Massive Multi-discipline Multimodal Understanding benchmark evaluating college-level subject knowledge across 30 subjects and 183 subfields.",
+      "capabilities": ["vqa", "knowledge"],
+      "modality": "image",
+      "keywords": ["mmmu", "multi-discipline", "college", "subject knowledge", "multiple choice"]
+    },
+    {
+      "task_id": "mmmu_pro_standard_test",
+      "config_path": "tasks/mmmu_pro/mmmu_pro_standard_test.py",
+      "display_name": "MMMU-Pro Standard Test",
+      "description": "MMMU-Pro benchmark with augmented candidate options and stricter evaluation for robust multimodal understanding.",
+      "capabilities": ["vqa", "knowledge"],
+      "modality": "image",
+      "keywords": ["mmmu-pro", "multi-discipline", "college", "robust evaluation", "multiple choice"]
+    },
+    {
+      "task_id": "mmmu_pro_vision_test",
+      "config_path": "tasks/mmmu_pro/mmmu_pro_vision_test.py",
+      "display_name": "MMMU-Pro Vision Test",
+      "description": "MMMU-Pro vision-only variant where questions and options are embedded in images to test pure visual understanding.",
+      "capabilities": ["vqa", "knowledge", "ocr"],
+      "modality": "image",
+      "keywords": ["mmmu-pro", "vision-only", "multi-discipline", "image-embedded questions"]
+    },
+    {
+      "task_id": "blink_val",
+      "config_path": "tasks/blink/blink_val.py",
+      "display_name": "BLINK Validation",
+      "description": "BLINK benchmark testing core visual perception abilities that humans can solve in a blink but are challenging for multimodal models.",
+      "capabilities": ["vqa", "perception", "spatial"],
+      "modality": "image",
+      "keywords": ["blink", "visual perception", "multi-image", "depth", "jigsaw", "forensics"]
+    },
+    {
+      "task_id": "blink_val_ev",
+      "config_path": "tasks/blink/blink_val_ev.py",
+      "display_name": "BLINK Validation (Extended)",
+      "description": "Extended variant of BLINK benchmark with additional evaluation configurations.",
+      "capabilities": ["vqa", "perception", "spatial"],
+      "modality": "image",
+      "keywords": ["blink", "visual perception", "extended evaluation"]
+    },
+    {
+      "task_id": "hallusion_bench_image",
+      "config_path": "tasks/hallusion_bench/hallusion_bench_image.py",
+      "display_name": "HallusionBench Image",
+      "description": "HallusionBench evaluating visual illusion and knowledge hallucination in large vision-language models.",
+      "capabilities": ["vqa", "hallucination"],
+      "modality": "image",
+      "keywords": ["hallucination", "illusion", "visual hallucination", "knowledge hallucination", "reliability"]
+    },
+    {
+      "task_id": "math_verse_testmini",
+      "config_path": "tasks/math_verse/math_verse_testmini.py",
+      "display_name": "MathVerse Test Mini",
+      "description": "MathVerse benchmark evaluating mathematical reasoning with visual contexts across geometry, algebra, and statistics.",
+      "capabilities": ["vqa", "math"],
+      "modality": "image",
+      "keywords": ["math", "mathematical reasoning", "geometry", "algebra", "visual math"]
+    },
+    {
+      "task_id": "math_verse_testmini_box",
+      "config_path": "tasks/math_verse/math_verse_testmini_box.py",
+      "display_name": "MathVerse Test Mini (Boxed)",
+      "description": "MathVerse benchmark variant requiring boxed-format answers for mathematical reasoning evaluation.",
+      "capabilities": ["vqa", "math"],
+      "modality": "image",
+      "keywords": ["math", "mathematical reasoning", "boxed answer", "geometry"]
+    },
+    {
+      "task_id": "math_vision_test",
+      "config_path": "tasks/math_vision/math_vision_test.py",
+      "display_name": "MathVision Test",
+      "description": "MathVision benchmark testing advanced mathematical reasoning on competition-level visual math problems.",
+      "capabilities": ["vqa", "math"],
+      "modality": "image",
+      "keywords": ["math", "competition math", "mathematical reasoning", "visual math"]
+    },
+    {
+      "task_id": "refcoco_val",
+      "config_path": "tasks/refcoco/refcoco_val.py",
+      "display_name": "RefCOCO Validation",
+      "description": "RefCOCO benchmark for referring expression comprehension, evaluating the ability to localize objects described by natural language.",
+      "capabilities": ["vqa", "grounding"],
+      "modality": "image",
+      "keywords": ["refcoco", "referring expression", "grounding", "object localization", "bounding box"]
+    },
+    {
+      "task_id": "refcoco_plus_val",
+      "config_path": "tasks/refcoco/refcoco_plus_val.py",
+      "display_name": "RefCOCO+ Validation",
+      "description": "RefCOCO+ benchmark for referring expression comprehension with no absolute spatial language, focusing on appearance-based descriptions.",
+      "capabilities": ["vqa", "grounding"],
+      "modality": "image",
+      "keywords": ["refcoco+", "referring expression", "grounding", "appearance-based", "bounding box"]
+    },
+    {
+      "task_id": "refcoco_g_val",
+      "config_path": "tasks/refcoco/refcoco_g_val.py",
+      "display_name": "RefCOCOg Validation",
+      "description": "RefCOCOg benchmark for referring expression comprehension with longer, more complex natural language descriptions.",
+      "capabilities": ["vqa", "grounding"],
+      "modality": "image",
+      "keywords": ["refcocog", "referring expression", "grounding", "complex descriptions", "bounding box"]
+    },
+    {
+      "task_id": "mvbench_test",
+      "config_path": "tasks/mvbench/mvbench_test.py",
+      "display_name": "MVBench Test",
+      "description": "MVBench comprehensive video understanding benchmark covering 20 temporal tasks including action recognition, scene transitions, and object tracking.",
+      "capabilities": ["video", "vqa", "perception"],
+      "modality": "video",
+      "keywords": ["mvbench", "video understanding", "temporal reasoning", "action recognition", "video QA"]
+    },
+    {
+      "task_id": "mmvet_v2",
+      "config_path": "tasks/mmvet/mmvet_v2.py",
+      "display_name": "MM-Vet v2",
+      "description": "MM-Vet v2 benchmark evaluating integrated vision-language capabilities including recognition, OCR, knowledge, math, and spatial reasoning.",
+      "capabilities": ["vqa", "ocr", "math", "spatial", "knowledge"],
+      "modality": "image",
+      "keywords": ["mm-vet", "integrated capabilities", "open-ended", "GPT-evaluated"]
+    },
+    {
+      "task_id": "vsi_bench_test",
+      "config_path": "tasks/vsi_bench/vsi_bench_test.py",
+      "display_name": "VSI-Bench Test",
+      "description": "VSI-Bench evaluating visual spatial intelligence including 3D spatial reasoning from 2D images.",
+      "capabilities": ["vqa", "spatial"],
+      "modality": "image",
+      "keywords": ["vsi-bench", "spatial intelligence", "3D reasoning", "spatial relations"]
+    },
+    {
+      "task_id": "mmsi_bench",
+      "config_path": "tasks/mmsi_bench/mmsi_bench.py",
+      "display_name": "MMSI-Bench",
+      "description": "Multimodal Spatial Intelligence benchmark testing spatial understanding and reasoning in multimodal contexts.",
+      "capabilities": ["vqa", "spatial"],
+      "modality": "image",
+      "keywords": ["mmsi", "spatial intelligence", "multimodal spatial", "spatial reasoning"]
+    },
+    {
+      "task_id": "erqa",
+      "config_path": "tasks/erqa/erqa.py",
+      "display_name": "ERQA",
+      "description": "Entity Recognition QA benchmark evaluating the ability to recognize and answer questions about specific entities in images.",
+      "capabilities": ["vqa", "perception"],
+      "modality": "image",
+      "keywords": ["erqa", "entity recognition", "visual QA", "image quality"]
+    },
+    {
+      "task_id": "visual_simpleqa",
+      "config_path": "tasks/visual_simpleqa/visual_simpleqa.py",
+      "display_name": "Visual SimpleQA",
+      "description": "Visual SimpleQA benchmark testing factual visual question answering with straightforward questions about image content.",
+      "capabilities": ["vqa", "knowledge"],
+      "modality": "image",
+      "keywords": ["simpleqa", "factual QA", "visual question answering", "knowledge"]
+    },
+    {
+      "task_id": "cii_bench_test",
+      "config_path": "tasks/cii_bench/cii_bench_test.py",
+      "display_name": "CII-Bench Test",
+      "description": "Chinese Image Implication benchmark testing understanding of implicit meanings and cultural connotations in Chinese images.",
+      "capabilities": ["vqa", "knowledge", "perception"],
+      "modality": "image",
+      "keywords": ["cii-bench", "chinese", "image implication", "cultural understanding", "implicit meaning"]
+    },
+    {
+      "task_id": "omni_spatial",
+      "config_path": "tasks/omni_spatial/omni_spatial.py",
+      "display_name": "OmniSpatial",
+      "description": "OmniSpatial benchmark for comprehensive spatial understanding evaluation across diverse spatial reasoning tasks.",
+      "capabilities": ["vqa", "spatial"],
+      "modality": "image",
+      "keywords": ["omni-spatial", "spatial reasoning", "spatial understanding", "comprehensive spatial"]
+    },
+    {
+      "task_id": "embspatial_bench",
+      "config_path": "tasks/embspatial_bench/embspatial_bench.py",
+      "display_name": "EmbSpatial-Bench",
+      "description": "Embodied Spatial benchmark evaluating spatial understanding from an embodied, egocentric perspective.",
+      "capabilities": ["vqa", "spatial", "embodied"],
+      "modality": "image",
+      "keywords": ["embodied", "spatial", "egocentric", "embodied spatial", "spatial reasoning"]
+    },
+    {
+      "task_id": "robo_spatial_home_all",
+      "config_path": "tasks/robo_spatial_home/robo_spatial_home_all.py",
+      "display_name": "RoboSpatial Home",
+      "description": "RoboSpatial Home benchmark testing spatial understanding in home environments for robotic applications.",
+      "capabilities": ["vqa", "spatial", "embodied"],
+      "modality": "image",
+      "keywords": ["robospatial", "home environment", "robotics", "spatial reasoning", "embodied"]
+    },
+    {
+      "task_id": "where2place",
+      "config_path": "tasks/where2place/where2place.py",
+      "display_name": "Where2Place",
+      "description": "Where2Place benchmark evaluating spatial reasoning for object placement in real-world scenes.",
+      "capabilities": ["vqa", "spatial", "embodied"],
+      "modality": "image",
+      "keywords": ["where2place", "object placement", "spatial reasoning", "scene understanding"]
+    },
+    {
+      "task_id": "embodied_verse_open",
+      "config_path": "tasks/embodied_verse/embodied_verse_open.py",
+      "display_name": "EmbodiedVerse Open",
+      "description": "EmbodiedVerse open-ended benchmark testing embodied reasoning and interaction understanding in 3D environments.",
+      "capabilities": ["vqa", "embodied", "spatial"],
+      "modality": "image",
+      "keywords": ["embodied", "3D environment", "embodied reasoning", "interaction", "open-ended"]
+    },
+    {
+      "task_id": "sora_bench",
+      "config_path": "tasks/t2v_generation/sora_prompt.py",
+      "display_name": "Sora Bench",
+      "description": "Text-to-video generation benchmark using Sora-style prompts to evaluate video synthesis quality and coherence.",
+      "capabilities": ["generation", "video"],
+      "modality": "text2video",
+      "keywords": ["sora", "text-to-video", "video generation", "t2v", "synthesis"]
+    },
+    {
+      "task_id": "ucf_t2v",
+      "config_path": "tasks/t2v_generation/ucf-101/ucf_test.py",
+      "display_name": "UCF-101 Text-to-Video",
+      "description": "UCF-101 text-to-video generation benchmark evaluating action video synthesis from text descriptions.",
+      "capabilities": ["generation", "video"],
+      "modality": "text2video",
+      "keywords": ["ucf-101", "text-to-video", "action recognition", "video generation", "t2v"]
+    },
+    {
+      "task_id": "genai_bench",
+      "config_path": "tasks/t2i/genai_bench/genai_bench.py",
+      "display_name": "GenAI-Bench",
+      "description": "GenAI-Bench evaluating text-to-image generation quality across compositional, spatial, and attribute-binding prompts.",
+      "capabilities": ["generation"],
+      "modality": "text2image",
+      "keywords": ["genai-bench", "text-to-image", "image generation", "t2i", "compositional"]
+    },
+    {
+      "task_id": "coco_1k_test_t2i",
+      "config_path": "tasks/t2i/coco/coco_1k_test.py",
+      "display_name": "COCO 1K Text-to-Image",
+      "description": "COCO 1K text-to-image generation benchmark measuring FID and inception metrics for image synthesis quality.",
+      "capabilities": ["generation"],
+      "modality": "text2image",
+      "keywords": ["coco", "text-to-image", "FID", "inception score", "t2i", "image generation"]
+    },
+    {
+      "task_id": "relscene_test",
+      "config_path": "tasks/t2i/relscene/relscene_test.py",
+      "display_name": "RelScene Test",
+      "description": "RelScene benchmark evaluating text-to-image generation of scenes with correct spatial relations between objects.",
+      "capabilities": ["generation", "spatial"],
+      "modality": "text2image",
+      "keywords": ["relscene", "text-to-image", "spatial relations", "scene generation", "t2i"]
+    },
+    {
+      "task_id": "charxiv_val",
+      "config_path": "tasks/charxiv/charxiv_val.py",
+      "display_name": "CharXiv Validation",
+      "description": "CharXiv benchmark evaluating chart and figure understanding from scientific papers on arXiv.",
+      "capabilities": ["vqa", "chart", "knowledge"],
+      "modality": "image",
+      "keywords": ["charxiv", "chart understanding", "scientific figures", "arxiv", "data visualization"]
+    },
+    {
+      "task_id": "video_safety_benign",
+      "config_path": "tasks/video_safety_bench/video_safety_benign.py",
+      "display_name": "Video Safety Bench (Benign)",
+      "description": "Video safety benchmark testing model responses to benign video content to ensure no false refusals.",
+      "capabilities": ["video", "safety"],
+      "modality": "video",
+      "keywords": ["video safety", "benign content", "false refusal", "safety evaluation"]
+    },
+    {
+      "task_id": "video_safety_harmful",
+      "config_path": "tasks/video_safety_bench/video_safety_harmful.py",
+      "display_name": "Video Safety Bench (Harmful)",
+      "description": "Video safety benchmark testing model ability to refuse harmful or unsafe video content.",
+      "capabilities": ["video", "safety"],
+      "modality": "video",
+      "keywords": ["video safety", "harmful content", "content moderation", "safety evaluation"]
+    },
+    {
+      "task_id": "measure_bench_real",
+      "config_path": "tasks/measure_bench/measure_bench_real.py",
+      "display_name": "MeasureBench Real",
+      "description": "MeasureBench benchmark evaluating measurement reading from real-world instrument images including rulers, gauges, and scales.",
+      "capabilities": ["vqa", "measurement", "perception"],
+      "modality": "image",
+      "keywords": ["measurement", "real instruments", "gauge reading", "visual measurement"]
+    },
+    {
+      "task_id": "measure_bench_syn",
+      "config_path": "tasks/measure_bench/measure_bench_syn.py",
+      "display_name": "MeasureBench Synthetic",
+      "description": "MeasureBench benchmark evaluating measurement reading from synthetic instrument images with controlled visual properties.",
+      "capabilities": ["vqa", "measurement", "perception"],
+      "modality": "image",
+      "keywords": ["measurement", "synthetic instruments", "gauge reading", "visual measurement"]
+    },
+    {
+      "task_id": "cmmu",
+      "config_path": "tasks/cmmu/cmmu.py",
+      "display_name": "CMMU",
+      "description": "Chinese Massive Multi-task Understanding benchmark evaluating multimodal reasoning across diverse Chinese-language tasks.",
+      "capabilities": ["vqa", "knowledge"],
+      "modality": "image",
+      "keywords": ["cmmu", "chinese", "multi-task", "multimodal understanding", "chinese language"]
+    },
+    {
+      "task_id": "MSRVTT_JSFUSION_test",
+      "config_path": "tasks/retrieval/msrvtt/msrvtt_test.py",
+      "display_name": "MSR-VTT Retrieval",
+      "description": "MSR-VTT video-text retrieval benchmark evaluating cross-modal matching between videos and text descriptions.",
+      "capabilities": ["retrieval", "video"],
+      "modality": "retrieval",
+      "keywords": ["msrvtt", "video retrieval", "text-video retrieval", "cross-modal", "video-text matching"]
+    },
+    {
+      "task_id": "flickr_1k_test",
+      "config_path": "tasks/retrieval/flickr/flickr_1k_test.py",
+      "display_name": "Flickr30K 1K Retrieval",
+      "description": "Flickr30K 1K image-text retrieval benchmark evaluating cross-modal matching between images and captions.",
+      "capabilities": ["retrieval"],
+      "modality": "retrieval",
+      "keywords": ["flickr30k", "image retrieval", "text-image retrieval", "cross-modal", "image-text matching"]
+    },
+    {
+      "task_id": "coco_val14_5k_test",
+      "config_path": "tasks/retrieval/coco/coco_val14_5k_test.py",
+      "display_name": "COCO 5K Retrieval",
+      "description": "COCO 5K image-text retrieval benchmark for evaluating cross-modal retrieval on COCO validation set.",
+      "capabilities": ["retrieval"],
+      "modality": "retrieval",
+      "keywords": ["coco", "image retrieval", "text-image retrieval", "cross-modal", "5k test"]
+    },
+    {
+      "task_id": "ucf101_retrieval",
+      "config_path": "tasks/retrieval/ucf-101/ucf_test.py",
+      "display_name": "UCF-101 Retrieval",
+      "description": "UCF-101 video-text retrieval benchmark evaluating cross-modal matching between action videos and text.",
+      "capabilities": ["retrieval", "video"],
+      "modality": "retrieval",
+      "keywords": ["ucf-101", "video retrieval", "action recognition", "text-video retrieval", "cross-modal"]
+    },
+    {
+      "task_id": "realworldqa",
+      "config_path": "tasks/realworldqa/realworldqa_test.py",
+      "display_name": "RealWorldQA",
+      "description": "RealWorldQA benchmark testing visual question answering on real-world images covering practical everyday scenarios.",
+      "capabilities": ["vqa", "perception", "knowledge"],
+      "modality": "image",
+      "keywords": ["realworldqa", "real-world", "practical QA", "everyday scenarios"]
+    },
+    {
+      "task_id": "sat",
+      "config_path": "tasks/sat/sat.py",
+      "display_name": "SAT",
+      "description": "SAT (Scholastic Assessment Test) visual benchmark evaluating academic reasoning with image-based questions.",
+      "capabilities": ["vqa", "knowledge", "math"],
+      "modality": "image",
+      "keywords": ["sat", "academic", "scholastic", "reasoning", "standardized test"]
+    },
+    {
+      "task_id": "cmmmu_val",
+      "config_path": "tasks/cmmmu/cmmmu_val.py",
+      "display_name": "CMMMU Validation",
+      "description": "Chinese Massive Multi-discipline Multimodal Understanding benchmark evaluating college-level Chinese subject knowledge.",
+      "capabilities": ["vqa", "knowledge"],
+      "modality": "image",
+      "keywords": ["cmmmu", "chinese", "multi-discipline", "college", "chinese language"]
+    },
+    {
+      "task_id": "chart_qa",
+      "config_path": "tasks/chart_qa/chart_qa_test.py",
+      "display_name": "ChartQA",
+      "description": "ChartQA benchmark evaluating question answering over chart and graph images requiring data extraction and reasoning.",
+      "capabilities": ["vqa", "chart"],
+      "modality": "image",
+      "keywords": ["chartqa", "chart understanding", "graph QA", "data extraction", "visualization"]
+    },
+    {
+      "task_id": "animalbench",
+      "config_path": "tasks/animalbench/animalbench_test.py",
+      "display_name": "AnimalBench",
+      "description": "AnimalBench video benchmark evaluating animal behavior understanding and recognition in video content.",
+      "capabilities": ["video", "vqa", "perception"],
+      "modality": "video",
+      "keywords": ["animalbench", "animal behavior", "video understanding", "animal recognition"]
+    },
+    {
+      "task_id": "math_vista",
+      "config_path": "tasks/math_vista/math_vista_testmini.py",
+      "display_name": "MathVista Test Mini",
+      "description": "MathVista benchmark evaluating mathematical reasoning in visual contexts across geometry, statistics, and scientific figures.",
+      "capabilities": ["vqa", "math", "chart"],
+      "modality": "image",
+      "keywords": ["mathvista", "math reasoning", "visual math", "geometry", "scientific figures"]
+    },
+    {
+      "task_id": "cv_bench_test",
+      "config_path": "tasks/cv_bench/cv_bench_test.py",
+      "display_name": "CV-Bench Test",
+      "description": "CV-Bench evaluating core computer vision capabilities including object detection, counting, and spatial understanding.",
+      "capabilities": ["vqa", "perception", "spatial"],
+      "modality": "image",
+      "keywords": ["cv-bench", "computer vision", "object detection", "counting", "spatial"]
+    },
+    {
+      "task_id": "true_docvqa_edited",
+      "config_path": "tasks/true/true_docvqa_edited.py",
+      "display_name": "TRUE DocVQA",
+      "description": "TRUE benchmark on document VQA evaluating trustworthiness and reliability of responses on document understanding tasks.",
+      "capabilities": ["vqa", "ocr", "hallucination"],
+      "modality": "image",
+      "keywords": ["true", "docvqa", "document understanding", "trustworthiness", "reliability"]
+    },
+    {
+      "task_id": "true_full",
+      "config_path": "tasks/true/true_full.py",
+      "display_name": "TRUE Full",
+      "description": "TRUE full benchmark evaluating trustworthiness, reliability, and uncertainty estimation across all visual QA tasks.",
+      "capabilities": ["vqa", "hallucination"],
+      "modality": "image",
+      "keywords": ["true", "trustworthiness", "reliability", "uncertainty", "full benchmark"]
+    },
+    {
+      "task_id": "true_hard",
+      "config_path": "tasks/true/true_hard.py",
+      "display_name": "TRUE Hard",
+      "description": "TRUE hard-subset benchmark with the most challenging samples for evaluating model trustworthiness under difficulty.",
+      "capabilities": ["vqa", "hallucination"],
+      "modality": "image",
+      "keywords": ["true", "trustworthiness", "hard subset", "challenging", "reliability"]
+    },
+    {
+      "task_id": "true_textvqa_edited",
+      "config_path": "tasks/true/true_textvqa_edited.py",
+      "display_name": "TRUE TextVQA",
+      "description": "TRUE benchmark on TextVQA evaluating trustworthiness and reliability for text-in-image question answering.",
+      "capabilities": ["vqa", "ocr", "hallucination"],
+      "modality": "image",
+      "keywords": ["true", "textvqa", "text recognition", "trustworthiness", "reliability"]
+    },
+    {
+      "task_id": "rome",
+      "config_path": "tasks/rome/rome.py",
+      "display_name": "ROME",
+      "description": "ROME comprehensive benchmark evaluating multimodal understanding across academic knowledge, geography, memes, puzzles, spatial reasoning, and diagrams.",
+      "capabilities": ["vqa", "knowledge", "spatial", "perception"],
+      "modality": "image",
+      "keywords": ["rome", "comprehensive", "academic", "geography", "memes", "puzzles", "diagrams", "spatial"]
+    },
+    {
+      "task_id": "mlvu_dev",
+      "config_path": "tasks/mlvu/mlvu_dev.py",
+      "display_name": "MLVU Dev",
+      "description": "MLVU (Multi-task Long Video Understanding) development set evaluating long-form video comprehension across multiple task types.",
+      "capabilities": ["video", "vqa"],
+      "modality": "video",
+      "keywords": ["mlvu", "long video", "video understanding", "multi-task", "long-form"]
+    },
+    {
+      "task_id": "mlvu_test",
+      "config_path": "tasks/mlvu/mlvu_test.py",
+      "display_name": "MLVU Test",
+      "description": "MLVU (Multi-task Long Video Understanding) test set for evaluating long-form video comprehension performance.",
+      "capabilities": ["video", "vqa"],
+      "modality": "video",
+      "keywords": ["mlvu", "long video", "video understanding", "multi-task", "test set"]
+    },
+    {
+      "task_id": "text_vqa",
+      "config_path": "tasks/text_vqa/text_vqa_val.py",
+      "display_name": "TextVQA",
+      "description": "TextVQA benchmark evaluating the ability to read and reason about text present in images.",
+      "capabilities": ["vqa", "ocr"],
+      "modality": "image",
+      "keywords": ["textvqa", "text recognition", "OCR", "reading text in images", "scene text"]
+    },
+    {
+      "task_id": "arpgrounding_attribute_val",
+      "config_path": "tasks/arpgrounding/arpgrounding_attribute_val.py",
+      "display_name": "ARPGrounding Attribute",
+      "description": "ARPGrounding attribute-based grounding benchmark evaluating object localization using attribute descriptions.",
+      "capabilities": ["vqa", "grounding", "perception"],
+      "modality": "image",
+      "keywords": ["arpgrounding", "attribute grounding", "object localization", "visual attributes"]
+    },
+    {
+      "task_id": "arpgrounding_priority_val",
+      "config_path": "tasks/arpgrounding/arpgrounding_priority_val.py",
+      "display_name": "ARPGrounding Priority",
+      "description": "ARPGrounding priority-based grounding benchmark evaluating object localization with prioritized referring expressions.",
+      "capabilities": ["vqa", "grounding", "perception"],
+      "modality": "image",
+      "keywords": ["arpgrounding", "priority grounding", "object localization", "referring expressions"]
+    },
+    {
+      "task_id": "arpgrounding_relation_val",
+      "config_path": "tasks/arpgrounding/arpgrounding_relation_val.py",
+      "display_name": "ARPGrounding Relation",
+      "description": "ARPGrounding relation-based grounding benchmark evaluating object localization using spatial and semantic relations.",
+      "capabilities": ["vqa", "grounding", "spatial"],
+      "modality": "image",
+      "keywords": ["arpgrounding", "relation grounding", "object localization", "spatial relations"]
+    },
+    {
+      "task_id": "ocrbench_test",
+      "config_path": "tasks/ocrbench/ocrbench_test.py",
+      "display_name": "OCRBench",
+      "description": "OCRBench comprehensive benchmark evaluating optical character recognition capabilities across diverse text types and formats.",
+      "capabilities": ["vqa", "ocr"],
+      "modality": "image",
+      "keywords": ["ocrbench", "OCR", "text recognition", "optical character recognition", "document"]
+    },
+    {
+      "task_id": "color_bench_test",
+      "config_path": "tasks/color_bench/color_bench_test.py",
+      "display_name": "ColorBench",
+      "description": "ColorBench benchmark evaluating color perception and recognition abilities in multimodal models.",
+      "capabilities": ["vqa", "perception"],
+      "modality": "image",
+      "keywords": ["colorbench", "color perception", "color recognition", "visual perception"]
+    },
+    {
+      "task_id": "ERQAPlus",
+      "config_path": "tasks/ERQAPlus/ERQAPlus.py",
+      "display_name": "ERQA+",
+      "description": "ERQA+ enhanced entity recognition QA benchmark with extended evaluation for entity identification and reasoning in images.",
+      "capabilities": ["vqa", "perception"],
+      "modality": "image",
+      "keywords": ["erqa+", "entity recognition", "enhanced QA", "image quality", "visual recognition"]
+    }
+  ]
+}

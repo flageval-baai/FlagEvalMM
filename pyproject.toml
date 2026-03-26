@@ -44,3 +44,4 @@ include = ["flagevalmm*"]
 
 [project.scripts]
 flagevalmm = "flagevalmm.eval:run"
+flagevalmm-nl = "flagevalmm.nl.cli:main"
