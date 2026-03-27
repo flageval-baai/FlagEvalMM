@@ -1,5 +1,5 @@
 config = dict(
-    dataset_path="facebook/textvqa",
+    dataset_path="lmms-lab/textvqa",
     split="validation",
     processed_dataset_path="textvqa",
     processor="process.py",
