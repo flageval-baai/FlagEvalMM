@@ -7,7 +7,7 @@ import os
 
 def process(cfg):
     data_dir, split = cfg.dataset_path, cfg.split
-    dataset = load_dataset(data_dir, split=split)
+    dataset = load_dataset(data_dir, split=split, streaming=True)
     name = cfg.get("dataset_name", "")
     output_dir = osp.join(cfg.processed_dataset_path, name, split)
     os.makedirs(osp.join(output_dir, "images"), exist_ok=True)
