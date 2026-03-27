@@ -2,6 +2,7 @@ import os
 
 config = dict(
     dataset_path="whyu/mm-vet-v2",
+    split="test",
     processed_dataset_path="mm-vet-v2",
     processor="process.py",
 )
@@ -20,6 +21,6 @@ evaluator = dict(
     use_cache=False,
     base_url=os.getenv("FLAGEVAL_BASE_URL"),
     api_key=os.getenv("FLAGEVAL_API_KEY"),
-    eval_model_name="gpt-4o-mini-2024-07-18",
+    eval_model_name="gpt-5-mini",
     chat_name="mmvet_v2_eval",
 )
