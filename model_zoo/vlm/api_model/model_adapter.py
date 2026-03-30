@@ -52,10 +52,8 @@ class ModelAdapter(BaseModelAdapter):
         self.cleanup()
         os._exit(0)
 
-    def model_init(self, task_info: Dict):
-        if task_info.get("backend", None):
-            self.model_server = self.launch_model(task_info)
-
+    def _build_model_config(self, task_info: Dict) -> Dict:
+        """Extract model config keys from task_info."""
         model_config_keys = [
             "model_name",
             "url",
@@ -77,8 +75,14 @@ class ModelAdapter(BaseModelAdapter):
             "provider",
             "retry_time",
         ]
+        return {k: task_info[k] for k in model_config_keys if k in task_info}
+
+    def model_init(self, task_info: Dict):
+        if task_info.get("backend", None):
+            self.model_server = self.launch_model(task_info)
+
         print(f"task_info: {task_info}")
-        model_config = {k: task_info[k] for k in model_config_keys if k in task_info}
+        model_config = self._build_model_config(task_info)
 
         model_type_map = {
             "http": HttpClient,
@@ -88,7 +92,39 @@ class ModelAdapter(BaseModelAdapter):
             "hunyuan": Hunyuan,
         }
         model_type = self.model_type or task_info.get("model_type", "http")
-        self.model = model_type_map[model_type](**model_config)
+        model_cls = model_type_map[model_type]
+
+        # Check for multi-endpoint configuration (url is a list)
+        urls = model_config.get("url")
+        if isinstance(urls, list):
+            num_endpoints = len(urls)
+            model_names = model_config.get("model_name")
+            api_keys = model_config.get("api_key")
+            if not isinstance(model_names, list):
+                model_names = [model_names] * num_endpoints
+            if not isinstance(api_keys, list):
+                api_keys = [api_keys] * num_endpoints
+            assert len(model_names) == num_endpoints, (
+                f"model_name list length ({len(model_names)}) must match "
+                f"url list length ({num_endpoints})"
+            )
+            assert len(api_keys) == num_endpoints, (
+                f"api_key list length ({len(api_keys)}) must match "
+                f"url list length ({num_endpoints})"
+            )
+
+            self.models = []
+            for i in range(num_endpoints):
+                cfg = model_config.copy()
+                cfg["url"] = urls[i]
+                cfg["model_name"] = model_names[i]
+                cfg["api_key"] = api_keys[i]
+                self.models.append(model_cls(**cfg))
+            self.model = self.models[0]
+            logger.info(f"Multi-endpoint mode: created {num_endpoints} model instances")
+        else:
+            self.model = model_cls(**model_config)
+            self.models = [self.model]
 
     def launch_model(self, task_info: Dict):
         if task_info.get("server_port"):
@@ -149,7 +185,9 @@ class ModelAdapter(BaseModelAdapter):
 
         return {"answer": answer, "reason": reason, "usage": usage_info}
 
-    def process_single_item(self, i, inter_results_dir):
+    def process_single_item(self, i, inter_results_dir, model=None):
+        if model is None:
+            model = self.model
         question_id, multi_modal_data, qs = self.dataset[i]
         inter_results_file = osp.join(inter_results_dir, f"{question_id}.json")
         if osp.exists(inter_results_file):
@@ -170,8 +208,8 @@ class ModelAdapter(BaseModelAdapter):
         logger.info(qs)
 
         try:
-            messages = self.model.build_message(qs, multi_modal_data=multi_modal_data)
-            result = self.model.infer(messages)
+            messages = model.build_message(qs, multi_modal_data=multi_modal_data)
+            result = model.infer(messages)
 
             if isinstance(result, list):
                 # Multiple inferences case
@@ -240,11 +278,28 @@ class ModelAdapter(BaseModelAdapter):
         num_workers = self.task_info.get("num_workers", 1)
         inter_results_dir = osp.join(meta_info["output_dir"], "items")
         os.makedirs(inter_results_dir, exist_ok=True)
-        with ThreadPoolExecutor(max_workers=num_workers) as executor:
-            future_to_item = {
-                executor.submit(self.process_single_item, i, inter_results_dir): i
-                for i in range(len(self.dataset))
-            }
+
+        num_endpoints = len(self.models)
+        total_items = len(self.dataset)
+
+        if num_endpoints > 1:
+            logger.info(
+                f"Multi-endpoint mode: distributing {total_items} items "
+                f"across {num_endpoints} endpoints, "
+                f"{num_workers} workers per endpoint"
+            )
+
+        # Assign each item to an endpoint via round-robin
+        # Total concurrency = num_workers * num_endpoints
+        max_workers = num_workers * num_endpoints
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_item = {}
+            for i in range(total_items):
+                model = self.models[i % num_endpoints]
+                future = executor.submit(
+                    self.process_single_item, i, inter_results_dir, model
+                )
+                future_to_item[future] = i
 
             for future in as_completed(future_to_item):
                 result = future.result()
