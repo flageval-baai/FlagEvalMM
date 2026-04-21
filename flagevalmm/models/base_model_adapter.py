@@ -158,6 +158,8 @@ class BaseModelAdapter:
             task_info.update(extra_cfg)
         self.task_info = task_info
         self.model_name: str = task_info.get("model_name", None)
+        if isinstance(self.model_name, list):
+            self.model_name = self.model_name[0]
         if self.model_name is None and "model_path" in task_info:
             self.model_name = osp.basename(task_info["model_path"])
         if not task_info.get("model_path"):

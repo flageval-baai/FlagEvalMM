@@ -39,7 +39,10 @@ def update_cfg_from_args(args):
         cfg["output_dir"] = args.output_dir
     else:
         if args.cfg and "model_name" in cfg:
-            model_name = cfg["model_name"].split("/")[-1]
+            model_name_value = cfg["model_name"]
+            if isinstance(model_name_value, list):
+                model_name_value = model_name_value[0]
+            model_name = model_name_value.split("/")[-1]
             cfg["output_dir"] = cfg.get(
                 "output_dir", f"{model_name}_{time.strftime('%Y%m%d_%H%M%S')}"
             )
