@@ -1,6 +1,6 @@
 config = dict(
     dataset_path="MMMU/MMMU_Pro",
-    dataset_name="standard",
+    dataset_name="standard (10 options)",
     split="test",
     processed_dataset_path="MMMU_Pro",
     processor="../mmmu/process.py",
