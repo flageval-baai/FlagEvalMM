@@ -10,8 +10,8 @@ dataset = dict(
     prompt_template=dict(
         type="PromptTemplate",
         post_prompt=(
-            "The image contains answer choices labeled A, B, C, and D. "
-            "Please select the correct answer and respond with only one letter: A, B, C, or D."
+            "Use all provided images together. Please select the correct answer and respond with "
+            "only one letter: A, B, C, or D."
         ),
     ),
     config=config,

@@ -10,6 +10,16 @@ from huggingface_hub import snapshot_download
 
 
 BENCHMARK_CSV = "DISE-bench/DISE-benchmark.csv"
+IMAGE_COLUMNS = [
+    ("image", "merged full image"),
+    ("question_image_path", "separate question image"),
+    ("question_image_1_path", "separate question image 1"),
+    ("question_image_2_path", "separate question image 2"),
+    ("option_a_image_path", "separate option A image"),
+    ("option_b_image_path", "separate option B image"),
+    ("option_c_image_path", "separate option C image"),
+    ("option_d_image_path", "separate option D image"),
+]
 
 
 def process(cfg):
@@ -32,21 +42,28 @@ def process(cfg):
     content = []
     missing = []
     for row_id, row in tqdm.tqdm(raw.iterrows(), total=len(raw)):
-        member = _csv_path_to_tar_member(row["image"])
-        shard = tar_index.get(member)
-        if shard is None:
-            missing.append(str(row["image"]))
+        image_refs, row_missing = _image_refs(row, tar_index)
+        if row_missing:
+            missing.extend(row_missing)
+            continue
+        if not image_refs:
+            missing.append(f"image={row.get('image', '')}")
             continue
 
-        img_path = osp.join("images", member)
-        _extract_image(shard, member, osp.join(output_dir, img_path))
+        img_paths = []
+        for ref in image_refs:
+            img_path = osp.join("images", ref["path"])
+            _extract_image(ref["shard"], ref["path"], osp.join(output_dir, img_path))
+            img_paths.append(img_path)
+
         content.append(
             {
                 "question_id": f"benchmark_{row_id}",
-                "question": str(row["question"]).strip(),
+                "question": _question_with_image_order(str(row["question"]).strip(), image_refs),
                 "question_type": "multiple-choice",
                 "answer": str(row["answer"]).strip().upper(),
-                "img_path": img_path,
+                "img_path": img_paths,
+                "image_roles": [ref["role"] for ref in image_refs],
                 "category": str(row.get("category", "")).strip(),
                 "difficulty": str(row.get("difficulty", "")).strip(),
                 "source": str(row.get("source", "")).strip(),
@@ -85,6 +102,39 @@ def _csv_path_to_tar_member(path: str) -> str:
     if path.startswith("images/"):
         path = path[len("images/") :]
     return path.lstrip("/\\")
+
+
+def _image_refs(row, tar_index: dict) -> tuple:
+    refs = []
+    missing = []
+    seen = set()
+    for column, role in IMAGE_COLUMNS:
+        value = row.get(column, "")
+        if pd.isna(value):
+            continue
+        value = str(value).strip()
+        if not value:
+            continue
+        member = _csv_path_to_tar_member(value)
+        if member in seen:
+            continue
+        shard = tar_index.get(member)
+        if shard is None:
+            missing.append(f"{column}={value}")
+            continue
+        refs.append({"role": role, "path": member, "shard": shard})
+        seen.add(member)
+    return refs, missing
+
+
+def _question_with_image_order(question: str, image_refs: list) -> str:
+    image_tokens = " ".join(f"<image {idx + 1}>" for idx in range(len(image_refs)))
+    image_order = "; ".join(f"<image {idx + 1}>: {ref['role']}" for idx, ref in enumerate(image_refs))
+    return (
+        f"{image_tokens}\n"
+        f"Images are provided in order ({image_order}). Use all images together.\n"
+        f"{question}"
+    )
 
 
 def _build_tar_index(dataset_root: str) -> dict:
