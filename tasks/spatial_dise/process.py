@@ -10,8 +10,10 @@ from huggingface_hub import snapshot_download
 
 
 BENCHMARK_CSV = "DISE-bench/DISE-benchmark.csv"
-IMAGE_COLUMNS = [
+MERGE_IMAGE_COLUMNS = [
     ("image", "merged full image"),
+]
+SEPARATE_IMAGE_COLUMNS = [
     ("question_image_path", "separate question image"),
     ("question_image_1_path", "separate question image 1"),
     ("question_image_2_path", "separate question image 2"),
@@ -24,6 +26,7 @@ IMAGE_COLUMNS = [
 
 def process(cfg):
     dataset_root = _dataset_root(cfg.dataset_path)
+    image_mode = getattr(cfg, "image_mode", "merge")
     output_dir = osp.join(cfg.processed_dataset_path, cfg.split)
     image_output_dir = osp.join(output_dir, "images")
     os.makedirs(image_output_dir, exist_ok=True)
@@ -42,7 +45,7 @@ def process(cfg):
     content = []
     missing = []
     for row_id, row in tqdm.tqdm(raw.iterrows(), total=len(raw)):
-        image_refs, row_missing = _image_refs(row, tar_index)
+        image_refs, row_missing = _image_refs(row, tar_index, image_mode)
         if row_missing:
             missing.extend(row_missing)
             continue
@@ -59,11 +62,12 @@ def process(cfg):
         content.append(
             {
                 "question_id": f"benchmark_{row_id}",
-                "question": _question_with_image_order(str(row["question"]).strip(), image_refs),
+                "question": _format_question(str(row["question"]).strip(), image_refs, image_mode),
                 "question_type": "multiple-choice",
                 "answer": str(row["answer"]).strip().upper(),
                 "img_path": img_paths,
                 "image_roles": [ref["role"] for ref in image_refs],
+                "image_mode": image_mode,
                 "category": str(row.get("category", "")).strip(),
                 "difficulty": str(row.get("difficulty", "")).strip(),
                 "source": str(row.get("source", "")).strip(),
@@ -104,11 +108,12 @@ def _csv_path_to_tar_member(path: str) -> str:
     return path.lstrip("/\\")
 
 
-def _image_refs(row, tar_index: dict) -> tuple:
+def _image_refs(row, tar_index: dict, image_mode: str) -> tuple:
     refs = []
     missing = []
     seen = set()
-    for column, role in IMAGE_COLUMNS:
+    columns = SEPARATE_IMAGE_COLUMNS if image_mode == "separate" else MERGE_IMAGE_COLUMNS
+    for column, role in columns:
         value = row.get(column, "")
         if pd.isna(value):
             continue
@@ -127,12 +132,18 @@ def _image_refs(row, tar_index: dict) -> tuple:
     return refs, missing
 
 
-def _question_with_image_order(question: str, image_refs: list) -> str:
+def _format_question(question: str, image_refs: list, image_mode: str) -> str:
+    if image_mode != "separate":
+        return question
+
     image_tokens = " ".join(f"<image {idx + 1}>" for idx in range(len(image_refs)))
-    image_order = "; ".join(f"<image {idx + 1}>: {ref['role']}" for idx, ref in enumerate(image_refs))
+    image_order = "; ".join(
+        f"<image {idx + 1}>: {ref['role']}" for idx, ref in enumerate(image_refs)
+    )
     return (
         f"{image_tokens}\n"
-        f"Images are provided in order ({image_order}). Use all images together.\n"
+        f"Images are provided as separate question/view/option images ({image_order}). "
+        "Use all images together.\n"
         f"{question}"
     )
 
