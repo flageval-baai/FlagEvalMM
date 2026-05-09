@@ -1,6 +1,7 @@
 import json
 import os
 import os.path as osp
+import string
 import tarfile
 from pathlib import Path
 
@@ -52,6 +53,7 @@ def process(cfg):
         if not image_refs:
             missing.append(f"image={row.get('image', '')}")
             continue
+        option_letters = _option_letters(row.get("options", ""))
 
         img_paths = []
         for ref in image_refs:
@@ -62,9 +64,12 @@ def process(cfg):
         content.append(
             {
                 "question_id": f"benchmark_{row_id}",
-                "question": _format_question(str(row["question"]).strip(), image_refs, image_mode),
+                "question": _format_question(
+                    str(row["question"]).strip(), image_refs, image_mode, option_letters
+                ),
                 "question_type": "multiple-choice",
                 "answer": str(row["answer"]).strip().upper(),
+                "option_letters": option_letters,
                 "img_path": img_paths,
                 "image_roles": [ref["role"] for ref in image_refs],
                 "image_mode": image_mode,
@@ -132,9 +137,21 @@ def _image_refs(row, tar_index: dict, image_mode: str) -> tuple:
     return refs, missing
 
 
-def _format_question(question: str, image_refs: list, image_mode: str) -> str:
+def _option_letters(value) -> list:
+    if value is None or pd.isna(value):
+        return list("ABCD")
+    letters = []
+    for option in str(value).replace("，", ",").split(","):
+        option = option.strip().upper()
+        if option and option[0] in string.ascii_uppercase and option[0] not in letters:
+            letters.append(option[0])
+    return letters or list("ABCD")
+
+
+def _format_question(question: str, image_refs: list, image_mode: str, option_letters: list) -> str:
+    option_text = ", ".join(option_letters)
     if image_mode != "separate":
-        return question
+        return f"The image contains answer choices labeled {option_text}.\n{question}"
 
     image_tokens = " ".join(f"<image {idx + 1}>" for idx in range(len(image_refs)))
     image_order = "; ".join(
@@ -143,7 +160,7 @@ def _format_question(question: str, image_refs: list, image_mode: str) -> str:
     return (
         f"{image_tokens}\n"
         f"Images are provided as separate question/view/option images ({image_order}). "
-        "Use all images together.\n"
+        f"Use all images together. The answer choices are labeled {option_text}.\n"
         f"{question}"
     )
 
